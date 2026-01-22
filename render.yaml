@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: tidycode
+    env: static
+    buildCommand: npm install && npm run build:web
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cross-Origin-Embedder-Policy
+        value: credentialless
+      - path: /*
+        name: Cross-Origin-Opener-Policy
+        value: same-origin
+      - path: /*.wasm
+        name: Content-Type
+        value: application/wasm
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+# Note: WASM files are pre-built and committed to src-wasm/pkg/
+# This provides optimized large file support (20MB+) without requiring
+# Rust/wasm-pack in the deployment environment

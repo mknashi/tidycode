@@ -1,0 +1,73 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="docGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="paperGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cursorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="200" height="200" rx="40" fill="url(#docGradient)"/>
+
+  <!-- Document/Paper shape with folded corner -->
+  <path d="M 60 45 L 60 155 L 140 155 L 140 70 L 115 45 Z" fill="url(#paperGradient)" stroke="none"/>
+
+  <!-- Folded corner -->
+  <path d="M 115 45 L 115 70 L 140 70 Z" fill="#cbd5e1" stroke="none"/>
+
+  <!-- Text lines on the document -->
+  <rect x="70" y="65" width="50" height="4" rx="2" fill="#3b82f6" opacity="0.8"/>
+  <rect x="70" y="75" width="45" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+  <rect x="70" y="83" width="48" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+  <rect x="70" y="91" width="42" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+
+  <rect x="70" y="103" width="52" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+  <rect x="70" y="111" width="47" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+  <rect x="70" y="119" width="50" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+
+  <rect x="70" y="131" width="44" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+  <rect x="70" y="139" width="49" height="3" rx="1.5" fill="#64748b" opacity="0.6"/>
+
+  <!-- Pen/Cursor indicator - made larger and more prominent -->
+  <g transform="translate(115, 105)">
+    <!-- Pen shadow for depth -->
+    <path d="M 2 2 L 22 22 L 18 26 L -2 6 Z" fill="#000000" opacity="0.15"/>
+
+    <!-- Pen body - larger and more detailed -->
+    <path d="M 0 0 L 20 20 L 16 24 L -4 4 Z" fill="url(#cursorGradient)"/>
+
+    <!-- Pen tip - more defined -->
+    <path d="M 20 20 L 16 24 L 12 20 Z" fill="#d97706"/>
+    <path d="M 20 20 L 18 22 L 14 20 Z" fill="#b45309"/>
+
+    <!-- Metallic band on pen -->
+    <rect x="8" y="4" width="3" height="10" rx="1" fill="#94a3b8" opacity="0.8" transform="rotate(45 9.5 9)"/>
+
+    <!-- Shine effect on pen - brighter -->
+    <path d="M 3 3 L 14 14 L 12 16 L 1 5 Z" fill="#fef3c7" opacity="0.6"/>
+    <path d="M 5 5 L 10 10 L 9 11 L 4 6 Z" fill="#ffffff" opacity="0.4"/>
+
+    <!-- Writing line/trail -->
+    <path d="M 22 22 L 28 28" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" opacity="0.7">
+      <animate attributeName="stroke-dasharray" values="0,10;10,0;0,10" dur="2s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- Writing dot - larger -->
+    <circle cx="24" cy="24" r="2.5" fill="#3b82f6">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="2;3;2" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- App name at bottom -->
+  <text x="100" y="180" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="white" text-anchor="middle" opacity="0.95">TidyNotePad</text>
+</svg>

@@ -1,0 +1,38 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main background -->
+  <rect width="200" height="200" rx="40" fill="url(#bgGradient)"/>
+
+  <!-- Curly braces - left side { -->
+  <path d="M 65 60 Q 55 60 55 70 L 55 85 Q 55 95 45 95 Q 55 95 55 105 L 55 120 Q 55 130 65 130"
+        stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
+
+  <!-- Curly braces - right side } -->
+  <path d="M 135 60 Q 145 60 145 70 L 145 85 Q 145 95 155 95 Q 145 95 145 105 L 145 120 Q 145 130 135 130"
+        stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
+
+  <!-- Central document/text representation -->
+  <rect x="75" y="70" width="50" height="8" rx="4" fill="white" opacity="0.9"/>
+  <rect x="75" y="88" width="35" height="6" rx="3" fill="white" opacity="0.7"/>
+  <rect x="75" y="102" width="45" height="6" rx="3" fill="white" opacity="0.7"/>
+  <rect x="75" y="116" width="30" height="6" rx="3" fill="white" opacity="0.7"/>
+
+  <!-- Cursor indicator with accent color -->
+  <rect x="130" y="70" width="3" height="8" rx="1.5" fill="url(#accentGradient)">
+    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- App name at bottom -->
+  <text x="100" y="175" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="white" text-anchor="middle" opacity="0.95">TidyNotePad</text>
+</svg>

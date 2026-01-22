@@ -1,0 +1,19 @@
+{
+  "name": "Tidy Code - Online Code Editor",
+  "short_name": "Tidy Code",
+  "description": "Powerful free online code editor and notepad with syntax highlighting, multi-tab support, todo lists, and CSV editing.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#1f2937",
+  "orientation": "any",
+  "categories": ["productivity", "utilities", "developer tools"],
+  "icons": [
+    {
+      "src": "/tidycode-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

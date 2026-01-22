@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Tidy Code Desktop - Professional Code Editor</title>
+  <meta name="description" content="Download Tidy Code desktop application. Free, powerful code editor with support for massive files (100MB+), native performance, and professional features. Available for Windows, macOS, and Linux.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid #334155;
+      padding: 20px 0;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-logo {
+      width: 48px;
+      height: 48px;
+    }
+
+    .header-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+      padding: 80px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .hero-content {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .hero .tagline {
+      font-size: 24px;
+      color: #e0e7ff;
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+
+    .hero .description {
+      font-size: 18px;
+      color: #cbd5e1;
+      margin-bottom: 48px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Download Section */
+    .download-section {
+      max-width: 1200px;
+      margin: -60px auto 0;
+      padding: 0 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .download-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 48px;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .detected-badge {
+      display: inline-block;
+      background: #3b82f6;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .os-name {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      color: #ffffff;
+    }
+
+    .download-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 18px 40px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 18px;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    }
+
+    .download-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 20px -3px rgba(59, 130, 246, 0.4);
+    }
+
+    .download-button svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .download-note {
+      margin-top: 16px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    /* Comparison Section */
+    .comparison-section {
+      max-width: 1200px;
+      margin: 80px auto;
+      padding: 0 24px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .section-subtitle {
+      text-align: center;
+      font-size: 18px;
+      color: #94a3b8;
+      margin-bottom: 48px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .comparison-card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 32px;
+      position: relative;
+    }
+
+    .comparison-card.featured {
+      border-color: #3b82f6;
+      background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+    }
+
+    .comparison-card .badge {
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .comparison-card h3 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .comparison-card .version-type {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .feature-list {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      color: #cbd5e1;
+    }
+
+    .feature-list li svg {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .feature-list.desktop-features li svg {
+      color: #10b981;
+    }
+
+    .feature-list.web-features li svg {
+      color: #3b82f6;
+    }
+
+    .feature-list .limitation {
+      color: #64748b;
+    }
+
+    .feature-list .limitation svg {
+      color: #475569;
+    }
+
+    /* Features Highlight */
+    .features-highlight {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 48px;
+      margin: 48px 0;
+    }
+
+    .features-highlight h3 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 32px;
+      color: #ffffff;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 16px;
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-icon svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .feature-content h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #ffffff;
+    }
+
+    .feature-content p {
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    /* All Platforms Section */
+    .all-platforms {
+      max-width: 1200px;
+      margin: 80px auto;
+      padding: 0 24px;
+    }
+
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .platform-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      text-decoration: none;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .platform-card:hover {
+      background: #334155;
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+    }
+
+    .platform-card .platform-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .platform-card .platform-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 16px;
+      color: #ffffff;
+    }
+
+    .platform-card .platform-arch {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* Footer CTA */
+    .footer-cta {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-top: 1px solid #334155;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .footer-cta p {
+      font-size: 16px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    .footer-cta a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .footer-cta a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero .tagline {
+        font-size: 20px;
+      }
+
+      .download-card {
+        padding: 32px 24px;
+      }
+
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <img src="/tidycode-logo.svg" alt="Tidy Code" class="header-logo">
+      <div class="header-title">Tidy Code</div>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="hero">
+    <div class="hero-content">
+      <h1>Unleash the Power of Desktop</h1>
+      <p class="tagline">Handle massive files with native performance</p>
+      <p class="description">
+        Tidy Code Desktop brings professional-grade editing capabilities to your fingertips.
+        Edit files up to 100MB+, enjoy native file system access, and experience blazing-fast
+        performance without browser limitations.
+      </p>
+    </div>
+  </div>
+
+  <!-- Download Card -->
+  <div class="download-section">
+    <div class="download-card">
+      <div class="detected-badge">Recommended for you</div>
+      <div class="os-name" id="detected-os">Detecting your system...</div>
+      <a href="#" id="primary-download" class="download-button">
+        <svg fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        <span id="download-text">Download Free</span>
+      </a>
+      <p class="download-note">Free forever • No credit card required • Instant download</p>
+    </div>
+  </div>
+
+  <!-- Comparison Section -->
+  <div class="comparison-section">
+    <h2 class="section-title">Desktop vs Web: Choose Your Power</h2>
+    <p class="section-subtitle">See why professionals choose the desktop app</p>
+
+    <div class="comparison-grid">
+      <!-- Desktop Version -->
+      <div class="comparison-card featured">
+        <span class="badge">Recommended</span>
+        <h3>Desktop App</h3>
+        <p class="version-type">Ultimate Performance</p>
+        <ul class="feature-list desktop-features">
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Massive files:</strong> Edit up to 100MB+ easily</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Native performance:</strong> Lightning fast, no lag</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Direct file access:</strong> Open files instantly</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Works offline:</strong> No internet required</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>System integration:</strong> Tray icon, file associations</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Auto-updates:</strong> Always latest features</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Lower memory usage:</strong> Optimized for performance</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Web Version -->
+      <div class="comparison-card">
+        <h3>Web App</h3>
+        <p class="version-type">Quick & Convenient</p>
+        <ul class="feature-list web-features">
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Instant access:</strong> No installation needed</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Cross-platform:</strong> Works anywhere</span>
+          </li>
+          <li>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Quick edits:</strong> Perfect for small files</span>
+          </li>
+          <li class="limitation">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <span>File size limited by browser memory</span>
+          </li>
+          <li class="limitation">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <span>Requires permission prompts for files</span>
+          </li>
+          <li class="limitation">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <span>Slower with large files</span>
+          </li>
+          <li class="limitation">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <span>Requires internet connection</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Features Highlight -->
+    <div class="features-highlight">
+      <h3>Why Developers Love Tidy Code Desktop</h3>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Blazing Fast</h4>
+            <p>Native performance for instant file loading and editing</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Large File Support</h4>
+            <p>Handle massive JSON, XML, CSV files up to 100MB+</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Privacy First</h4>
+            <p>Your files stay on your machine, no cloud uploads</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Smart Features</h4>
+            <p>AI assistance, LSP support, VIM mode, and more</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Beautiful UI</h4>
+            <p>Dark/light themes with customizable editor</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="feature-content">
+            <h4>Always Updated</h4>
+            <p>Auto-updates ensure you always have the latest</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Platforms -->
+  <div class="all-platforms">
+    <h2 class="section-title">Available on All Major Platforms</h2>
+    <p class="section-subtitle">Choose your preferred download format</p>
+
+    <div class="platform-grid">
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_x64-setup.exe" class="platform-card">
+        <div class="platform-icon">🪟</div>
+        <div class="platform-name">Windows</div>
+        <div class="platform-arch">x64 Installer (.exe)</div>
+      </a>
+
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_x64_en-US.msi" class="platform-card">
+        <div class="platform-icon">🪟</div>
+        <div class="platform-name">Windows</div>
+        <div class="platform-arch">x64 MSI Package</div>
+      </a>
+
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_aarch64.dmg" class="platform-card">
+        <div class="platform-icon">🍎</div>
+        <div class="platform-name">macOS</div>
+        <div class="platform-arch">Apple Silicon (M1/M2/M3)</div>
+      </a>
+
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_x64.dmg" class="platform-card">
+        <div class="platform-icon">🍎</div>
+        <div class="platform-name">macOS</div>
+        <div class="platform-arch">Intel (x64)</div>
+      </a>
+
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/neo-note-pad_amd64.AppImage" class="platform-card">
+        <div class="platform-icon">🐧</div>
+        <div class="platform-name">Linux</div>
+        <div class="platform-arch">AppImage (x64)</div>
+      </a>
+
+      <a href="https://github.com/mknashi/tidycode/releases/latest/download/neo-note-pad_amd64.deb" class="platform-card">
+        <div class="platform-icon">🐧</div>
+        <div class="platform-name">Linux</div>
+        <div class="platform-arch">Debian/Ubuntu (.deb)</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer CTA -->
+  <div class="footer-cta">
+    <p>Prefer the web version?</p>
+    <a href="/">Try Tidy Code Online →</a>
+  </div>
+
+  <script>
+    // Detect OS and architecture
+    async function detectOS() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const platform = navigator.platform.toLowerCase();
+
+      let os = 'Unknown';
+      let downloadUrl = 'https://github.com/mknashi/tidycode/releases/latest';
+      let downloadText = 'Download Free';
+
+      // Windows
+      if (userAgent.indexOf('win') !== -1) {
+        os = 'Windows (x64)';
+        downloadUrl = 'https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_x64-setup.exe';
+        downloadText = 'Download for Windows';
+      }
+      // macOS
+      else if (userAgent.indexOf('mac') !== -1) {
+        let isAppleSilicon = false;
+
+        // Method 1: Check navigator.platform for ARM
+        if (platform.indexOf('arm') !== -1) {
+          isAppleSilicon = true;
+        }
+
+        // Method 2: Check userAgent for ARM indicators
+        if (userAgent.indexOf('arm') !== -1) {
+          isAppleSilicon = true;
+        }
+
+        // Method 3: Use WebGL renderer detection (most reliable for M1/M2/M3)
+        try {
+          const canvas = document.createElement('canvas');
+          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+          if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+              const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
+              // Apple Silicon GPUs typically contain "apple" in the renderer string
+              if (renderer.indexOf('apple') !== -1) {
+                isAppleSilicon = true;
+              }
+            }
+          }
+        } catch (e) {
+          // WebGL detection failed, use default
+        }
+
+        // Method 4: Check maxTouchPoints (Apple Silicon Macs have higher values)
+        if (navigator.maxTouchPoints > 2) {
+          isAppleSilicon = true;
+        }
+
+        if (isAppleSilicon) {
+          os = 'macOS (Apple Silicon)';
+          downloadUrl = 'https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_aarch64.dmg';
+          downloadText = 'Download for macOS';
+        } else {
+          os = 'macOS (Intel)';
+          downloadUrl = 'https://github.com/mknashi/tidycode/releases/latest/download/TidyCode_x64.dmg';
+          downloadText = 'Download for macOS';
+        }
+      }
+      // Linux
+      else if (userAgent.indexOf('linux') !== -1) {
+        os = 'Linux (x64)';
+        downloadUrl = 'https://github.com/mknashi/tidycode/releases/latest/download/neo-note-pad_amd64.AppImage';
+        downloadText = 'Download for Linux';
+      }
+
+      // Update UI
+      document.getElementById('detected-os').textContent = os;
+      document.getElementById('primary-download').href = downloadUrl;
+      document.getElementById('download-text').textContent = downloadText;
+
+      // Debug logging
+      console.log('Detection info:', {
+        userAgent,
+        platform,
+        maxTouchPoints: navigator.maxTouchPoints,
+        detectedOS: os
+      });
+    }
+
+    // Run detection on page load
+    detectOS();
+  </script>
+</body>
+</html>

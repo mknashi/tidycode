@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:desktop:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd NeoNotePad - feature-rich text editor with desktop support\n\nFeatures:\n- Multi-tab editing with drag-and-drop reordering\n- JSON/XML formatting with syntax validation and error detection\n- CSV editing with preview and column management\n- Search with highlighting and adjustable results panel\n- Auto-pairing for brackets, quotes, and XML tags\n- Find & Replace with undo support\n- Structure view for JSON and XML files\n- Dark/Light themes\n- Notes & Todo lists integrated panels\n- Desktop app support via Tauri\n- AI integration with OpenAI, Claude, and Ollama\n- LSP support for code intelligence\n- Save confirmation dialog for unsaved files\n\nTechnologies:\n- React 18 with Vite\n- Tailwind CSS for styling\n- CodeMirror 6 for code editing\n- Tauri for desktop application\n- Lucide React for icons\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(node generate-icons.js:*)",
+      "Bash(iconutil:*)",
+      "Bash(npm install:*)",
+      "Bash(node generate-ico.js:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd UI enhancements for better usability\n\n1. **Unified Format Button**:\n   - Replace separate \"Format JSON\" and \"Format XML\" buttons with single \"Format\" button\n   - Auto-detects content type (JSON/XML) and formats accordingly\n   - Cleaner toolbar with less clutter\n\n2. **Auto-focus Editor on VIM Mode Toggle**:\n   - Editor now automatically receives focus when VIM mode is enabled\n   - Improves workflow - users can immediately start typing after enabling VIM\n\n3. **Enhanced Diff Viewer**:\n   - Add ability to load current tab content into left panel automatically\n   - New \"Type/Paste Content\" button with textarea for manual input\n   - Supports three input methods: file upload, clipboard paste, or manual typing\n   - Better UX for comparing different versions of content\n\nThese enhancements improve daily workflows by reducing clicks and providing\nmore intuitive ways to interact with the editor.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd File Explorer with expand/collapse functionality\n\nFeatures:\n- New collapsible File Explorer panel showing all open tabs\n- Tree structure view with folder grouping\n- Highlight currently active file\n- Click to switch between open files\n- Visual indicator for modified files (orange dot)\n- Expand/collapse folders with chevron icons\n- Responsive design matching app theme (dark/light)\n- Close button to toggle explorer visibility\n- Shows file count in footer\n\nUI Integration:\n- Added \"Explorer\" toggle button in toolbar\n- Explorer panel appears on left side of editor\n- Smooth width transition when opening/closing\n- Works alongside existing Structure panel\n- Blue highlight for active button state\n\nThis enhancement improves navigation when working with multiple files,\nespecially useful in desktop mode for project-based workflows.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git merge:*)",
+      "Bash(npm run dev:desktop:*)",
+      "Bash(cargo install:*)",
+      "Bash(chmod:*)",
+      "Bash(npm run build:wasm:dev:*)",
+      "Bash(ls:*)",
+      "Bash(wasm-pack build:*)",
+      "Bash(node generate-large-json.js:*)",
+      "Bash(npm run build:full:*)",
+      "Bash(grep:*)",
+      "Bash(cargo check:*)",
+      "Bash(npm run build:desktop:mac:*)",
+      "Bash(vite build:*)",
+      "Bash(cargo build:*)",
+      "Bash(npx vite build)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

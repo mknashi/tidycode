@@ -1,0 +1,460 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden; /* Keep app fixed without body scroll jumps */
+}
+
+#root {
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+}
+
+body.theme-dark {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+body.theme-light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+body.theme-light .bg-gray-950,
+body.theme-light .bg-gray-900 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .bg-gray-800 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .bg-gray-700 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .bg-gray-600 {
+  background-color: #e5e7eb !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .border-gray-800,
+body.theme-light .border-gray-700,
+body.theme-light .border-gray-600 {
+  border-color: #cbd5f5 !important;
+}
+
+body.theme-light .text-gray-500,
+body.theme-light .text-gray-400 {
+  color: #475569 !important;
+}
+
+body.theme-light .text-gray-300 {
+  color: #334155 !important;
+}
+
+body.theme-light .text-gray-200,
+body.theme-light .text-gray-100,
+body.theme-light .text-white {
+  color: #0f172a !important;
+}
+
+body.theme-light .caret-white {
+  caret-color: #0f172a !important;
+}
+
+/* CSV Table sticky headers */
+.csv-table-container {
+  position: relative;
+  overflow: auto;
+}
+
+.csv-table thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+}
+
+.csv-table th {
+  position: sticky !important;
+  top: 0 !important;
+}
+
+.csv-table .line-num-header {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 100 !important;
+}
+
+.csv-table .line-num-cell {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 30 !important;
+}
+
+/* Prevent theme overrides on line number backgrounds */
+body.theme-dark .csv-table .line-num-header[style*="backgroundColor"],
+body.theme-dark .csv-table .line-num-cell[style*="backgroundColor"],
+body.theme-light .csv-table .line-num-header[style*="backgroundColor"],
+body.theme-light .csv-table .line-num-cell[style*="backgroundColor"] {
+  background-color: inherit !important;
+}
+
+/* Editor line numbers background - prevent theme overrides */
+.editor-line-numbers {
+  background-color: inherit !important;
+}
+
+body.theme-dark .editor-line-numbers {
+  background-color: #1f2937 !important;
+}
+
+body.theme-light .editor-line-numbers {
+  background-color: #f3f4f6 !important;
+}
+
+/* Hide scrollbar for tab bar */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Markdown Preview Styles */
+.markdown-preview {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: #e5e7eb;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #f9fafb;
+}
+
+.markdown-preview h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 0.3em;
+}
+
+.markdown-preview h3 { font-size: 1.25em; }
+.markdown-preview h4 { font-size: 1em; }
+.markdown-preview h5 { font-size: 0.875em; }
+.markdown-preview h6 { font-size: 0.85em; color: #9ca3af; }
+
+.markdown-preview p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-preview a {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+.markdown-preview code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(110, 118, 129, 0.4);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+.markdown-preview pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #1f2937;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.markdown-preview pre code {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  background-color: transparent;
+  border: 0;
+}
+
+.markdown-preview blockquote {
+  padding: 0 1em;
+  color: #9ca3af;
+  border-left: 0.25em solid #374151;
+  margin: 0 0 16px 0;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-preview li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-preview li > p {
+  margin-bottom: 0.5em;
+}
+
+.markdown-preview table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  margin-bottom: 16px;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+  padding: 6px 13px;
+  border: 1px solid #374151;
+}
+
+.markdown-preview table th {
+  font-weight: 600;
+  background-color: #1f2937;
+}
+
+.markdown-preview table tr {
+  background-color: transparent;
+  border-top: 1px solid #374151;
+}
+
+.markdown-preview table tr:nth-child(2n) {
+  background-color: rgba(110, 118, 129, 0.1);
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: transparent;
+}
+
+.markdown-preview hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #374151;
+  border: 0;
+}
+
+/* Light theme overrides for markdown */
+body.theme-light .markdown-preview {
+  color: #1f2937;
+}
+
+body.theme-light .markdown-preview h1,
+body.theme-light .markdown-preview h2,
+body.theme-light .markdown-preview h3,
+body.theme-light .markdown-preview h4,
+body.theme-light .markdown-preview h5,
+body.theme-light .markdown-preview h6 {
+  color: #111827;
+}
+
+body.theme-light .markdown-preview h1,
+body.theme-light .markdown-preview h2 {
+  border-bottom-color: #e5e7eb;
+}
+
+body.theme-light .markdown-preview h6 {
+  color: #6b7280;
+}
+
+body.theme-light .markdown-preview a {
+  color: #2563eb;
+}
+
+body.theme-light .markdown-preview code {
+  background-color: rgba(175, 184, 193, 0.2);
+}
+
+body.theme-light .markdown-preview pre {
+  background-color: #f3f4f6;
+}
+
+body.theme-light .markdown-preview blockquote {
+  color: #6b7280;
+  border-left-color: #d1d5db;
+}
+
+body.theme-light .markdown-preview table th,
+body.theme-light .markdown-preview table td {
+  border-color: #d1d5db;
+}
+
+body.theme-light .markdown-preview table th {
+  background-color: #f9fafb;
+}
+
+body.theme-light .markdown-preview table tr {
+  border-top-color: #d1d5db;
+}
+
+body.theme-light .markdown-preview table tr:nth-child(2n) {
+  background-color: #f9fafb;
+}
+
+body.theme-light .markdown-preview hr {
+  background-color: #e5e7eb;
+}
+
+/* Hide xterm.js scrollbar - terminals use scrollback buffer instead */
+.xterm .xterm-viewport {
+  overflow-y: hidden !important;
+}
+
+.xterm .xterm-screen {
+  overflow-y: hidden !important;
+}
+
+/* CodeMirror Selection Styling - Dark Mode */
+/* Use mix-blend-mode to make selection visible while keeping text readable */
+body.theme-dark .cm-selectionLayer {
+  mix-blend-mode: multiply !important;
+}
+
+body.theme-dark .cm-selectionBackground,
+body.theme-dark .cm-focused .cm-selectionBackground,
+body.theme-dark .cm-selectionLayer .cm-selectionBackground {
+  background: rgba(95, 232, 200, 0.35) !important;
+  box-shadow:
+    inset 0 -3px 0 rgba(0,0,0,0.35),
+    inset 0 3px 0 rgba(255,255,255,0.12),
+    inset 0 0 0 1px rgba(95, 232, 200, 0.15) !important;
+}
+
+/* Selection match (when text matches selection) - light gray at 25% */
+body.theme-dark .cm-selectionMatch {
+  background-color: rgba(95, 232, 200, 0.34) !important;
+}
+
+/* Native selection fallback */
+body.theme-dark .cm-content ::selection,
+body.theme-dark .cm-line ::selection,
+body.theme-dark .cm-line span::selection {
+  background-color: rgba(95, 232, 200, 0.34) !important;
+}
+
+/* Light mode selection - keep existing blue */
+body.theme-light .cm-selectionBackground,
+body.theme-light .cm-focused .cm-selectionBackground,
+body.theme-light .cm-selectionLayer .cm-selectionBackground {
+  background-color: #add6ff !important;
+}
+
+body.theme-light .cm-selectionMatch {
+  background-color: rgba(173, 214, 255, 0.3) !important;
+}
+
+body.theme-light .cm-content ::selection,
+body.theme-light .cm-line ::selection,
+body.theme-light .cm-line span::selection {
+  background-color: #add6ff !important;
+}
+
+
+/* Print styles for PDF viewer */
+@media print {
+  /* When in PDF print mode, hide everything first */
+  body.pdf-print-mode * {
+    display: none !important;
+  }
+
+  /* Then show only the PDF viewer hierarchy */
+  body.pdf-print-mode .pdf-viewer-container,
+  body.pdf-print-mode .pdf-viewer-container *,
+  body.pdf-print-mode .pdf-pages-container,
+  body.pdf-print-mode .pdf-pages-container *,
+  body.pdf-print-mode .pdf-page,
+  body.pdf-print-mode .pdf-page * {
+    display: block !important;
+  }
+
+  /* Reset the main containers */
+  body.pdf-print-mode .pdf-viewer-container {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.pdf-print-mode .pdf-pages-container {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Each PDF page */
+  body.pdf-print-mode .pdf-page {
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  /* Last page doesn't need page break */
+  body.pdf-print-mode .pdf-page:last-child {
+    page-break-after: auto !important;
+  }
+
+  /* Show canvas elements (PDF rendering) */
+  body.pdf-print-mode canvas {
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Hide text layer and annotation layer during print */
+  body.pdf-print-mode .react-pdf__Page__textContent,
+  body.pdf-print-mode .react-pdf__Page__annotations {
+    display: none !important;
+  }
+}

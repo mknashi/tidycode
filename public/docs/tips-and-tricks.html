@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidy Code Tips & Tricks - Keyboard Shortcuts, Format Conversion, VIM Commands</title>
+    <meta name="description" content="Master Tidy Code with keyboard shortcuts, JSON/XML/YAML/TOML formatting and conversion tips, VIM mode commands, multi-cursor editing, Diff Viewer comparisons, and AI-powered code assistance.">
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: #0d1117;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+        }
+
+        .nav-brand::before {
+            content: '$';
+            color: #7ee787;
+            margin-right: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #58a6ff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 100px auto 40px;
+            padding: 24px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #58a6ff;
+        }
+
+        .back-link::before {
+            content: '←';
+            color: #7ee787;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+        }
+
+        h1::before {
+            content: '// ';
+            color: #7ee787;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 48px;
+            line-height: 1.8;
+        }
+
+        .section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2::before {
+            content: '> ';
+            color: #7ee787;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        h3::before {
+            content: '$ ';
+            color: #7ee787;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 16px;
+        }
+
+        li {
+            color: #8b949e;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        .tip-card {
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .tip-card:hover {
+            border-color: #58a6ff;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.1);
+        }
+
+        .tip-card h4 {
+            color: #7ee787;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .tip-card h4::before {
+            content: '→ ';
+            color: #58a6ff;
+        }
+
+        .tip-card p {
+            color: #8b949e;
+            margin-bottom: 0;
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .highlight-box {
+            background: rgba(126, 231, 135, 0.05);
+            border-left: 4px solid #7ee787;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+        }
+
+        .highlight-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .highlight-box li {
+            color: #8b949e;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .highlight-box li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #58a6ff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        strong {
+            color: #f0f6fc;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            margin-top: 60px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 24px;
+            }
+
+            .nav-links {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code">
+                <span>tidy_code</span>
+            </a>
+            <div class="nav-links">
+                <a href="/app" class="nav-link">[web_app]</a>
+                <a href="/docs/index.html" class="nav-link">[docs]</a>
+                <a href="/docs/features.html" class="nav-link">[features]</a>
+                <a href="/docs/release-notes.html" class="nav-link">[release_notes]</a>
+                <a href="/docs/tips-and-tricks.html" class="nav-link">[tips_&_tricks]</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <a href="/docs/index.html" class="back-link">Back to Documentation</a>
+
+        <h1>Tips & Tricks</h1>
+
+        <p class="lead">
+            Master Tidy Code with these helpful tips and shortcuts to boost your productivity.
+            Learn keyboard shortcuts, JSON/XML/YAML/TOML formatting and conversion tricks, VIM mode
+            commands, multi-cursor editing techniques, and how to efficiently work with large files.
+            Get the most out of features like the Structure panel, Format Converter, Diff Viewer,
+            and AI-powered code assistance.
+        </p>
+
+        <div class="section">
+            <h2>Data Format Support</h2>
+
+            <div class="tip-card">
+                <h4>Auto-Format</h4>
+                <p>
+                    Click the <strong>"Format"</strong> button to automatically format JSON, XML, YAML, or TOML.
+                    The formatter intelligently detects your content type and applies proper indentation.
+                    No need to select between formats - it's automatic!
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Format Conversion</h4>
+                <p>
+                    Use the <strong>"Convert"</strong> dropdown to convert between JSON, XML, YAML, and TOML.
+                    Converted content opens in a new tab, preserving your original file. Review the info
+                    panel for any adjustments made during conversion (like XML tag name fixes).
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Real-time Validation</h4>
+                <p>
+                    Syntax errors are highlighted in real-time as you type. Look for red underlines
+                    and error messages in the Structure panel. This helps you catch mistakes before
+                    they become problems. Works with JSON, XML, YAML, and TOML files.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Structure View</h4>
+                <p>
+                    Toggle the Structure panel to see a tree view of your data document. Click on
+                    any node to jump directly to that location in your file. Perfect for navigating
+                    large configuration files, API responses, or TOML config files.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Editing Features</h2>
+
+            <div class="tip-card">
+                <h4>Auto-Pairing</h4>
+                <p>
+                    Brackets <span class="kbd">{}</span>, quotes <span class="kbd">""</span>, and
+                    XML tags are automatically paired as you type. Press <span class="kbd">Tab</span>
+                    to skip past the closing character. This saves time and prevents mismatched pairs.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Multi-Cursor Editing</h4>
+                <p>
+                    Hold <span class="kbd">Cmd/Ctrl</span> and click to place multiple cursors.
+                    Edit multiple locations simultaneously for faster bulk editing. Great for renaming
+                    variables or updating similar patterns.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Find & Replace</h4>
+                <p>
+                    Click the "Find/Replace" button in the toolbar to open the search panel.
+                    Supports regex patterns and case-sensitive matching. The search results panel
+                    shows all matches with context for easy navigation.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Tab Management</h4>
+                <p>
+                    Drag tabs to reorder them or organize your workspace. Right-click on tabs for
+                    quick actions like "Close Others" or "Close All to Right". The File Explorer
+                    shows all open tabs in a tree structure.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Code Completion</h2>
+
+            <div class="tip-card">
+                <h4>LSP Support</h4>
+                <p>
+                    Language Server Protocol provides intelligent code completion, hover information,
+                    and diagnostics for supported languages. Get IntelliSense-style suggestions as
+                    you type.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>AI Assistance</h4>
+                <p>
+                    Enable AI integration (OpenAI, Claude, or Ollama) for advanced code suggestions,
+                    error fixes, and explanations. The AI can help refactor code, explain complex
+                    logic, or suggest improvements.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>VIM Mode</h2>
+
+            <div class="tip-card">
+                <h4>Modal Editing</h4>
+                <p>
+                    Enable VIM mode for keyboard-driven editing with normal, insert, and visual modes.
+                    The editor automatically receives focus when you enable VIM mode, so you can start
+                    typing commands immediately.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>VIM Keybindings</h4>
+                <p>
+                    Use standard VIM commands: <span class="kbd">h j k l</span> for navigation,
+                    <span class="kbd">i</span> for insert mode, <span class="kbd">v</span> for visual mode,
+                    <span class="kbd">:</span> for commands, and more. Great for experienced VIM users.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Large File Support</h2>
+
+            <div class="tip-card">
+                <h4>WASM-Powered Performance</h4>
+                <p>
+                    Tidy Code can handle files up to 20MB+ using WebAssembly technology.
+                    Files larger than 5MB automatically use WASM for efficient line indexing
+                    and fast search operations. No configuration needed - it just works!
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Optimized for Large Files</h4>
+                <p>
+                    For optimal performance with large files (10MB+), syntax highlighting is
+                    automatically disabled. This keeps the editor responsive even with million-line
+                    log files or large data dumps. Virtual scrolling ensures smooth navigation.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Memory Efficiency</h4>
+                <p>
+                    Large files are stored in WASM memory, not in React state. This significantly
+                    reduces memory usage and improves performance. The editor only loads visible
+                    lines, making it possible to work with very large files comfortably.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Markdown Preview</h2>
+
+            <div class="tip-card">
+                <h4>Live Preview</h4>
+                <p>
+                    When you open a Markdown file, you'll see a rendered HTML preview by default.
+                    The preview updates as you type, making it easy to write documentation or
+                    README files with instant visual feedback.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Toggle Editor View</h4>
+                <p>
+                    Click the <strong>"Show Editor"</strong> button to switch between preview-only
+                    mode and split view. In split view, you can edit the markdown source while
+                    seeing the rendered output. Perfect for writing and formatting simultaneously.
+                </p>
+            </div>
+
+            <div class="tip-card">
+                <h4>Distraction-Free Reading</h4>
+                <p>
+                    By default, the editor panel is collapsed for Markdown files to provide a
+                    distraction-free reading experience. This is ideal for reviewing documentation
+                    or reading markdown content without the clutter of source code.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Diff Viewer</h2>
+
+            <div class="tip-card">
+                <h4>Compare Files</h4>
+                <p>
+                    Use the Diff Viewer to compare two versions of a file. You can upload files,
+                    paste content, or load the current tab content automatically. Color-coded
+                    highlighting shows additions, deletions, and modifications.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h3>Productivity Tips</h3>
+                <ul>
+                    <li>Click the Explorer button to manage multiple open files in tree view</li>
+                    <li>Drag tabs to reorder or organize your workspace efficiently</li>
+                    <li>Toggle VIM mode with the modern switch control for instant modal editing</li>
+                    <li>Use the Diff Viewer to compare versions of your files side-by-side</li>
+                    <li>Open Markdown files for instant preview - toggle editor when needed</li>
+                    <li>Large files (20MB+) are handled automatically with WASM for best performance</li>
+                    <li>Save files with <span class="kbd">Cmd/Ctrl + S</span> (works on both web and desktop)</li>
+                    <li>Enable AI assistance for code suggestions and debugging help</li>
+                    <li>Use the Structure panel to navigate JSON/XML/YAML/TOML documents easily</li>
+                    <li>Convert between data formats with the Convert dropdown - results open in new tab</li>
+                    <li>Right-click on tabs for quick access to close/compare options</li>
+                    <li>Upload multiple files at once using the "Open File" button (web) or native dialogs (desktop)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Tidy Code. Built for focus.</p>
+    </footer>
+</body>
+</html>

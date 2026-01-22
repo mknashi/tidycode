@@ -1,0 +1,44 @@
+{
+  "$schema": "../../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "PDF Print Plugin Lab",
+  "version": "0.1.0",
+  "identifier": "com.tidycode.printlab",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "PDF Print Plugin Lab",
+        "width": 840,
+        "height": 720,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "dialog:allow-open",
+            "fs:allow-read-file",
+            "native-pdf-print:default",
+            "native-pdf-print:allow-get-printers",
+            "native-pdf-print:allow-print-pdf-bytes",
+            "native-pdf-print:allow-get-printer-media"
+          ]
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}

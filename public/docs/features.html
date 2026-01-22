@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidy Code Features - PDF Viewer, JSON/YAML/TOML Formatter, Format Converter, VIM Mode</title>
+    <meta name="description" content="Explore Tidy Code features: PDF viewing with search and thumbnails, JSON/XML/YAML/TOML formatting and conversion, CSV preview, Markdown rendering, VIM mode, multi-cursor editing, LSP code completion, and large file support up to 100MB with WASM.">
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: #0d1117;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+        }
+
+        .nav-brand::before {
+            content: '$';
+            color: #7ee787;
+            margin-right: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #58a6ff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 100px auto 40px;
+            padding: 24px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #58a6ff;
+        }
+
+        .back-link::before {
+            content: '←';
+            color: #7ee787;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+        }
+
+        h1::before {
+            content: '// ';
+            color: #7ee787;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 48px;
+            line-height: 1.8;
+        }
+
+        .section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2::before {
+            content: '> ';
+            color: #7ee787;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        h3::before {
+            content: '$ ';
+            color: #7ee787;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: rgba(48, 54, 61, 0.8);
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #f0f6fc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .shortcut-item {
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .shortcut-item span:first-child {
+            color: #c9d1d9;
+        }
+
+        .highlight-box {
+            background: rgba(126, 231, 135, 0.05);
+            border-left: 4px solid #7ee787;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+        }
+
+        .highlight-box h3::before {
+            content: '';
+        }
+
+        .highlight-box h4 {
+            color: #7ee787;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-list li {
+            color: #8b949e;
+            padding: 0.75rem 0;
+            padding-left: 28px;
+            position: relative;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        strong {
+            color: #f0f6fc;
+            font-weight: 600;
+        }
+
+        a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .platform-badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-radius: 4px;
+            letter-spacing: 0.05em;
+            margin-left: 0.5rem;
+        }
+
+        .badge-web {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #eff6ff;
+        }
+
+        .badge-desktop {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #d1fae5;
+        }
+
+        .badge-both {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: #ede9fe;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            margin-top: 60px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 24px;
+            }
+
+            .nav-links {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code">
+                <span>tidy_code</span>
+            </a>
+            <div class="nav-links">
+                <a href="/app" class="nav-link">[web_app]</a>
+                <a href="/docs/index.html" class="nav-link">[docs]</a>
+                <a href="/docs/features.html" class="nav-link">[features]</a>
+                <a href="/docs/release-notes.html" class="nav-link">[release_notes]</a>
+                <a href="/docs/tips-and-tricks.html" class="nav-link">[tips_&_tricks]</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <a href="/docs/index.html" class="back-link">Back to Documentation</a>
+
+        <h1>Features</h1>
+
+        <p class="lead">
+            Explore all the capabilities Tidy Code offers. From basic text editing to advanced
+            PDF viewing, AI assistance, and large file support - find everything you need to
+            work efficiently with any file type. Features include JSON/XML/YAML/TOML formatting and conversion,
+            CSV preview, Markdown rendering, VIM mode, multi-cursor editing, regex search, and
+            code completion with LSP support. Handle large files up to 100MB with WebAssembly-powered performance.
+        </p>
+
+        <div class="section">
+            <h2>Core Features</h2>
+
+            <h3>File Management</h3>
+            <ul class="feature-list">
+                <li><strong>New File:</strong> Click "New" button (web) or <span class="kbd">Cmd/Ctrl + N</span> (desktop)</li>
+                <li><strong>Open File:</strong> Click "Open File" button (web) or <span class="kbd">Cmd/Ctrl + O</span> (desktop)</li>
+                <li><strong>Save:</strong> Save current file with <span class="kbd">Cmd/Ctrl + S</span> (both platforms)</li>
+                <li><strong>Save As:</strong> Save with new name using <span class="kbd">Cmd/Ctrl + Shift + S</span> (both platforms)</li>
+                <li><strong>Close Tab:</strong> Click X on tab (web) or right-click context menu (both platforms)</li>
+                <li><strong>Recent Files:</strong> Access recently opened files via menu (desktop only)</li>
+                <li><strong>File Explorer:</strong> Click "Explorer" button to view all open tabs in tree structure</li>
+            </ul>
+
+            <h3>Text Editing</h3>
+            <ul class="feature-list">
+                <li><strong>Undo/Redo:</strong> Standard <span class="kbd">Cmd/Ctrl + Z</span> and <span class="kbd">Cmd/Ctrl + Shift + Z</span></li>
+                <li><strong>Cut/Copy/Paste:</strong> Use system shortcuts or Edit menu</li>
+                <li><strong>Select All:</strong> <span class="kbd">Cmd/Ctrl + A</span> selects entire document</li>
+                <li><strong>Multi-Cursor:</strong> Hold <span class="kbd">Cmd/Ctrl</span> and click to add cursors</li>
+                <li><strong>Line Operations:</strong> Duplicate, move, or delete entire lines</li>
+                <li><strong>Auto-Pairing:</strong> Automatic closing of brackets, quotes, and tags</li>
+            </ul>
+
+            <h3>Search & Replace</h3>
+            <ul class="feature-list">
+                <li><strong>Open Panel:</strong> Click "Find/Replace" button in toolbar (both platforms)</li>
+                <li><strong>Search:</strong> Enter text in search field to find matches</li>
+                <li><strong>Replace:</strong> Use replace field to substitute text</li>
+                <li><strong>Regex Support:</strong> Toggle regex mode for pattern matching</li>
+                <li><strong>Case Sensitive:</strong> Toggle case sensitivity in search</li>
+                <li><strong>Results Panel:</strong> View all matches with surrounding context</li>
+                <li><strong>Navigation:</strong> Jump between matches with arrow buttons</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Specialized Tools</h2>
+
+            <h3>📕 PDF Viewer</h3>
+            <ul class="feature-list">
+                <li><strong>Full Document Navigation:</strong> Page-by-page navigation with prev/next buttons and jump-to-page</li>
+                <li><strong>Thumbnail Sidebar:</strong> Visual page thumbnails for quick navigation</li>
+                <li><strong>Document Outline:</strong> View document bookmarks and table of contents</li>
+                <li><strong>Text Search:</strong> Search PDF content with keyword highlighting in yellow</li>
+                <li><strong>Zoom Controls:</strong> Fit-to-width, fit-to-page, and custom zoom levels (50%-200%)</li>
+                <li><strong>Focus Mode:</strong> Hide all UI panels for distraction-free reading (Eye icon button)</li>
+                <li><strong>Page Virtualization:</strong> Efficient rendering for large PDFs (100+ pages)</li>
+                <li><strong>Download & Print:</strong> Save PDF or send to printer from viewer</li>
+                <li><strong>Theme Support:</strong> Dark and light themes for comfortable viewing</li>
+            </ul>
+
+            <h3>🎨 SVG Viewer</h3>
+            <ul class="feature-list">
+                <li><strong>Pan & Zoom:</strong> Interactive pan and zoom with mouse drag</li>
+                <li><strong>Zoom Controls:</strong> Zoom in, zoom out, and reset view buttons</li>
+                <li><strong>Fit-to-Screen:</strong> Automatically fit SVG to viewport</li>
+                <li><strong>Download:</strong> Save SVG file from viewer</li>
+                <li><strong>Theme Support:</strong> Adapts to dark/light theme</li>
+                <li><strong>Large File Support:</strong> Efficiently handles complex SVG graphics</li>
+            </ul>
+
+            <h3>📝 JSON Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Format:</strong> One-click formatting with proper indentation</li>
+                <li><strong>Validate:</strong> Real-time syntax validation with error highlighting</li>
+                <li><strong>Structure View:</strong> Navigate JSON tree structure</li>
+                <li><strong>Minify:</strong> Compress JSON by removing whitespace</li>
+                <li><strong>Collapse/Expand:</strong> Fold sections of large JSON files</li>
+            </ul>
+
+            <h3>🔖 XML Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Format:</strong> Auto-format XML with proper nesting</li>
+                <li><strong>Validate:</strong> Check XML syntax and structure</li>
+                <li><strong>Tag Completion:</strong> Auto-close XML tags</li>
+                <li><strong>Structure View:</strong> Tree view of XML document</li>
+                <li><strong>Attribute Editing:</strong> Easy attribute management</li>
+            </ul>
+
+            <h3>📄 YAML Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Format:</strong> One-click formatting with configurable indentation</li>
+                <li><strong>Validate:</strong> Real-time syntax validation with detailed error messages</li>
+                <li><strong>Structure View:</strong> Navigate YAML hierarchy with tree view</li>
+                <li><strong>Auto-Detection:</strong> Automatically detects YAML content from patterns</li>
+                <li><strong>Line Width Control:</strong> Configurable line width for formatting</li>
+            </ul>
+
+            <h3>⚙️ TOML Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Format:</strong> One-click formatting with optional key sorting</li>
+                <li><strong>Validate:</strong> Real-time syntax validation with helpful tips</li>
+                <li><strong>Structure View:</strong> View sections, tables, and key-value pairs</li>
+                <li><strong>Browser Compatible:</strong> Works in all modern browsers via smol-toml</li>
+                <li><strong>Date/Time Support:</strong> Full support for TOML date and time values</li>
+            </ul>
+
+            <h3>🔄 Format Converter</h3>
+            <ul class="feature-list">
+                <li><strong>Bidirectional:</strong> Convert between JSON, XML, YAML, and TOML</li>
+                <li><strong>New Tab Output:</strong> Converted content opens in new tab (preserves original)</li>
+                <li><strong>Smart Adjustments:</strong> Auto-fix XML tag names (spaces → underscores)</li>
+                <li><strong>TOML Compatibility:</strong> Handle null values and root array wrapping</li>
+                <li><strong>Adjustment Tracking:</strong> See all changes made during conversion</li>
+                <li><strong>Line Navigation:</strong> Click adjustments to jump to affected lines</li>
+            </ul>
+
+            <h3>📊 CSV Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Preview:</strong> Visual table preview of CSV data</li>
+                <li><strong>Column Management:</strong> Add, remove, or reorder columns</li>
+                <li><strong>Delimiter Detection:</strong> Auto-detect comma, tab, or semicolon</li>
+                <li><strong>Header Row:</strong> Toggle first row as header</li>
+                <li><strong>Export:</strong> Export to various formats</li>
+            </ul>
+
+            <h3>📄 Markdown Editor</h3>
+            <ul class="feature-list">
+                <li><strong>Live Preview:</strong> Rendered HTML preview updates as you type</li>
+                <li><strong>Toggle Editor:</strong> Switch between preview-only and split view</li>
+                <li><strong>Default Collapsed:</strong> Editor collapsed by default for distraction-free reading</li>
+                <li><strong>Full Markdown Support:</strong> Complete markdown syntax rendering</li>
+                <li><strong>Smooth Transitions:</strong> Intuitive toggle controls with visual feedback</li>
+            </ul>
+
+            <h3>🔀 Diff Viewer</h3>
+            <ul class="feature-list">
+                <li><strong>File Upload:</strong> Compare two files side by side</li>
+                <li><strong>Paste Content:</strong> Compare pasted text or code</li>
+                <li><strong>Current Tab:</strong> Load current editor content automatically</li>
+                <li><strong>Color Coding:</strong> Green for additions, red for deletions</li>
+                <li><strong>Line-by-Line:</strong> Precise comparison highlighting</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Advanced Features</h2>
+
+            <h3>Large File Support</h3>
+            <ul class="feature-list">
+                <li><strong>WASM-Powered:</strong> Handle files up to 20MB+ with WebAssembly technology</li>
+                <li><strong>Efficient Indexing:</strong> Fast line indexing for million-line files</li>
+                <li><strong>Virtual Scrolling:</strong> Smooth navigation through massive files</li>
+                <li><strong>Fast Search:</strong> Quick search operations on large files</li>
+                <li><strong>Memory Efficient:</strong> WASM memory storage reduces React state overhead</li>
+                <li><strong>Auto-Optimization:</strong> Syntax highlighting disabled for files >10MB</li>
+            </ul>
+
+            <h3>AI Integration<span class="platform-badge badge-both">Web + Desktop</span></h3>
+            <ul class="feature-list">
+                <li><strong>OpenAI:</strong> GPT-4 and GPT-3.5 Turbo support (both platforms)</li>
+                <li><strong>Claude:</strong> Anthropic Claude models integration (both platforms)</li>
+                <li><strong>Groq:</strong> Fast cloud AI processing (both platforms)</li>
+                <li><strong>WebLLM:</strong> Browser-based AI models (web only)</li>
+                <li><strong>Ollama:</strong> Local AI models for privacy (desktop only)</li>
+                <li><strong>Code Suggestions:</strong> AI-powered code completion</li>
+                <li><strong>Error Fixes:</strong> Automatic error detection and fixes</li>
+                <li><strong>Explanations:</strong> Get AI explanations of complex code</li>
+            </ul>
+
+            <h3>VIM Mode</h3>
+            <ul class="feature-list">
+                <li><strong>Modern Toggle Switch:</strong> iOS-style toggle control with sliding animation</li>
+                <li><strong>Modal Editing:</strong> Normal, insert, and visual modes</li>
+                <li><strong>Standard Keybindings:</strong> Classic VIM commands</li>
+                <li><strong>Navigation:</strong> h, j, k, l movement</li>
+                <li><strong>Commands:</strong> Full VIM command support</li>
+                <li><strong>Auto-Focus:</strong> Editor focuses automatically when enabled</li>
+                <li><strong>Mode Indicator:</strong> Visual badge showing current mode (N/I/V)</li>
+            </ul>
+
+            <h3>LSP Support</h3>
+            <ul class="feature-list">
+                <li><strong>Code Intelligence:</strong> IntelliSense-style completions</li>
+                <li><strong>Hover Info:</strong> Documentation on hover</li>
+                <li><strong>Diagnostics:</strong> Real-time error checking</li>
+                <li><strong>Go to Definition:</strong> Jump to symbol definitions</li>
+                <li><strong>Language Support:</strong> JavaScript, TypeScript, Python, and more</li>
+            </ul>
+
+            <h3>Terminal Integration<span class="platform-badge badge-desktop">Desktop Only</span></h3>
+            <ul class="feature-list">
+                <li><strong>Built-in Terminal:</strong> Integrated terminal panel</li>
+                <li><strong>Toggle Panel:</strong> Click the Terminal icon button in toolbar</li>
+                <li><strong>Multiple Terminals:</strong> Create multiple terminal instances</li>
+                <li><strong>Full Shell:</strong> Access to complete shell environment</li>
+                <li><strong>Working Directory:</strong> Terminal opens in your current project folder</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Platform-Specific Features</h2>
+
+            <h3>Web Version Features<span class="platform-badge badge-web">Web</span></h3>
+            <ul class="feature-list">
+                <li><strong>No Installation:</strong> Access directly from your browser</li>
+                <li><strong>Cross-Platform:</strong> Works on any device with a modern browser</li>
+                <li><strong>Auto-Save:</strong> Browser-based local storage for your work</li>
+                <li><strong>WebLLM AI:</strong> Browser-based AI models (no API key needed)</li>
+                <li><strong>Groq API:</strong> Fast cloud-based AI processing</li>
+                <li><strong>Share via URL:</strong> Easy sharing and collaboration</li>
+            </ul>
+
+            <h3>Desktop App Features<span class="platform-badge badge-desktop">Desktop</span></h3>
+            <ul class="feature-list">
+                <li><strong>Native File System:</strong> Direct access to local files and folders</li>
+                <li><strong>Integrated Terminal:</strong> Full shell environment within the app</li>
+                <li><strong>Ollama Support:</strong> Local AI models for complete privacy</li>
+                <li><strong>System Tray:</strong> Quick access from system menu</li>
+                <li><strong>Native Dialogs:</strong> Platform-native file dialogs</li>
+                <li><strong>Offline Mode:</strong> Full functionality without internet</li>
+                <li><strong>Better Performance:</strong> Optimized for desktop with lower memory usage</li>
+                <li><strong>System Integration:</strong> File type associations and context menus</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="highlight-box">
+                <h3>Keyboard Shortcuts</h3>
+                <p style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.938rem;">
+                    <strong>Note:</strong> Desktop app supports additional native shortcuts. Web version relies on toolbar buttons for most actions.
+                </p>
+                <h4 style="color: #10b981; margin-bottom: 0.75rem;">Available on Both Platforms:</h4>
+                <div class="shortcut-grid">
+                    <div class="shortcut-item">
+                        <span>Save File</span>
+                        <span class="kbd">Cmd/Ctrl + S</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Save As</span>
+                        <span class="kbd">Cmd/Ctrl + Shift + S</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Undo</span>
+                        <span class="kbd">Cmd/Ctrl + Z</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Redo</span>
+                        <span class="kbd">Cmd/Ctrl + Shift + Z</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Select All</span>
+                        <span class="kbd">Cmd/Ctrl + A</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Copy</span>
+                        <span class="kbd">Cmd/Ctrl + C</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Cut</span>
+                        <span class="kbd">Cmd/Ctrl + X</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Paste</span>
+                        <span class="kbd">Cmd/Ctrl + V</span>
+                    </div>
+                </div>
+                <h4 style="color: #10b981; margin: 1.5rem 0 0.75rem;">Desktop Only:</h4>
+                <div class="shortcut-grid">
+                    <div class="shortcut-item">
+                        <span>New File</span>
+                        <span class="kbd">Cmd/Ctrl + N</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Open File</span>
+                        <span class="kbd">Cmd/Ctrl + O</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Tidy Code. Built for focus.</p>
+    </footer>
+</body>
+</html>

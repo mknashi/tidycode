@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large File Generator - Tidy Code Testing</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 {
+            color: #60a5fa;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        .file-size {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .result {
+            background: #1e1e1e;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #10b981;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+        .info {
+            background: #1e3a8a;
+            border-left-color: #60a5fa;
+        }
+        input[type="number"] {
+            background: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            width: 120px;
+            margin: 0 10px;
+        }
+        label {
+            display: inline-flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 Large File Generator</h1>
+    <p>Generate large test files to test Tidy Code's WASM integration (5MB+ files use WASM acceleration)</p>
+
+    <div class="section">
+        <h2>Quick Generate</h2>
+        <button onclick="generateFile(10000)">10K lines (~1MB)</button>
+        <button onclick="generateFile(50000)">50K lines (~5MB)</button>
+        <button onclick="generateFile(100000)">100K lines (~10MB)</button>
+        <button onclick="generateFile(500000)">500K lines (~50MB)</button>
+        <button onclick="generateFile(1000000)">1M lines (~100MB)</button>
+    </div>
+
+    <div class="section">
+        <h2>Custom File Generator</h2>
+        <div class="controls">
+            <label>
+                Lines:
+                <input type="number" id="lineCount" value="100000" min="1000" max="10000000" step="10000">
+            </label>
+            <button onclick="generateCustomFile()">Generate Custom File</button>
+            <button class="secondary" onclick="generateJSON()">Generate JSON</button>
+            <button class="secondary" onclick="generateCSV()">Generate CSV</button>
+        </div>
+        <div id="customResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Test Scenarios</h2>
+        <button onclick="generateSearchTest()">Search Test File (50K lines)</button>
+        <button onclick="generateCodeFile()">Code File (JavaScript)</button>
+        <button onclick="generateLogFile()">Log File (100K entries)</button>
+        <div id="scenarioResult"></div>
+    </div>
+
+    <div class="section info">
+        <h3>How to Test</h3>
+        <ol>
+            <li>Click a button above to generate a test file</li>
+            <li>The file will be automatically downloaded to your Downloads folder</li>
+            <li>Open Tidy Code and load the downloaded file</li>
+            <li>Files ≥5MB will show a <strong>WASM</strong> badge in the tab</li>
+            <li>Check the console for performance metrics</li>
+        </ol>
+        <p><strong>Expected Performance:</strong></p>
+        <ul>
+            <li>10MB file: ~50ms indexing (vs ~400ms in JavaScript)</li>
+            <li>50MB file: ~200ms indexing (vs ~2000ms in JavaScript)</li>
+            <li>Search: 10-14x faster with WASM</li>
+        </ul>
+    </div>
+
+    <script>
+        function formatFileSize(bytes) {
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+            return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+        }
+
+        function downloadFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showResult(elementId, message, size) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `
+                    <div class="result">
+✓ Generated file: ${message}
+Size: <span class="file-size">${formatFileSize(size)}</span>
+Lines: ${(size / 100).toFixed(0).toLocaleString()} (approx)
+File downloaded to your Downloads folder.
+                    </div>
+                `;
+            }
+        }
+
+        function generateFile(lineCount) {
+            const lines = [];
+            for (let i = 1; i <= lineCount; i++) {
+                lines.push(`Line ${i}: This is a test line with some sample content for testing Tidy Code's WASM performance.`);
+            }
+            const content = lines.join('\n');
+            const filename = `test-${lineCount}-lines.txt`;
+
+            downloadFile(content, filename);
+            showResult('customResult', filename, content.length);
+        }
+
+        function generateCustomFile() {
+            const lineCount = parseInt(document.getElementById('lineCount').value) || 100000;
+            generateFile(lineCount);
+        }
+
+        function generateJSON() {
+            const lineCount = parseInt(document.getElementById('lineCount').value) || 10000;
+            const data = [];
+
+            for (let i = 1; i <= lineCount; i++) {
+                data.push({
+                    id: i,
+                    name: `Item ${i}`,
+                    description: `This is test item number ${i} with some sample data`,
+                    timestamp: Date.now() + i,
+                    value: Math.random() * 1000,
+                    active: i % 2 === 0,
+                    tags: [`tag${i % 10}`, `category${i % 5}`]
+                });
+            }
+
+            const content = JSON.stringify(data, null, 2);
+            const filename = `test-${lineCount}-items.json`;
+
+            downloadFile(content, filename);
+            showResult('customResult', filename, content.length);
+        }
+
+        function generateCSV() {
+            const lineCount = parseInt(document.getElementById('lineCount').value) || 100000;
+            const lines = ['ID,Name,Email,Age,City,Country,Status,Created'];
+
+            const cities = ['New York', 'London', 'Tokyo', 'Paris', 'Sydney'];
+            const countries = ['USA', 'UK', 'Japan', 'France', 'Australia'];
+            const statuses = ['Active', 'Inactive', 'Pending'];
+
+            for (let i = 1; i <= lineCount; i++) {
+                lines.push(
+                    `${i},User ${i},user${i}@example.com,${20 + (i % 50)},${cities[i % 5]},${countries[i % 5]},${statuses[i % 3]},2024-01-${String((i % 28) + 1).padStart(2, '0')}`
+                );
+            }
+
+            const content = lines.join('\n');
+            const filename = `test-${lineCount}-records.csv`;
+
+            downloadFile(content, filename);
+            showResult('customResult', filename, content.length);
+        }
+
+        function generateSearchTest() {
+            const lines = [];
+            const keywords = ['error', 'warning', 'info', 'debug', 'critical'];
+
+            for (let i = 1; i <= 50000; i++) {
+                const keyword = keywords[i % keywords.length];
+                lines.push(`[${i}] ${keyword.toUpperCase()}: Test log message ${i} with some ${keyword} content`);
+            }
+
+            const content = lines.join('\n');
+            const filename = 'search-test-50k-lines.txt';
+
+            downloadFile(content, filename);
+            showResult('scenarioResult', filename, content.length);
+        }
+
+        function generateCodeFile() {
+            const lines = [];
+
+            lines.push('// Generated test JavaScript file');
+            lines.push('// Testing WASM performance with code syntax');
+            lines.push('');
+
+            for (let i = 1; i <= 10000; i++) {
+                lines.push(`function testFunction${i}(param1, param2) {`);
+                lines.push(`  const result = param1 + param2 + ${i};`);
+                lines.push(`  console.log('Function ${i} executed with result:', result);`);
+                lines.push(`  return result * ${Math.random().toFixed(4)};`);
+                lines.push(`}`);
+                lines.push('');
+            }
+
+            const content = lines.join('\n');
+            const filename = 'test-code-10k-functions.js';
+
+            downloadFile(content, filename);
+            showResult('scenarioResult', filename, content.length);
+        }
+
+        function generateLogFile() {
+            const lines = [];
+            const levels = ['INFO', 'DEBUG', 'WARNING', 'ERROR', 'CRITICAL'];
+            const modules = ['auth', 'database', 'api', 'cache', 'queue'];
+
+            for (let i = 1; i <= 100000; i++) {
+                const timestamp = new Date(Date.now() - (100000 - i) * 1000).toISOString();
+                const level = levels[i % levels.length];
+                const module = modules[i % modules.length];
+
+                lines.push(`${timestamp} [${level}] [${module}] Log entry ${i}: Processing request with ID ${i}, status: ${i % 2 === 0 ? 'success' : 'pending'}`);
+            }
+
+            const content = lines.join('\n');
+            const filename = 'test-logs-100k-entries.log';
+
+            downloadFile(content, filename);
+            showResult('scenarioResult', filename, content.length);
+        }
+
+        // Show initial message
+        document.getElementById('customResult').innerHTML = '<div class="result info">Click a button above to generate a test file</div>';
+    </script>
+</body>
+</html>

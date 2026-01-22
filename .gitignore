@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+
+# Tauri build outputs
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Development
+.vite/
+.DS_Store
+*.log
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Test files (exclude test data files from repo)
+test-*.json
+test-*.xml
+test-*.csv
+test.md
+test.sh
+
+# Documentation artifacts (keep only source docs)
+*.md.backup
+AI-FIX-FEATURE.md
+CONTEXT-WINDOW-FIX.md
+DESKTOP-BUILD-SUCCESS.md
+DUAL-BUILD-GUIDE.md
+DUAL-BUILD-SUMMARY.md
+LSP_INTEGRATION.md
+PHASE2_TEST_CASES.md
+QUICK-START-AI-FIX.md
+SETUP-WIZARD-COMPLETE.md
+SETUP-WIZARD-GUIDE.md
+TRUNCATION-MERGE-FIX.md
+VSCODE-DIFF-FEATURES.md
+test-checklist.md
+
+# Server artifacts
+serve.js
+
+# Build artifacts
+bettertextpad@1.0.0/
+tauri
+
+# HTML preview files
+logo-preview.html
+index.html.backup
+
+# LSP binaries (these should be downloaded/built per platform)
+src-tauri/resources/lsp/*
+!src-tauri/resources/lsp/.gitkeep
+test-data-30mb.json
+# Test data files
+test-*.txt
+test-data-*.json
+*.swp

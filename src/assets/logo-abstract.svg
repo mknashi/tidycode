@@ -1,0 +1,69 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="abstractBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="symbolGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentDot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Main background circle -->
+  <circle cx="100" cy="100" r="90" fill="url(#abstractBg)"/>
+
+  <!-- Abstract "T" and "P" fusion - forming a unique symbol -->
+  <!-- This creates a stylized geometric shape that hints at text/editing -->
+
+  <!-- Vertical stroke (T stem / P stem) -->
+  <rect x="85" y="50" width="30" height="100" rx="5" fill="url(#symbolGradient)" filter="url(#glow)"/>
+
+  <!-- Top horizontal bar (T crossbar) -->
+  <rect x="60" y="50" width="80" height="20" rx="5" fill="url(#symbolGradient)" filter="url(#glow)"/>
+
+  <!-- Circular element (P bowl - modified into abstract shape) -->
+  <path d="M 115 90 Q 145 90 145 110 Q 145 130 115 130 L 115 90 Z" fill="url(#symbolGradient)" filter="url(#glow)"/>
+
+  <!-- Connecting element - creates flow -->
+  <circle cx="115" cy="110" r="8" fill="url(#abstractBg)"/>
+
+  <!-- Accent dots representing pixels/text -->
+  <g opacity="0.9">
+    <circle cx="70" cy="85" r="4" fill="url(#accentDot)">
+      <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="85" cy="95" r="3" fill="url(#accentDot)">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="70" cy="105" r="3.5" fill="url(#accentDot)">
+      <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Subtle geometric accents in corners -->
+  <g opacity="0.2">
+    <circle cx="35" cy="35" r="8" fill="white"/>
+    <circle cx="165" cy="35" r="6" fill="white"/>
+    <circle cx="35" cy="165" r="6" fill="white"/>
+    <circle cx="165" cy="165" r="8" fill="white"/>
+  </g>
+
+  <!-- Optional subtle app initial at bottom -->
+  <text x="100" y="175" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle" opacity="0.8">BTP</text>
+</svg>

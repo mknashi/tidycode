@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidy Code Documentation - Free Text Editor for JSON, XML, YAML, TOML, PDF & More</title>
+    <meta name="description" content="Get started with Tidy Code, a free text editor for developers. Edit and convert JSON, XML, YAML, TOML files with syntax highlighting. View PDFs with search and zoom. Available as web app and desktop for macOS, Windows, Linux.">
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: #0d1117;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+        }
+
+        .nav-brand::before {
+            content: '$';
+            color: #7ee787;
+            margin-right: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #58a6ff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 100px auto 40px;
+            padding: 24px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+        }
+
+        h1::before {
+            content: '// ';
+            color: #7ee787;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 48px;
+            line-height: 1.8;
+        }
+
+        .section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2::before {
+            content: '> ';
+            color: #7ee787;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        h3::before {
+            content: '$ ';
+            color: #7ee787;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 16px;
+        }
+
+        li {
+            color: #8b949e;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 32px 0;
+        }
+
+        .help-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 24px;
+            text-decoration: none;
+            color: #c9d1d9;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .help-card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(88, 166, 255, 0.2);
+        }
+
+        .help-card strong {
+            color: #ffffff;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .help-card span {
+            color: #8b949e;
+            font-size: 0.875rem;
+        }
+
+        .highlight-box {
+            background: rgba(126, 231, 135, 0.05);
+            border-left: 4px solid #7ee787;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+        }
+
+        strong {
+            color: #f0f6fc;
+            font-weight: 600;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            background: rgba(48, 54, 61, 0.8);
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #f0f6fc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            margin-top: 60px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 24px;
+            }
+
+            .nav-links {
+                gap: 16px;
+            }
+
+            .help-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code">
+                <span>tidy_code</span>
+            </a>
+            <div class="nav-links">
+                <a href="/app" class="nav-link">[web_app]</a>
+                <a href="/docs/index.html" class="nav-link">[docs]</a>
+                <a href="/docs/features.html" class="nav-link">[features]</a>
+                <a href="/docs/release-notes.html" class="nav-link">[release_notes]</a>
+                <a href="/docs/tips-and-tricks.html" class="nav-link">[tips_&_tricks]</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Documentation</h1>
+
+        <p class="lead">
+            Welcome to Tidy Code, a powerful, feature-rich text editor designed for developers,
+            data professionals, and power users who demand both performance and flexibility.
+            Edit JSON, XML, YAML, TOML, CSV, and Markdown files with syntax highlighting, formatting, validation, and conversion.
+            Open and view PDF documents with search, zoom, and annotation support. Available as a free
+            web app or native desktop application for macOS, Windows, and Linux.
+        </p>
+
+        <!-- Welcome Section -->
+        <div class="section">
+            <h2>Welcome to Tidy Code</h2>
+            <p>
+                Tidy Code is a modern text editor built with cutting-edge web technologies
+                and available as both a web application and native desktop app. It brings professional-grade
+                editing capabilities to any platform with intelligent handling of large files using WebAssembly technology.
+            </p>
+            <p>
+                What sets Tidy Code apart is its performance: 8x faster indexing and 14x faster search on
+                multi-million line documents. Whether you're debugging JSON APIs, formatting XML configurations,
+                analyzing CSV datasets, or writing markdown documentation, Tidy Code adapts to your workflow
+                with smart auto-detection and context-aware features.
+            </p>
+            <p>
+                Available as a lightweight web app (access anywhere, no installation) or as a native desktop application
+                (full file system access, native shortcuts, integrated terminal), Tidy Code gives you the freedom to
+                work your way. The desktop version uses Tauri for a tiny bundle size (3-5 MB vs 50-100 MB for traditional
+                Electron apps) while maintaining full native performance and system integration.
+            </p>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section">
+            <h2>Getting Started</h2>
+
+            <h3>Installation & Setup</h3>
+            <p>
+                <strong>Desktop App:</strong> Download Tidy Code for macOS, Windows, or Linux from our website.
+                The desktop app provides native file dialogs, terminal integration, Ollama AI support, and offline capabilities.
+            </p>
+            <p>
+                <strong>Web Version:</strong> Access instantly at <a href="https://tidycode.ai">tidycode.ai</a> -
+                no installation required. Works on any device with a modern browser.
+            </p>
+
+            <h3>First Steps</h3>
+            <p>
+                <strong>Web:</strong> Click the <strong>New</strong> button to create a file, or <strong>Open File</strong> to upload files from your device.
+            </p>
+            <p>
+                <strong>Desktop:</strong> Use <span class="kbd">Cmd/Ctrl + N</span> for new files or <span class="kbd">Cmd/Ctrl + O</span> to open files.
+                The interface is designed to be intuitive - start typing and Tidy Code adapts to your content.
+            </p>
+        </div>
+
+        <!-- Documentation Resources -->
+        <div class="section">
+            <h2>Documentation Resources</h2>
+            <p>
+                Explore our comprehensive documentation, tips and tricks, and release notes to get
+                the most out of Tidy Code.
+            </p>
+
+            <div class="help-grid">
+                <a href="/docs/features.html" class="help-card">
+                    <strong>Features</strong>
+                    <span>Complete guide to all features and capabilities</span>
+                </a>
+                <a href="/docs/tips-and-tricks.html" class="help-card">
+                    <strong>Tips & Tricks</strong>
+                    <span>Master Tidy Code with helpful tips and shortcuts</span>
+                </a>
+                <a href="/docs/release-notes.html" class="help-card">
+                    <strong>Release Notes</strong>
+                    <span>See what's new in the latest version</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="section">
+            <h2>Quick Start</h2>
+
+            <h3>Getting Started</h3>
+            <p>
+                Tidy Code is designed to be intuitive from the first use. Simply open a file or create a new tab
+                to start editing. The editor automatically detects your file type and enables appropriate features.
+            </p>
+
+            <h3>Opening Files</h3>
+            <ul>
+                <li>Use the File menu or drag and drop files directly into the editor</li>
+                <li>Multiple tabs let you work on several files simultaneously</li>
+                <li>Reorder tabs by dragging them to your preferred position</li>
+            </ul>
+
+            <h3>Basic Features</h3>
+            <ul>
+                <li>Syntax highlighting works automatically for 30+ languages</li>
+                <li>Use the Format button to beautify JSON, XML, and other structured data</li>
+                <li>Search with Ctrl/Cmd+F, replace with Ctrl/Cmd+H</li>
+                <li>Toggle dark/light themes from the View menu</li>
+            </ul>
+
+            <h3>Advanced Features</h3>
+            <ul>
+                <li>Enable VIM mode for keyboard-driven editing</li>
+                <li>Use the File Explorer to navigate project structures</li>
+                <li>Open PDFs with full navigation, search, and zoom capabilities</li>
+                <li>Preview markdown files with live rendering</li>
+            </ul>
+        </div>
+
+        <!-- Key Features -->
+        <div class="section">
+            <h2>Key Features</h2>
+
+            <h3>Multi-Tab Editing</h3>
+            <ul>
+                <li>Open multiple files with drag-and-drop tab reordering</li>
+                <li>Syntax highlighting for 30+ languages</li>
+                <li>VIM mode for keyboard enthusiasts</li>
+                <li>Customizable dark/light themes</li>
+            </ul>
+
+            <h3>Document Viewers</h3>
+            <ul>
+                <li>PDF viewer with search, zoom, navigation, and focus mode</li>
+                <li>SVG viewer with pan and zoom capabilities</li>
+                <li>Markdown live preview with editor toggle</li>
+            </ul>
+
+            <h3>Data Formatting & Conversion</h3>
+            <ul>
+                <li>JSON/XML/YAML/TOML formatting and validation with syntax highlighting</li>
+                <li>Convert between JSON, XML, YAML, and TOML formats with one click</li>
+                <li>CSV editing with preview and column management</li>
+                <li>Structure view for navigating complex documents</li>
+                <li>Auto-pairing for brackets, quotes, and XML tags</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li>Large file support (100MB+) with WASM technology</li>
+                <li>8x faster indexing on multi-million line documents</li>
+                <li>14x faster search compared to traditional methods</li>
+                <li>Advanced search with regex support and highlighting</li>
+            </ul>
+
+            <h3>Developer Tools</h3>
+            <ul>
+                <li>Language Server Protocol (LSP) support</li>
+                <li>Built-in terminal integration (desktop app)</li>
+                <li>File Explorer for project navigation</li>
+                <li>AI-powered assistance for code suggestions and fixes</li>
+                <li>Diff viewer for comparing files</li>
+            </ul>
+
+            <div class="highlight-box">
+                <p>
+                    <strong>What's New in v0.2.4:</strong> Full YAML and TOML support with validation, formatting, and structure view.
+                    Format conversion between JSON, XML, YAML, and TOML with smart adjustments for XML tag names and TOML limitations.
+                    Converted files open in new tabs with a resizable info panel showing all adjustments made during conversion.
+                </p>
+            </div>
+        </div>
+
+        <!-- For Different Users -->
+        <div class="section">
+            <h2>For Different Users</h2>
+
+            <h3>For Developers</h3>
+            <ul>
+                <li>Syntax highlighting for 30+ languages</li>
+                <li>Code completion with LSP</li>
+                <li>Intelligent auto-pairing</li>
+                <li>Integrated terminal access</li>
+                <li>SVG/image preview for graphics work</li>
+            </ul>
+
+            <h3>For Data Professionals</h3>
+            <ul>
+                <li>Format and validate JSON/XML with one click</li>
+                <li>Edit CSV files with a visual preview</li>
+                <li>Structure view to navigate complex documents</li>
+                <li>View PDF reports with search and annotation capabilities</li>
+            </ul>
+
+            <h3>For Power Users</h3>
+            <ul>
+                <li>Enable VIM mode for keyboard-driven editing</li>
+                <li>Use regex in find & replace</li>
+                <li>Leverage AI for code assistance</li>
+                <li>Customize your workspace with themes and layouts</li>
+                <li>Use focus mode to eliminate distractions when reviewing documents</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Tidy Code. Built for focus.</p>
+    </footer>
+</body>
+</html>

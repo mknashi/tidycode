@@ -1,0 +1,33 @@
+[package]
+name = "tauri-plugin-native-pdf-print"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+links = "tauri-plugin-native-pdf-print"
+
+[dependencies]
+tauri = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+base64 = "0.22"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+  "Data_Pdf",
+  "Foundation",
+  "Graphics_Imaging",
+  "Storage",
+  "Storage_Streams",
+  "UI",
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Graphics_Printing",
+  "Win32_Storage",
+  "Win32_Storage_Xps",
+  "Win32_System_WinRT",
+  "Win32_System_Com",
+] }

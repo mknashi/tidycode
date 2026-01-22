@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidy Code - Private Alpha</title>
+    <meta name="description" content="Tidy Code Private Alpha - Join us in shaping the future of developer tools">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: #0d1117;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+        }
+
+        .nav-brand::before {
+            content: '$';
+            color: #7ee787;
+            margin-right: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #58a6ff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 100px auto 40px;
+            padding: 24px;
+        }
+
+        .alpha-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #7ee787 0%, #58a6ff 100%);
+            color: #0d1117;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            box-shadow: 0 0 20px rgba(126, 231, 135, 0.3);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+        }
+
+        h1::before {
+            content: '// ';
+            color: #7ee787;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 48px;
+            line-height: 1.8;
+        }
+
+        .section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2::before {
+            content: '> ';
+            color: #7ee787;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        h3::before {
+            content: '$ ';
+            color: #7ee787;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 16px;
+        }
+
+        li {
+            color: #8b949e;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(126, 231, 135, 0.1) 100%);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 6px;
+            padding: 40px;
+            margin: 48px 0;
+            text-align: center;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+            margin: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .btn-primary {
+            background: #238636;
+            color: #ffffff;
+            border: 1px solid #2ea043;
+            box-shadow: 0 0 20px rgba(46, 160, 67, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+            box-shadow: 0 0 30px rgba(46, 160, 67, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #58a6ff;
+            border: 1px solid #58a6ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(88, 166, 255, 0.1);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .highlight-box {
+            background: rgba(126, 231, 135, 0.05);
+            border-left: 4px solid #7ee787;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+        }
+
+        strong {
+            color: #f0f6fc;
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            margin-top: 60px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 24px;
+            }
+
+            .cta-section {
+                padding: 32px 24px;
+            }
+
+            .nav-links {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code">
+                <span>tidy_code</span>
+            </a>
+            <div class="nav-links">
+                <a href="/private-alpha" class="nav-link">[home]</a>
+                <a href="/app" class="nav-link">[try_online]</a>
+                <a href="/download-alpha" class="nav-link">[download]
+                <a href="/docs/index.html" class="nav-link">[docs]</a>
+                <a href="#feedback-form" class="nav-link">[feedback]</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="alpha-badge">🔒 Private Alpha</div>
+
+        <h1>Welcome to Tidy Code Alpha</h1>
+
+        <p class="lead">
+            Thanks for joining the <strong>Private Alpha</strong>. This is an intentionally small group
+            of developers we trust to give honest feedback and help shape what Tidy Code becomes.
+        </p>
+
+        <p class="lead">
+            Your role here isn't just to test — it's to help us figure out what this tool should
+            actually be. Use it for real work, break things, tell us what's missing, and let us
+            know what works.
+        </p>
+
+        <!-- What Is Tidy Code -->
+        <div class="section">
+            <h2>What Is Tidy Code?</h2>
+            <p>
+                Tidy Code is a focused workspace for the everyday developer tasks that happen
+                <em>outside</em> your main IDE. You know the drill: quickly viewing a PDF spec,
+                formatting messy JSON from an API response, cleaning up CSV data, or just jotting
+                down notes while debugging.
+            </p>
+            <p>
+                Instead of opening five different apps or websites, Tidy Code handles it all in
+                one clean interface. No bloat, no distractions — just the tools you actually need,
+                available on <strong>desktop and web</strong>.
+            </p>
+        </div>
+
+        <!-- What Private Alpha Means -->
+        <div class="section">
+            <h2>What "Private Alpha" Means</h2>
+            <p>This is <strong>not a polished beta</strong> and not a public release.</p>
+
+            <h3>What to expect</h3>
+            <ul>
+                <li>Core functionality is present</li>
+                <li>UX and workflows are still evolving</li>
+                <li>Bugs and rough edges are expected</li>
+                <li>Things may change quickly based on feedback</li>
+            </ul>
+
+            <h3>What <em>not</em> to expect</h3>
+            <ul>
+                <li>Team collaboration or sharing features</li>
+                <li>Enterprise guarantees or SLAs</li>
+                <li>Long-term backward compatibility</li>
+            </ul>
+
+            <div class="highlight-box">
+                <p><strong>Your honest feedback at this stage has outsized impact.</strong></p>
+            </div>
+        </div>
+
+        <!-- How to Participate -->
+        <div class="section">
+            <h2>How You Can Help Shape Tidy Code</h2>
+            <p>
+                This isn't just a testing phase — we genuinely want your input to guide where
+                Tidy Code goes next. Here's how you can make the biggest impact:
+            </p>
+
+            <h3>Try It With Real Work</h3>
+            <ul>
+                <li>Use it for actual tasks, not just toy examples</li>
+                <li>Open your real JSON configs, API responses, log files, and PDFs</li>
+                <li>See if it fits naturally into your workflow — or where it falls short</li>
+            </ul>
+
+            <h3>Report What Feels Off</h3>
+            <ul>
+                <li>Features that are slow, confusing, or clunky</li>
+                <li>Bugs and crashes (we know they're there)</li>
+                <li>Places where you expected something to work differently</li>
+                <li>UI elements that feel awkward or in the wrong place</li>
+            </ul>
+
+            <h3>Tell Us What's Missing</h3>
+            <ul>
+                <li>Features that would make you reach for Tidy Code more often</li>
+                <li>Tools you're currently using that Tidy Code could replace</li>
+                <li>Workflows that almost work but need one more thing</li>
+            </ul>
+
+            <h3>Share What Works</h3>
+            <ul>
+                <li>Features you found immediately useful</li>
+                <li>Workflows where Tidy Code saved you time</li>
+                <li>Moments when you thought "this is exactly what I needed"</li>
+            </ul>
+
+            <div class="highlight-box">
+                <p>
+                    <strong>Don't overthink it.</strong> Short, honest notes like "the PDF search is
+                    slow on large files" or "I love the tab reordering" are incredibly helpful.
+                    Screenshots and specific examples are even better.
+                </p>
+            </div>
+        </div>
+
+        <!-- What's Included -->
+        <div class="section">
+            <h2>What's Included in the Alpha</h2>
+
+            <h3>Multi-Tab Editing</h3>
+            <ul>
+                <li>Open multiple files with drag-and-drop tab reordering</li>
+                <li>Syntax highlighting for 50+ languages</li>
+                <li>Optional VIM mode for keyboard-driven editing</li>
+                <li>Dark and light themes</li>
+            </ul>
+
+            <h3>Document Viewers</h3>
+            <ul>
+                <li>PDF viewer with search, zoom, navigation, and distraction-free focus mode</li>
+                <li>SVG viewer with pan and zoom controls</li>
+                <li>Markdown live preview with side-by-side editing</li>
+            </ul>
+
+            <h3>Formatters & Data Tools</h3>
+            <ul>
+                <li>JSON/XML/YAML formatting with syntax validation and structure view</li>
+                <li>CSV editing with preview and column management</li>
+                <li>Error detection and helpful validation messages</li>
+                <li>Auto-pairing for brackets, quotes, and XML tags</li>
+            </ul>
+
+            <h3>Developer Productivity</h3>
+            <ul>
+                <li>Advanced search with regex support and adjustable results panel</li>
+                <li>Large file support (100MB+) with WASM acceleration — 8x faster indexing, 14x faster search</li>
+                <li>File Explorer for navigating project structures</li>
+                <li>Built-in notes and todo lists for tracking tasks</li>
+                <li>LSP support for code intelligence</li>
+                <li>AI-powered coding assistance (experimental)</li>
+            </ul>
+
+            <h3>Desktop & Web</h3>
+            <ul>
+                <li>Native desktop apps for Windows and macOS</li>
+                <li>Web version with same core features</li>
+                <li>Offline-first behavior on desktop</li>
+                <li>All data stays local by default</li>
+                <li>No ads, no tracking</li>
+            </ul>
+
+            <p style="margin-top: 24px;"><strong>During alpha:</strong></p>
+            <ul>
+                <li>No payment required</li>
+                <li>No strict time limits</li>
+                <li>Builds may update frequently with new features and fixes</li>
+            </ul>
+        </div>
+
+        <!-- Privacy & Trust -->
+        <div class="section">
+            <h2>Privacy & Trust</h2>
+            <ul>
+                <li>All desktop data stays local by default</li>
+                <li>No ads</li>
+                <li>No telemetry unless explicitly enabled</li>
+                <li>We will not share or reuse your data</li>
+            </ul>
+            <p>This is a trust-based early program.</p>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="cta-section">
+            <h2 style="border-bottom: none; padding-bottom: 0;">Get Started</h2>
+            <p style="margin-bottom: 32px;">Choose your preferred way to use Tidy Code</p>
+            <div>
+                <a href="/app" class="btn btn-primary">Try Online Version</a>
+                <a href="/download-alpha" class="btn btn-secondary">Download Desktop App</a>
+            </div>
+        </div>
+
+        <!-- Documentation Links -->
+        <div class="section">
+            <h2>Documentation & Resources</h2>
+            <p>Get the most out of Tidy Code with our guides and resources:</p>
+            <ul>
+                <li><a href="/docs/features.html" style="color: #58a6ff; text-decoration: none;">Features</a> — Full guide to all features and capabilities</li>
+                <li><a href="/docs/tips-and-tricks.html" style="color: #58a6ff; text-decoration: none;">Tips & Tricks</a> — Master Tidy Code with helpful tips and shortcuts</li>
+                <li><a href="/docs/release-notes.html" style="color: #58a6ff; text-decoration: none;">Release Notes</a> — See what's new in the latest version</li>
+            </ul>
+        </div>
+
+        <!-- Feedback -->
+        <div id="feedback" class="section">
+            <h2>Send Us Your Thoughts</h2>
+            <p>
+                We've made it easy to share feedback. Use the form below, or just reply directly
+                to your alpha invite email. Either way works — whatever's easiest for you.
+            </p>
+            <p>
+                No need for formal bug reports or lengthy write-ups. Quick notes like "this feature
+                is awesome" or "this button doesn't work on Mac" are exactly what we need.
+            </p>
+
+            <!-- Feedback Form -->
+            <div id="feedback-form" style="margin-top: 32px;">
+                <h3 style="margin-top: 0;">Send Feedback</h3>
+                <form id="feedbackForm" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <label for="name" style="display: block; margin-bottom: 8px; color: #c9d1d9; font-size: 14px;">Name (Optional)</label>
+                        <input type="text" id="name" name="name" style="width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-family: 'JetBrains Mono', monospace; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label for="email" style="display: block; margin-bottom: 8px; color: #c9d1d9; font-size: 14px;">Email (Optional)</label>
+                        <input type="email" id="email" name="email" style="width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-family: 'JetBrains Mono', monospace; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label for="feedback" style="display: block; margin-bottom: 8px; color: #c9d1d9; font-size: 14px;">Your Feedback <span style="color: #f85149;">*</span></label>
+                        <textarea id="feedback" name="feedback" required rows="6" style="width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-family: 'JetBrains Mono', monospace; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                    <div>
+                        <button type="submit" style="padding: 12px 32px; background: #238636; color: #ffffff; border: 1px solid #2ea043; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 14px; transition: all 0.3s;">
+                            Send Feedback
+                        </button>
+                        <span id="formStatus" style="margin-left: 16px; color: #7ee787;"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Small Ask -->
+        <div class="section">
+            <h2>A Small Ask</h2>
+            <p>Please keep this alpha <strong>private</strong>:</p>
+            <ul>
+                <li>Don't share builds or links publicly</li>
+                <li>Don't post reviews yet</li>
+                <li>Feel free to talk to us directly anytime</li>
+            </ul>
+            <p>We'll invite you to the closed beta and public beta when the time comes.</p>
+        </div>
+
+        <!-- Thank You -->
+        <div class="highlight-box" style="margin-top: 48px;">
+            <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 16px;">Thanks for Being Here</h2>
+            <p>
+                Building developer tools is hard, and we don't take for granted that you're spending
+                time helping us get this right. Tidy Code exists to make the messy, in-between
+                developer tasks a little less annoying — and your feedback is what makes that possible.
+            </p>
+            <p style="margin-top: 16px;"><strong>— The Tidy Code Team</strong></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Tidy Code. Built for focus.</p>
+    </footer>
+
+    <script>
+        // Feedback form handler
+        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const statusEl = document.getElementById('formStatus');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            statusEl.textContent = '';
+
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                feedback: document.getElementById('feedback').value,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            };
+
+            // Create mailto link as fallback
+            const subject = encodeURIComponent('Tidy Code Alpha Feedback');
+            const body = encodeURIComponent(`
+Name: ${formData.name || 'Anonymous'}
+Email: ${formData.email || 'Not provided'}
+Timestamp: ${formData.timestamp}
+
+Feedback:
+${formData.feedback}
+
+---
+User Agent: ${formData.userAgent}
+            `);
+
+            const mailtoLink = `mailto:feedback@tidycode.ai?subject=${subject}&body=${body}`;
+
+            // Open mailto link
+            window.location.href = mailtoLink;
+
+            // Show success message
+            setTimeout(() => {
+                statusEl.textContent = '✓ Email client opened. Thank you for your feedback!';
+                statusEl.style.color = '#7ee787';
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+
+                // Reset form
+                document.getElementById('feedbackForm').reset();
+            }, 1000);
+        });
+
+        // Focus name field when navigating to feedback section
+        if (window.location.hash === '#feedback') {
+            setTimeout(() => {
+                const nameField = document.getElementById('name');
+                if (nameField) {
+                    nameField.focus();
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

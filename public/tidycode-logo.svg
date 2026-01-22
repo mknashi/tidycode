@@ -1,0 +1,35 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background circle with gradient -->
+    <defs>
+      <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+
+    <!-- Main background -->
+    <rect width="200" height="200" rx="40" fill="url(#bgGradient)"/>
+
+    <!-- Curly braces - left side { (proportionally larger) -->
+    <path d="M 80 35 Q 40 35 40 60 L 40 78 Q 40 95 25 95 Q 40 95 40 112 L 40 130 Q 40 155 80 155"
+          stroke="white" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+    <!-- Curly braces - right side } (proportionally larger) -->
+    <path d="M 120 35 Q 160 35 160 60 L 160 78 Q 160 95 175 95 Q 160 95 160 112 L 160 130 Q 160 155 120 155"
+          stroke="white" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+    <!-- Central document/text representation (proportionally larger) -->
+    <rect x="60" y="58" width="80" height="14" rx="7" fill="white" opacity="0.9"/>
+    <rect x="60" y="82" width="60" height="12" rx="6" fill="white" opacity="0.7"/>
+    <rect x="60" y="104" width="80" height="12" rx="6" fill="white" opacity="0.7"/>
+    <rect x="60" y="126" width="55" height="12" rx="6" fill="white" opacity="0.7"/>
+
+    <!-- Cursor indicator with accent color (proportionally larger) -->
+    <rect x="145" y="58" width="7" height="14" rx="3.5" fill="url(#accentGradient)">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+</svg>

@@ -1,0 +1,228 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "TidyCode",
+  "version": "0.2.4",
+  "identifier": "com.tidycode.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build:full"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Tidy Code",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximized": true,
+        "devtools": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      },
+      "capabilities": [
+        {
+          "identifier": "main",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "core:webview:allow-print",
+            "dialog:allow-open",
+            "dialog:allow-save",
+            "dialog:allow-ask",
+            "dialog:allow-message",
+            "core:window:allow-start-dragging",
+            "shell:allow-open",
+            "fs:allow-read-dir",
+            "fs:allow-read-file",
+            "fs:allow-write-file",
+            "fs:allow-create",
+            "fs:allow-remove",
+            "fs:allow-rename",
+            "fs:allow-exists",
+            "fs:allow-stat",
+            "fs:allow-watch",
+            "fs:allow-unwatch",
+            "process:allow-restart",
+            "notification:allow-request-permission",
+            "notification:allow-is-permission-granted",
+            "notification:allow-show",
+            "clipboard-manager:allow-read-text",
+            "clipboard-manager:allow-write-text",
+            "global-shortcut:allow-register",
+            "global-shortcut:allow-unregister",
+            "global-shortcut:allow-is-registered",
+            "native-pdf-print:default",
+            "native-pdf-print:allow-get-printer-media",
+            "native-pdf-print:allow-get-printers",
+            "native-pdf-print:allow-print-pdf-bytes",
+            "drag:default"
+          ]
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app", "deb", "rpm", "nsis", "msi"],
+    "resources": [
+      "resources/lsp",
+      "icons/32x32.png"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["txt"],
+        "name": "Text File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["json"],
+        "name": "JSON File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["xml"],
+        "name": "XML File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["html", "htm"],
+        "name": "HTML File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["css"],
+        "name": "CSS File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["js", "jsx"],
+        "name": "JavaScript File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["ts", "tsx"],
+        "name": "TypeScript File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["log"],
+        "name": "Log File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["csv"],
+        "name": "CSV File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["php"],
+        "name": "PHP File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["py"],
+        "name": "Python File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["rb"],
+        "name": "Ruby File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["java"],
+        "name": "Java File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["go"],
+        "name": "Go File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["rs"],
+        "name": "Rust File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["c", "h"],
+        "name": "C File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["cpp", "hpp", "cc", "cxx"],
+        "name": "C++ File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["cs"],
+        "name": "C# File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["swift"],
+        "name": "Swift File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["kt", "kts"],
+        "name": "Kotlin File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["yaml", "yml"],
+        "name": "YAML File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["toml"],
+        "name": "TOML File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["ini", "conf", "config"],
+        "name": "Configuration File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["sql"],
+        "name": "SQL File",
+        "role": "Editor"
+      },
+      {
+        "ext": ["pdf"],
+        "name": "PDF Document",
+        "role": "Viewer"
+      }
+    ]
+  }
+}

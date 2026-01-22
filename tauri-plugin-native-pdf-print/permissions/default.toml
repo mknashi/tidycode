@@ -1,0 +1,37 @@
+"$schema" = "https://tauri.app/schemas/acl.schema.json"
+
+[[permission]]
+identifier = "allow-print-pdf"
+description = "Enables the print_pdf command"
+commands.allow = ["print_pdf"]
+
+[[permission]]
+identifier = "allow-print-pdf-bytes"
+description = "Enables the print_pdf_bytes command"
+commands.allow = ["print_pdf_bytes"]
+
+[[permission]]
+identifier = "allow-get-printers"
+description = "Enables the get_printers command"
+commands.allow = ["get_printers"]
+
+[[permission]]
+identifier = "allow-get-default-printer"
+description = "Enables the get_default_printer command"
+commands.allow = ["get_default_printer"]
+
+[[permission]]
+identifier = "allow-get-printer-media"
+description = "Enables the get_printer_media command"
+commands.allow = ["get_printer_media"]
+
+[[permission]]
+identifier = "default"
+description = "Default permissions for native pdf print plugin"
+permissions = [
+  "allow-print-pdf",
+  "allow-print-pdf-bytes",
+  "allow-get-printers",
+  "allow-get-default-printer",
+  "allow-get-printer-media"
+]

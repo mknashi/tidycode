@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple WASM Test</title>
+</head>
+<body>
+    <h1>Simple WASM Load Test</h1>
+    <div id="status">Loading...</div>
+    <div id="log"></div>
+
+    <script type="module">
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+
+        function log(msg) {
+            console.log(msg);
+            logEl.innerHTML += `<div>${msg}</div>`;
+        }
+
+        log('Starting WASM test...');
+        log('Current location: ' + window.location.href);
+        log('Import.meta.url would be: ' + import.meta.url);
+
+        try {
+            // Test 1: Check if WebAssembly is supported
+            log('✓ WebAssembly is supported: ' + (typeof WebAssembly !== 'undefined'));
+
+            // Test 2: Try to load the WASM JS module
+            log('Attempting to import WASM module...');
+
+            const wasm = await import('./src-wasm/pkg/file_ops_wasm.js');
+            log('✓ WASM JS module loaded successfully');
+            log('Available exports: ' + Object.keys(wasm).join(', '));
+
+            // Test 3: Try to initialize WASM
+            log('Attempting to initialize WASM...');
+
+            // Try with auto-detect first
+            try {
+                await wasm.default();
+                log('✓ WASM initialized (auto-detect)');
+                statusEl.innerHTML = '<span style="color: green">SUCCESS</span>';
+            } catch (e) {
+                log('✗ Auto-detect failed: ' + e.message);
+
+                // Try with explicit URL
+                log('Trying explicit URL...');
+                const wasmUrl = new URL('./src-wasm/pkg/file_ops_wasm_bg.wasm', import.meta.url);
+                log('WASM URL: ' + wasmUrl.href);
+
+                const response = await fetch(wasmUrl.href);
+                log('Fetch status: ' + response.status);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch WASM: ' + response.status);
+                }
+
+                const wasmBinary = await response.arrayBuffer();
+                log('WASM binary size: ' + (wasmBinary.byteLength / 1024).toFixed(1) + ' KB');
+
+                await wasm.default(wasmBinary);
+                log('✓ WASM initialized (explicit fetch)');
+                statusEl.innerHTML = '<span style="color: green">SUCCESS (with explicit fetch)</span>';
+            }
+
+            // Test 4: Try calling a WASM function
+            log('Testing WASM functions...');
+            const content = new TextEncoder().encode("Hello WASM\nLine 2\nLine 3");
+            const fileId = wasm.create_file_buffer(content);
+            log('✓ Created file buffer with ID: ' + fileId);
+
+            const info = wasm.get_file_info(fileId);
+            log('✓ File info: ' + JSON.stringify(info));
+
+            wasm.free_file_buffer(fileId);
+            log('✓ All tests passed!');
+
+        } catch (error) {
+            log('✗ ERROR: ' + error.message);
+            log('Stack: ' + error.stack);
+            statusEl.innerHTML = '<span style="color: red">FAILED</span>';
+        }
+    </script>
+</body>
+</html>

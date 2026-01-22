@@ -1,0 +1,17 @@
+# Cloudflare Pages redirect rules
+# Static HTML pages should be served directly, not routed through the SPA
+# More specific routes MUST come before catch-all /*
+
+# Web app redirect (temporary until /app becomes the actual app route)
+/app /                      302
+
+# Serve static HTML files without .html extension
+/private-alpha /private-alpha.html    200
+/download /download.html         200
+/download-alpha /download-alpha.html   200
+
+# Documentation pages
+/docs /docs/index.html       200
+
+# All other routes should go to the SPA (index.html) for client-side routing
+/* /index.html            200

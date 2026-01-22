@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Module Test - Tidy Code</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 {
+            color: #60a5fa;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #1e1e1e;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #10b981;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+        .error {
+            border-left-color: #ef4444;
+            color: #fca5a5;
+        }
+        .success {
+            color: #86efac;
+        }
+        .timing {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-label {
+            color: #9ca3af;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #60a5fa;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Tidy Code WASM Module Test</h1>
+    <p>Testing WebAssembly-powered file operations for large file support.</p>
+
+    <div class="section">
+        <h2>Module Status</h2>
+        <div id="status" class="result">Initializing...</div>
+    </div>
+
+    <div class="section">
+        <h2>Quick Tests</h2>
+        <button onclick="testBasicFunctionality()">Test Basic Functionality</button>
+        <button onclick="testLineIndexing()">Test Line Indexing</button>
+        <button onclick="testSearch()">Test Search</button>
+        <button onclick="testJSONFormat()">Test JSON Format</button>
+        <button onclick="testPerformance()">Performance Benchmark</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>Custom File Test</h2>
+        <textarea id="customInput" placeholder="Enter your text here to test with WASM...">Hello World!
+This is line 2.
+This is line 3 with "search" term.
+Another line here.
+Final line with search.</textarea>
+        <br>
+        <button onclick="testCustomInput()">Load into WASM</button>
+        <button onclick="searchCustomInput()">Search for "search"</button>
+        <button onclick="getLines()">Get Lines 2-3</button>
+        <div id="customResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>Performance Stats</h2>
+        <div class="stats" id="perfStats">
+            <div class="stat-box">
+                <div class="stat-label">Files Loaded</div>
+                <div class="stat-value" id="fileCount">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Size (MB)</div>
+                <div class="stat-value" id="totalSize">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Last Load Time</div>
+                <div class="stat-value" id="loadTime">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Last Search Time</div>
+                <div class="stat-value" id="searchTime">-</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as wasm from './src-wasm/pkg/file_ops_wasm.js';
+
+        // Make wasm available globally for onclick handlers
+        window.wasm = wasm;
+        window.currentFileId = null;
+
+        // Initialize
+        try {
+            await wasm.default();
+            document.getElementById('status').innerHTML =
+                '<span class="success">✓ WASM module loaded successfully!</span>\n' +
+                `Module functions available: ${Object.keys(wasm).filter(k => typeof wasm[k] === 'function').join(', ')}`;
+        } catch (error) {
+            document.getElementById('status').innerHTML =
+                `<span class="error">✗ Failed to load WASM: ${error.message}</span>`;
+        }
+
+        window.log = function(message, type = 'result') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            return div;
+        };
+
+        window.testBasicFunctionality = async function() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+
+            try {
+                const content = new TextEncoder().encode("Line 1\nLine 2\nLine 3\n");
+                const start = performance.now();
+                const fileId = wasm.create_file_buffer(content);
+                const loadTime = (performance.now() - start).toFixed(2);
+
+                const info = wasm.get_file_info(fileId);
+
+                results.appendChild(log(`✓ Created file buffer (ID: ${fileId}) in ${loadTime}ms`, 'result success'));
+                results.appendChild(log(`  Size: ${info.size} bytes`, 'result'));
+                results.appendChild(log(`  Lines: ${info.line_count}`, 'result'));
+                results.appendChild(log(`  Index size: ${info.index_size} bytes`, 'result'));
+
+                wasm.free_file_buffer(fileId);
+                results.appendChild(log(`✓ Buffer freed successfully`, 'result success'));
+
+                document.getElementById('loadTime').textContent = `${loadTime}ms`;
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.testLineIndexing = async function() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+
+            try {
+                const content = new TextEncoder().encode("First line\nSecond line\nThird line\nFourth line\n");
+                const fileId = wasm.create_file_buffer(content);
+
+                const lines1to2 = wasm.get_line_range(fileId, 1, 2);
+                const lines2to3 = wasm.get_line_range(fileId, 2, 3);
+
+                results.appendChild(log(`✓ Line range 1-2:\n${lines1to2}`, 'result success'));
+                results.appendChild(log(`✓ Line range 2-3:\n${lines2to3}`, 'result success'));
+
+                wasm.free_file_buffer(fileId);
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.testSearch = async function() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+
+            try {
+                const content = new TextEncoder().encode(
+                    "foo bar\nbaz\nfoo baz\ntest\nfoo test\n"
+                );
+                const fileId = wasm.create_file_buffer(content);
+
+                const start = performance.now();
+                const searchResults = wasm.search_file(fileId, "foo", 10);
+                const searchTime = (performance.now() - start).toFixed(2);
+
+                results.appendChild(log(`✓ Search completed in ${searchTime}ms`, 'result timing'));
+                results.appendChild(log(`Found ${searchResults.length} matches for "foo":`, 'result success'));
+
+                searchResults.forEach(match => {
+                    results.appendChild(log(
+                        `  Line ${match.line}, Col ${match.column}: ${match.text}`,
+                        'result'
+                    ));
+                });
+
+                wasm.free_file_buffer(fileId);
+                document.getElementById('searchTime').textContent = `${searchTime}ms`;
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.testJSONFormat = async function() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+
+            try {
+                const json = '{"name":"test","value":123,"nested":{"a":1,"b":2}}';
+                const content = new TextEncoder().encode(json);
+                const fileId = wasm.create_file_buffer(content);
+
+                // Validate
+                const isValid = wasm.validate_json(fileId);
+                results.appendChild(log(`✓ JSON validation: ${isValid ? 'Valid' : 'Invalid'}`, 'result success'));
+
+                // Format
+                const formatted = wasm.format_json(fileId, 2);
+                results.appendChild(log(`✓ Formatted JSON:\n${formatted}`, 'result success'));
+
+                wasm.free_file_buffer(fileId);
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.testPerformance = async function() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '';
+
+            try {
+                // Generate a large test file (1MB)
+                const lineCount = 10000;
+                let content = '';
+                for (let i = 0; i < lineCount; i++) {
+                    content += `This is test line ${i + 1} with some sample content for testing performance.\n`;
+                }
+
+                const encoded = new TextEncoder().encode(content);
+                results.appendChild(log(`Generated ${(encoded.length / 1024 / 1024).toFixed(2)}MB test file with ${lineCount} lines`, 'result'));
+
+                // Test indexing speed
+                const indexStart = performance.now();
+                const fileId = wasm.create_file_buffer(encoded);
+                const indexTime = (performance.now() - indexStart).toFixed(2);
+
+                results.appendChild(log(`✓ Indexed ${lineCount} lines in ${indexTime}ms`, 'result timing'));
+                results.appendChild(log(`  Speed: ${(lineCount / indexTime * 1000).toFixed(0)} lines/second`, 'result'));
+
+                // Test search speed
+                const searchStart = performance.now();
+                const matches = wasm.search_file(fileId, "line 50", 100);
+                const searchTime = (performance.now() - searchStart).toFixed(2);
+
+                results.appendChild(log(`✓ Searched in ${searchTime}ms (found ${matches.length} matches)`, 'result timing'));
+
+                // Test line access speed
+                const lineStart = performance.now();
+                const lines = wasm.get_line_range(fileId, 5000, 5010);
+                const lineTime = (performance.now() - lineStart).toFixed(2);
+
+                results.appendChild(log(`✓ Retrieved 10 lines in ${lineTime}ms`, 'result timing'));
+
+                const info = wasm.get_file_info(fileId);
+                document.getElementById('fileCount').textContent = '1';
+                document.getElementById('totalSize').textContent = (info.size / 1024 / 1024).toFixed(2);
+                document.getElementById('loadTime').textContent = `${indexTime}ms`;
+                document.getElementById('searchTime').textContent = `${searchTime}ms`;
+
+                wasm.free_file_buffer(fileId);
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.testCustomInput = function() {
+            const input = document.getElementById('customInput').value;
+            const results = document.getElementById('customResults');
+            results.innerHTML = '';
+
+            try {
+                // Free previous file if exists
+                if (window.currentFileId !== null) {
+                    wasm.free_file_buffer(window.currentFileId);
+                }
+
+                const content = new TextEncoder().encode(input);
+                const start = performance.now();
+                window.currentFileId = wasm.create_file_buffer(content);
+                const loadTime = (performance.now() - start).toFixed(2);
+
+                const info = wasm.get_file_info(window.currentFileId);
+
+                results.appendChild(log(`✓ Loaded into WASM (ID: ${window.currentFileId}) in ${loadTime}ms`, 'result success'));
+                results.appendChild(log(`  Lines: ${info.line_count}, Size: ${info.size} bytes`, 'result'));
+            } catch (error) {
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.searchCustomInput = function() {
+            const results = document.getElementById('customResults');
+
+            if (window.currentFileId === null) {
+                results.innerHTML = '';
+                results.appendChild(log('Please load file first!', 'result error'));
+                return;
+            }
+
+            try {
+                const searchResults = wasm.search_file(window.currentFileId, "search", 100);
+                results.innerHTML = '';
+                results.appendChild(log(`Found ${searchResults.length} matches:`, 'result success'));
+
+                searchResults.forEach(match => {
+                    results.appendChild(log(
+                        `  Line ${match.line}, Col ${match.column}: ${match.text}`,
+                        'result'
+                    ));
+                });
+            } catch (error) {
+                results.innerHTML = '';
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+
+        window.getLines = function() {
+            const results = document.getElementById('customResults');
+
+            if (window.currentFileId === null) {
+                results.innerHTML = '';
+                results.appendChild(log('Please load file first!', 'result error'));
+                return;
+            }
+
+            try {
+                const lines = wasm.get_line_range(window.currentFileId, 2, 3);
+                results.innerHTML = '';
+                results.appendChild(log(`Lines 2-3:\n${lines}`, 'result success'));
+            } catch (error) {
+                results.innerHTML = '';
+                results.appendChild(log(`✗ Error: ${error.message}`, 'result error'));
+            }
+        };
+    </script>
+</body>
+</html>

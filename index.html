@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta Tags -->
+    <title>Tidy Code - Free Text Editor for JSON, XML, PDF, Markdown & Large Files</title>
+    <meta name="title" content="Tidy Code - Free Text Editor for JSON, XML, PDF, Markdown & Large Files" />
+    <meta name="description" content="Tidy Code is a powerful free text editor with PDF viewing, JSON/XML formatting, Markdown preview, and large file support (100MB+) using WASM. Features multi-tab editing, Diff Viewer, Notes & Todos, VIM mode, and AI assistance. Available as web app and desktop for macOS, Windows, Linux." />
+    <meta name="keywords" content="text editor, PDF viewer, JSON editor, JSON formatter, XML editor, XML validator, CSV editor, Markdown editor, large file editor, WASM editor, VIM mode editor, code editor, diff viewer, file comparison, notes app, todo list, syntax highlighting, multi-tab editor, desktop app, Tauri app, macOS editor, Windows editor, Linux editor, developer tools, AI code assistant" />
+    <meta name="author" content="Tidy Code" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+
+    <!-- Google AdSense -->
+    <meta name="google-adsense-account" content="ca-pub-5382516546709796">
+
+    <!-- Google Analytics 4 with Consent Mode -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q7KH24J5K7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+
+      // Set default consent to denied (GDPR compliant)
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied',
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied'
+      });
+
+      gtag('js', new Date());
+      gtag('config', 'G-Q7KH24J5K7', {
+        'anonymize_ip': true,
+        'allow_google_signals': false,
+        'allow_ad_personalization_signals': false
+      });
+
+      // Check if user has given consent
+      window.hasAnalyticsConsent = function() {
+        return localStorage.getItem('tidycode-analytics-consent') === 'granted';
+      };
+
+      // Grant consent - called when user accepts
+      window.grantAnalyticsConsent = function() {
+        gtag('consent', 'update', {
+          'analytics_storage': 'granted'
+        });
+        console.log('[Analytics] Consent granted - analytics now active');
+      };
+
+      // If user previously consented, grant immediately
+      if (window.hasAnalyticsConsent()) {
+        window.grantAnalyticsConsent();
+      }
+    </script>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tidycode.ai/" />
+    <meta property="og:title" content="Tidy Code - Free Text Editor for JSON, XML, PDF & Large Files" />
+    <meta property="og:description" content="Free text editor with PDF viewing, JSON/XML formatting, Markdown preview, large file support (100MB+), Diff Viewer, VIM mode, and AI assistance. Web app and desktop for macOS, Windows, Linux." />
+    <meta property="og:image" content="https://tidycode.ai/tidycode-logo.svg" />
+    <meta property="og:site_name" content="Tidy Code" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://tidycode.ai/" />
+    <meta property="twitter:title" content="Tidy Code - Free Text Editor for JSON, XML, PDF & Large Files" />
+    <meta property="twitter:description" content="Free text editor with PDF viewing, JSON/XML formatting, Markdown preview, large file support (100MB+), Diff Viewer, VIM mode, and AI assistance. Web and desktop apps available." />
+    <meta property="twitter:image" content="https://tidycode.ai/tidycode-logo.svg" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg" />
+    <link rel="apple-touch-icon" href="/tidycode-logo.svg" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://tidycode.ai/" />
+
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#1f2937" />
+    <meta name="application-name" content="Tidy Code" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tidy Code" />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tidy Code",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Windows, macOS, Linux, Web",
+      "description": "Free text editor with PDF viewing, JSON/XML formatting, Markdown preview, and large file support (100MB+) using WebAssembly. Features multi-tab editing, Diff Viewer, Notes & Todos, VIM mode, and AI assistance. Available as web app and native desktop application.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "browserRequirements": "Requires JavaScript. Modern browser recommended.",
+      "url": "https://tidycode.ai/",
+      "screenshot": "https://tidycode.ai/tidycode-logo.svg",
+      "featureList": [
+        "PDF viewing with search, zoom, thumbnails, and focus mode",
+        "JSON editor and formatter with syntax validation",
+        "XML editor and validator with structure view",
+        "CSV file editor with preview and column management",
+        "Markdown preview with live rendering",
+        "Large file support (100MB+) with WebAssembly",
+        "8x faster indexing and 14x faster search on large files",
+        "Multi-tab editing with drag-and-drop reordering",
+        "Diff Viewer for file comparison",
+        "Notes and Todo list management",
+        "VIM mode for modal editing",
+        "AI assistance with OpenAI, Claude, and Ollama",
+        "Dark and light themes",
+        "Native desktop app for macOS, Windows, and Linux",
+        "Native PDF printing with page selection (desktop)",
+        "LSP support for code intelligence",
+        "Find and replace with regex support",
+        "Syntax highlighting for 30+ languages"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "Tidy Code"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>Tidy Code requires JavaScript to function. Please enable JavaScript in your browser settings.</p>
+        <p><a href="/privacy.html" style="color: #60a5fa;">Privacy Policy</a></p>
+      </div>
+    </noscript>
+  </body>
+</html>

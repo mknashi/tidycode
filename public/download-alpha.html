@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Tidy Code - Private Alpha</title>
+    <meta name="description" content="Download Tidy Code for Windows and macOS - Private Alpha Release">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: #0d1117;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            padding: 16px 0;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+        }
+
+        .nav-brand::before {
+            content: '$';
+            color: #7ee787;
+            margin-right: 4px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #58a6ff;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 100px auto 40px;
+            padding: 24px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .alpha-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #7ee787 0%, #58a6ff 100%);
+            color: #0d1117;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            box-shadow: 0 0 20px rgba(126, 231, 135, 0.3);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+        }
+
+        h1::before {
+            content: '// ';
+            color: #7ee787;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 32px;
+        }
+
+        .downloads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 32px;
+            margin-bottom: 60px;
+        }
+
+        .download-card {
+            background: #161b22;
+            border: 2px solid #30363d;
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .download-card:hover {
+            border-color: #58a6ff;
+            box-shadow: 0 0 30px rgba(88, 166, 255, 0.2);
+            transform: translateY(-4px);
+        }
+
+        .platform-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .platform-icon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.3));
+        }
+
+        .platform-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 24px;
+        }
+
+        .download-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .download-btn:hover {
+            background: rgba(88, 166, 255, 0.1);
+            border-color: #58a6ff;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+        }
+
+        .download-btn .arch-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .download-btn .arch-name {
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .download-btn .file-info {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .download-btn .download-icon {
+            font-size: 24px;
+            color: #58a6ff;
+        }
+
+        .info-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 32px;
+            margin-top: 40px;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2::before {
+            content: '> ';
+            color: #7ee787;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            color: #8b949e;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        li::before {
+            content: '>';
+            position: absolute;
+            left: 8px;
+            color: #7ee787;
+            font-weight: bold;
+        }
+
+        p {
+            color: #8b949e;
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 32px;
+            padding: 12px 24px;
+            background: transparent;
+            color: #58a6ff;
+            border: 1px solid #58a6ff;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            background: rgba(88, 166, 255, 0.1);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .back-link::before {
+            content: '← ';
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            margin-top: 60px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .downloads-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code">
+                <span>tidy_code</span>
+            </a>
+            <div class="nav-links">
+                <a href="/private-alpha" class="nav-link">[home]</a>
+                <a href="/app" class="nav-link">[try_online]</a>
+                <a href="/docs/index.html" class="nav-link">[docs]</a>
+                <a href="/private-alpha#feedback-form" class="nav-link">[feedback]</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <a href="/private-alpha" class="back-link">Back to Private Alpha</a>
+
+        <div class="header">
+            <div class="alpha-badge">🔒 Private Alpha</div>
+            <h1>Download Tidy Code</h1>
+            <p class="subtitle">Choose your platform to download the desktop application</p>
+        </div>
+
+        <div class="downloads-grid">
+            <!-- macOS Downloads -->
+            <div class="download-card">
+                <div class="platform-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.05 20.28C16.07 21.23 15.06 21.08 14.1 20.64C13.08 20.19 12.15 20.16 11.09 20.64C9.74 21.25 9.03 21.07 8.15 20.28C3.75 15.76 4.45 8.96 9.39 8.73C10.58 8.79 11.38 9.41 12.05 9.46C13.09 9.26 14.09 8.63 15.23 8.71C16.61 8.82 17.64 9.38 18.32 10.38C15.55 12.11 16.24 16.05 18.82 17.04C18.32 18.38 17.71 19.7 17.04 20.29M12.03 8.69C11.88 6.74 13.43 5.16 15.25 5C15.51 7.21 13.27 8.87 12.03 8.69Z" fill="#c9d1d9"/>
+                    </svg>
+                </div>
+                <div class="platform-name">macOS</div>
+                <div class="download-options">
+                    <a href="#" class="download-btn" id="mac-universal">
+                        <div class="arch-info">
+                            <div class="arch-name">Universal (Apple Silicon + Intel)</div>
+                            <div class="file-info">.dmg • ~8 MB</div>
+                        </div>
+                        <div class="download-icon">↓</div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Windows Downloads -->
+            <div class="download-card">
+                <div class="platform-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 5.45L10.95 4.29V11.47H3V5.45ZM11.5 4.22L21 2.75V11.47H11.5V4.22ZM3 12.53H10.95V19.71L3 18.55V12.53ZM11.5 19.78V12.53H21V21.25L11.5 19.78Z" fill="#c9d1d9"/>
+                    </svg>
+                </div>
+                <div class="platform-name">Windows</div>
+                <div class="download-options">
+                    <a href="#" class="download-btn" id="windows-x64-setup">
+                        <div class="arch-info">
+                            <div class="arch-name">Windows 10/11 (64-bit)</div>
+                            <div class="file-info">.exe installer • ~5 MB</div>
+                        </div>
+                        <div class="download-icon">↓</div>
+                    </a>
+                    <a href="#" class="download-btn" id="windows-arm64-setup">
+                        <div class="arch-info">
+                            <div class="arch-name">Windows 11 ARM64</div>
+                            <div class="file-info">.exe installer • ~5 MB</div>
+                        </div>
+                        <div class="download-icon">↓</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Requirements -->
+        <div class="info-section">
+            <h2>System Requirements</h2>
+
+            <h3 style="font-size: 1.25rem; color: #58a6ff; margin: 24px 0 12px 0;">macOS</h3>
+            <ul>
+                <li>macOS 10.15 (Catalina) or later</li>
+                <li>Apple Silicon (M1/M2/M3) or Intel processor</li>
+                <li>50 MB free disk space</li>
+            </ul>
+
+            <h3 style="font-size: 1.25rem; color: #58a6ff; margin: 24px 0 12px 0;">Windows</h3>
+            <ul>
+                <li>Windows 10 (version 1809 or later) for x64 builds</li>
+                <li>Windows 11 for ARM64 builds</li>
+                <li>50 MB free disk space</li>
+            </ul>
+        </div>
+
+        <!-- Installation Notes -->
+        <div class="info-section" style="margin-top: 24px;">
+            <h2>Installation Notes</h2>
+            <p><strong>macOS:</strong> After downloading, open the .dmg file and drag Tidy Code to your Applications folder. On first launch, you may need to right-click the app and select "Open" to bypass Gatekeeper.</p>
+            <p><strong>Windows:</strong> Run the installer and follow the prompts. For ARM64 devices (like Surface Pro X), use the ARM64 build. Windows Defender may show a warning for unrecognized apps - click "More info" and then "Run anyway" to proceed.</p>
+        </div>
+
+        <!-- Alpha Notice -->
+        <div class="info-section" style="margin-top: 24px; background: rgba(126, 231, 135, 0.05); border-left: 4px solid #7ee787;">
+            <h2 style="border-bottom: none;">Alpha Release Notice</h2>
+            <p>This is an <strong>alpha release</strong> intended for testing and feedback. Features may change, and bugs are expected. Please report any issues through the feedback form on the <a href="/beta" style="color: #58a6ff; text-decoration: underline;">alpha information page</a>.</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Tidy Code. Built for focus.</p>
+    </footer>
+
+    <script>
+        // Download links - Cloudflare R2 bucket URLs
+        const R2_DOMAIN = 'pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev';
+
+        // Fetch version from package.json and render download links
+        async function initDownloadLinks() {
+            let version = 'v0.2.0'; // Fallback version
+
+            try {
+                const response = await fetch('/version.json');
+                if (response.ok) {
+                    const versionData = await response.json();
+                    version = `v${versionData.version}`;
+                }
+            } catch (error) {
+                console.warn('Could not fetch version.json, using fallback version:', error);
+            }
+
+            const downloadLinks = {
+                'mac-universal': `https://${R2_DOMAIN}/TidyCode-${version}-mac-universal.dmg`,
+                'windows-x64-setup': `https://${R2_DOMAIN}/TidyCode-${version}-windows-x64-setup.exe`,
+                'windows-arm64-setup': `https://${R2_DOMAIN}/TidyCode-${version}-windows-arm64-setup.exe`
+            };
+
+            // Set up download links
+            Object.keys(downloadLinks).forEach(id => {
+                const element = document.getElementById(id);
+                if (element && downloadLinks[id] !== '#') {
+                    element.href = downloadLinks[id];
+                } else if (element) {
+                    // Show coming soon message
+                    element.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        alert('Download links will be available soon. Please check back later or contact us for early access.');
+                    });
+                }
+            });
+
+            // Auto-detect platform and highlight recommended option
+            const userAgent = navigator.userAgent.toLowerCase();
+            const platform = navigator.platform?.toLowerCase() || '';
+
+            if (userAgent.includes('mac') || platform.includes('mac')) {
+                // Highlight Universal build for macOS
+                document.getElementById('mac-universal').style.borderColor = '#7ee787';
+                document.getElementById('mac-universal').style.background = 'rgba(126, 231, 135, 0.1)';
+            } else if (userAgent.includes('win') || platform.includes('win')) {
+                // Highlight x64 installer for Windows
+                document.getElementById('windows-x64-setup').style.borderColor = '#7ee787';
+                document.getElementById('windows-x64-setup').style.background = 'rgba(126, 231, 135, 0.1)';
+            }
+        }
+
+        // Initialize when DOM is ready
+        initDownloadLinks();
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+
+# Allowed pages
+Allow: /
+Allow: /app
+Allow: /docs/
+Allow: /privacy.html
+
+# Disallowed pages (alpha/private)
+Disallow: /private-alpha.html
+Disallow: /download-alpha.html
+
+Sitemap: https://tidycode.ai/sitemap.xml
