@@ -1,0 +1,19 @@
+{
+  "name": "file-ops-wasm",
+  "type": "module",
+  "collaborators": [
+    "Tidy Code Team"
+  ],
+  "description": "WebAssembly file operations for Tidy Code",
+  "version": "0.1.0",
+  "files": [
+    "file_ops_wasm_bg.wasm",
+    "file_ops_wasm.js",
+    "file_ops_wasm.d.ts"
+  ],
+  "main": "file_ops_wasm.js",
+  "types": "file_ops_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
