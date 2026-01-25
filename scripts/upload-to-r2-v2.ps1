@@ -228,23 +228,23 @@ Upload-If-Exists "tidycode-*.x86_64.rpm" "TidyCode-$VERSION-linux-x86_64.rpm" "L
 Write-Host ""
 Write-Host "🎉 Upload complete!" -ForegroundColor Green
 Write-Host ""
-Write-Host "Public URLs (using pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev):" -ForegroundColor Cyan
+Write-Host "Public URLs (using pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev):" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "macOS:" -ForegroundColor Yellow
-Write-Host "  Universal DMG:   https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-universal.dmg"
-Write-Host "  ARM64 DMG:       https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-arm64.dmg"
-Write-Host "  x64 DMG:         https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-x64.dmg"
+Write-Host "  Universal DMG:   https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-universal.dmg"
+Write-Host "  ARM64 DMG:       https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-arm64.dmg"
+Write-Host "  x64 DMG:         https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-x64.dmg"
 Write-Host ""
 Write-Host "Windows:" -ForegroundColor Yellow
-Write-Host "  x64 MSI:         https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-x64.msi"
-Write-Host "  x64 Installer:   https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-x64-setup.exe"
-Write-Host "  ARM64 MSI:       https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-arm64.msi"
-Write-Host "  ARM64 Installer: https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-arm64-setup.exe"
+Write-Host "  x64 MSI:         https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-x64.msi"
+Write-Host "  x64 Installer:   https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-x64-setup.exe"
+Write-Host "  ARM64 MSI:       https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-arm64.msi"
+Write-Host "  ARM64 Installer: https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-arm64-setup.exe"
 Write-Host ""
 Write-Host "Linux:" -ForegroundColor Yellow
-Write-Host "  AppImage:        https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-x86_64.AppImage"
-Write-Host "  DEB Package:     https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-amd64.deb"
-Write-Host "  RPM Package:     https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-x86_64.rpm"
+Write-Host "  AppImage:        https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-x86_64.AppImage"
+Write-Host "  DEB Package:     https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-amd64.deb"
+Write-Host "  RPM Package:     https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-x86_64.rpm"
 
 # Offer to save credentials for future use
 if (-not $USE_EXISTING_TOKEN) {

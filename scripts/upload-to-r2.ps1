@@ -330,20 +330,20 @@ if ($uploadedFiles.Count -gt 0) {
         Write-Host "  [OK] $file" -ForegroundColor Green
     }
     Write-Host ""
-    Write-Host "Public URLs (using pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev):" -ForegroundColor Cyan
+    Write-Host "Public URLs (using pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev):" -ForegroundColor Cyan
     Write-Host ""
 
     # Only show URLs for uploaded files
     if ($uploadedFiles -match "macOS") {
         Write-Host "macOS:" -ForegroundColor Yellow
         if ($uploadedFiles -contains "macOS Universal DMG") {
-            Write-Host "  Universal DMG:   https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-universal.dmg"
+            Write-Host "  Universal DMG:   https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-universal.dmg"
         }
         if ($uploadedFiles -contains "macOS ARM64 DMG") {
-            Write-Host "  ARM64 DMG:       https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-arm64.dmg"
+            Write-Host "  ARM64 DMG:       https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-arm64.dmg"
         }
         if ($uploadedFiles -contains "macOS x64 DMG") {
-            Write-Host "  x64 DMG:         https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-mac-x64.dmg"
+            Write-Host "  x64 DMG:         https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-mac-x64.dmg"
         }
         Write-Host ""
     }
@@ -351,16 +351,16 @@ if ($uploadedFiles.Count -gt 0) {
     if ($uploadedFiles -match "Windows") {
         Write-Host "Windows:" -ForegroundColor Yellow
         if ($uploadedFiles -contains "Windows x64 MSI") {
-            Write-Host "  x64 MSI:         https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-x64.msi"
+            Write-Host "  x64 MSI:         https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-x64.msi"
         }
         if ($uploadedFiles -contains "Windows x64 Setup") {
-            Write-Host "  x64 Installer:   https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-x64-setup.exe"
+            Write-Host "  x64 Installer:   https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-x64-setup.exe"
         }
         if ($uploadedFiles -contains "Windows ARM64 MSI") {
-            Write-Host "  ARM64 MSI:       https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-arm64.msi"
+            Write-Host "  ARM64 MSI:       https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-arm64.msi"
         }
         if ($uploadedFiles -contains "Windows ARM64 Setup") {
-            Write-Host "  ARM64 Installer: https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-windows-arm64-setup.exe"
+            Write-Host "  ARM64 Installer: https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-windows-arm64-setup.exe"
         }
         Write-Host ""
     }
@@ -368,13 +368,13 @@ if ($uploadedFiles.Count -gt 0) {
     if ($uploadedFiles -match "Linux") {
         Write-Host "Linux:" -ForegroundColor Yellow
         if ($uploadedFiles -contains "Linux AppImage") {
-            Write-Host "  AppImage:        https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-x86_64.AppImage"
+            Write-Host "  AppImage:        https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-x86_64.AppImage"
         }
         if ($uploadedFiles -contains "Linux DEB") {
-            Write-Host "  DEB Package:     https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-amd64.deb"
+            Write-Host "  DEB Package:     https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-amd64.deb"
         }
         if ($uploadedFiles -contains "Linux RPM") {
-            Write-Host "  RPM Package:     https://pub-9e756d8120fc44b6a3b1d665fb099ed7.r2.dev/TidyCode-$VERSION-linux-x86_64.rpm"
+            Write-Host "  RPM Package:     https://pub-73b0ec13d5ad4a2faf3ee5bacea83252.r2.dev/TidyCode-$VERSION-linux-x86_64.rpm"
         }
         Write-Host ""
     }
