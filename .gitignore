@@ -81,3 +81,7 @@ test-data-30mb.json
 test-*.txt
 test-data-*.json
 *.swp
+
+# PDF.js files (copied from node_modules by vite-plugin-static-copy)
+public/pdf.worker.min.mjs
+public/cmaps/
