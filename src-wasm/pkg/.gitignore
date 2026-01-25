@@ -1,0 +1,13 @@
+# Ignore build artifacts but keep the generated WASM module files
+# These are needed for production builds on platforms without Rust
+
+# Keep these files:
+# - file_ops_wasm.js
+# - file_ops_wasm.d.ts
+# - file_ops_wasm_bg.wasm
+# - file_ops_wasm_bg.wasm.d.ts
+# - package.json
+
+# Ignore intermediate build files
+*.rs.bk
+.cargo-ok
