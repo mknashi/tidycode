@@ -41,6 +41,7 @@ import DiffViewer from './components/DiffViewer';
 import AISettingsModal from './components/AISettingsModal';
 import OllamaSetupWizard from './components/OllamaSetupWizard';
 import CodeMirrorEditor from './components/CodeMirrorEditor';
+import VirtualEditor from './components/VirtualEditor';
 import TabsExplorer from './components/TabsExplorer';
 import FileSystemBrowser from './components/FileSystemBrowser';
 import AdBanner from './components/AdBanner';
@@ -2812,6 +2813,7 @@ const TidyCode = () => {
       let wasmFileHandle = null;
       let displayContent;
       let isTruncated = false;
+      let useVirtualEditor = false;
 
       if (useWasm) {
         // WASM path - avoid creating full string to prevent freezing
@@ -2868,19 +2870,39 @@ const TidyCode = () => {
               displayContent = '[Error loading file from WASM]';
             }
           } else if (fileSize <= WASM_STORAGE_LIMIT) {
-            // File is too large to load fully into editor (would freeze UI)
-            // but can be stored in WASM - show preview
-            const previewSize = isTauriDesktop ? 10 * 1024 * 1024 : 5 * 1024 * 1024; // Desktop: 10MB, Web: 5MB
-
-            console.log(`[WASM] File exceeds safe load limit (${formatFileSize(SAFE_FULL_LOAD_LIMIT)}) - loading ${formatFileSize(previewSize)} preview`);
+            // File is too large for CodeMirror but can use VirtualEditor
+            // VirtualEditor uses react-window for efficient virtualized rendering
+            console.log(`[WASM] File exceeds CodeMirror safe limit (${formatFileSize(SAFE_FULL_LOAD_LIMIT)}) - will use VirtualEditor`);
 
             try {
-              // Use streaming decode to avoid blocking UI thread
-              const previewBytes = contentBytes.slice(0, previewSize);
+              const { getContentFromWasm } = await import('./utils/wasmFileHandler.js');
+              console.log('[WASM] Retrieving full content for VirtualEditor...');
+              const startTime = performance.now();
 
-              // Decode in chunks to prevent UI freeze
+              displayContent = await getContentFromWasm(wasmFileHandle);
+
+              const loadTime = performance.now() - startTime;
+              console.log(`[WASM] Loaded full content in ${loadTime.toFixed(0)}ms for VirtualEditor`);
+
+              // Mark as using VirtualEditor (not truncated - full content loaded)
+              useVirtualEditor = true;
+              showTransientMessage(`Loaded ${formatFileSize(fileSize)} - using virtual scrolling editor`, 'info');
+            } catch (error) {
+              console.error('[WASM] Failed to load content for VirtualEditor:', error);
+              displayContent = '[Error loading file from WASM]';
+            }
+          } else {
+            // File exceeds WASM storage limit - load preview in VirtualEditor
+            // Desktop: preview up to 100MB, Web: preview up to 50MB
+            const PREVIEW_LIMIT = isTauriDesktop ? 100 * 1024 * 1024 : 50 * 1024 * 1024;
+
+            console.log(`[WASM] File exceeds WASM storage limit (${formatFileSize(WASM_STORAGE_LIMIT)}) - loading ${formatFileSize(PREVIEW_LIMIT)} preview`);
+
+            try {
+              // Decode preview in chunks to prevent UI freeze
+              const previewBytes = contentBytes.slice(0, PREVIEW_LIMIT);
               const chunkSize = 512 * 1024; // 512KB chunks
-              displayContent = ''; // Use outer displayContent variable
+              displayContent = '';
               const decoder = new TextDecoder();
 
               for (let offset = 0; offset < previewBytes.length; offset += chunkSize) {
@@ -2894,27 +2916,16 @@ const TidyCode = () => {
                 }
               }
 
-              // Count lines in preview
-              const previewLines = displayContent.split('\n').length;
-              const loadedSize = formatFileSize(displayContent.length);
-              displayContent += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 LARGE FILE - EDITOR PREVIEW\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️  File too large to load into editor without freezing UI\n\nDisplaying: ${loadedSize} preview (~${previewLines.toLocaleString()} lines)\nTotal file: ${formatFileSize(fileSize)} (${wasmFileHandle.lineCount.toLocaleString()} lines)\nRemaining: ${formatFileSize(fileSize - displayContent.length)}\n\n💡 Full file capabilities:\n   ✓ Complete ${formatFileSize(fileSize)} file stored in WASM memory\n   ✓ Search works across entire file (Cmd/Ctrl+F)\n   ✓ Format button processes entire file\n   ✓ Save includes all content, not just preview\n   ✓ No data loss - full file preserved\n\n📝 Why preview mode?\n   Loading ${formatFileSize(fileSize)} into the editor would freeze the UI.\n   This preview lets you see file structure and beginning while\n   keeping all operations (search, save, format) fully functional.\n\n   Files up to 20MB can be loaded fully. This file (${formatFileSize(fileSize)})\n   exceeds that limit for smooth editor performance.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+              // Mark as preview mode with VirtualEditor
+              useVirtualEditor = true;
               isTruncated = true;
 
               console.log(`[WASM] Loaded ${formatFileSize(displayContent.length)} preview for very large file (${formatFileSize(fileSize)} total)`);
-              showTransientMessage(`Large file (${formatFileSize(fileSize)}) - showing ${formatFileSize(displayContent.length)} preview`, 'info');
+              showTransientMessage(`Large file (${formatFileSize(fileSize)}) - showing ${formatFileSize(PREVIEW_LIMIT)} preview`, 'info');
             } catch (error) {
               console.error('[WASM] Failed to load preview:', error);
               displayContent = '[Error loading file preview]';
             }
-          } else {
-            // File exceeds WASM storage limit - too large even for WASM
-            console.log(`[WASM] File exceeds WASM storage limit (${formatFileSize(WASM_STORAGE_LIMIT)})`);
-            if (isTauriDesktop) {
-              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for desktop mode.\n\nPlease use a specialized tool for files of this size.`;
-            } else {
-              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for web mode.\n\n💡 The Tidy Code desktop app supports files up to ${formatFileSize(1024 * 1024 * 1024)}!\n\n📥 Download the desktop app:\nhttps://tidycode.ai/download-alpha.html`;
-            }
-            showTransientMessage(`File too large: ${formatFileSize(fileSize)}`, 'error');
           }
 
         } catch (error) {
@@ -2990,7 +3001,8 @@ const TidyCode = () => {
         wasmFileHandle: wasmFileHandle,
         fileSize: fileSize,
         isLargeFile: useWasm && wasmFileHandle !== null,
-        isTruncated: isTruncated
+        isTruncated: isTruncated,
+        useVirtualEditor: useVirtualEditor
       };
 
       console.log('[WASM] Creating tab with:', {
@@ -2999,6 +3011,7 @@ const TidyCode = () => {
         contentLength: displayContent?.length,
         isLargeFile: newTab.isLargeFile,
         isTruncated: newTab.isTruncated,
+        useVirtualEditor: newTab.useVirtualEditor,
         hasWasmHandle: !!wasmFileHandle
       });
 
@@ -7912,24 +7925,48 @@ const TidyCode = () => {
             </div>
           </div>
         )}
-        <CodeMirrorEditor
-          ref={codeMirrorRef}
-          value={activeTab.content}
-          onChange={(newValue) => {
-            updateTabContent(activeTab.id, newValue);
-          }}
-          language={syntaxLanguage || 'javascript'}
-          theme={theme}
-          fontSize={fontSize}
-          vimEnabled={vimEnabled}
-          onVimModeChange={(mode) => {
-            setVimMode(mode);
-          }}
-          aiSettings={aiSettings}
-          lspSettings={aiSettings}
-          searchTerm={findValue}
-          caseSensitive={caseSensitive}
-          onCursorChange={(pos) => {
+        {activeTab.useVirtualEditor ? (
+          <VirtualEditor
+            ref={codeMirrorRef}
+            value={activeTab.content}
+            onChange={(newValue) => {
+              updateTabContent(activeTab.id, newValue);
+            }}
+            theme={theme}
+            fontSize={fontSize}
+            searchTerm={findValue}
+            caseSensitive={caseSensitive}
+            onSearchResults={(count, truncated) => {
+              if (truncated) {
+                console.log(`[VirtualEditor] Search results truncated at ${count} matches`);
+              }
+            }}
+            onCursorChange={(line, col) => {
+              const cursorInfo = { line: line + 1, column: col + 1 };
+              lastCursorRef.current = cursorInfo;
+              setCursorPosition(cursorInfo);
+            }}
+            className="w-full h-full"
+          />
+        ) : (
+          <CodeMirrorEditor
+            ref={codeMirrorRef}
+            value={activeTab.content}
+            onChange={(newValue) => {
+              updateTabContent(activeTab.id, newValue);
+            }}
+            language={syntaxLanguage || 'javascript'}
+            theme={theme}
+            fontSize={fontSize}
+            vimEnabled={vimEnabled}
+            onVimModeChange={(mode) => {
+              setVimMode(mode);
+            }}
+            aiSettings={aiSettings}
+            lspSettings={aiSettings}
+            searchTerm={findValue}
+            caseSensitive={caseSensitive}
+            onCursorChange={(pos) => {
             // Update cursor position for display
             if (activeTab) {
               const contentForCursor = activeTab.content || '';
@@ -8031,6 +8068,7 @@ const TidyCode = () => {
           className="w-full h-full"
           style={{ fontSize: '14px' }}
         />
+        )}
       </div>
     );
   };
@@ -8194,13 +8232,14 @@ const TidyCode = () => {
 
         {/* Right side controls */}
         <div className="flex gap-1.5 ml-auto items-center">
-          {/* VIM Mode Toggle */}
-          <div className="flex items-center gap-2">
+          {/* VIM Mode Toggle - disabled for VirtualEditor (large files) */}
+          <div className={`flex items-center gap-2 ${activeTab?.useVirtualEditor ? 'opacity-50' : ''}`}>
             <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               VIM
             </span>
             <button
               onClick={() => {
+                if (activeTab?.useVirtualEditor) return; // Disabled for large files
                 setVimEnabled(!vimEnabled);
                 if (!vimEnabled) {
                   setVimMode('normal'); // Start in normal mode when enabling VIM
@@ -8212,22 +8251,25 @@ const TidyCode = () => {
                   }, 100);
                 }
               }}
+              disabled={activeTab?.useVirtualEditor}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                vimEnabled
-                  ? 'bg-indigo-600 hover:bg-indigo-500'
-                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
+                activeTab?.useVirtualEditor
+                  ? theme === 'dark' ? 'bg-gray-800 cursor-not-allowed' : 'bg-gray-200 cursor-not-allowed'
+                  : vimEnabled
+                    ? 'bg-indigo-600 hover:bg-indigo-500'
+                    : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
               }`}
-              title={vimEnabled ? "Disable VIM Mode" : "Enable VIM Mode"}
+              title={activeTab?.useVirtualEditor ? "VIM Mode unavailable for large files" : vimEnabled ? "Disable VIM Mode" : "Enable VIM Mode"}
               role="switch"
               aria-checked={vimEnabled}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  vimEnabled ? 'translate-x-6' : 'translate-x-1'
+                  vimEnabled && !activeTab?.useVirtualEditor ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
-            {vimEnabled && (
+            {vimEnabled && !activeTab?.useVirtualEditor && (
               <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                 vimMode === 'normal' ? 'bg-green-500 text-white' :
                 vimMode === 'insert' ? 'bg-blue-500 text-white' :
@@ -9594,7 +9636,7 @@ const TidyCode = () => {
             <span>Tabs: {tabs.length}</span>
             {activeTab && (
               <>
-                <span>Length: {String(activeTab.content || '').length} characters</span>
+                <span>Size: {formatFileSize(activeTab.fileSize || new Blob([activeTab.content || '']).size)}</span>
                 <span>Lines: {String(activeTab.content || '').split('\n').length}</span>
                 <span className="text-blue-400">Ln {cursorPosition.line}, Col {cursorPosition.column}</span>
               </>

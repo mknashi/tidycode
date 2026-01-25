@@ -43,8 +43,11 @@ desktop.ini
 test-*.json
 test-*.xml
 test-*.csv
+test-*.log
+test-*.txt
 test.md
 test.sh
+test-files/
 
 # Documentation artifacts (keep only source docs)
 *.md.backup
@@ -81,3 +84,7 @@ test-data-30mb.json
 test-*.txt
 test-data-*.json
 *.swp
+
+# PDF.js files (copied from node_modules during dev/build)
+public/pdf.worker.min.mjs
+public/cmaps/
