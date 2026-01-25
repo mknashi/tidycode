@@ -85,3 +85,6 @@ test-data-*.json
 # PDF.js files (copied from node_modules by vite-plugin-static-copy)
 public/pdf.worker.min.mjs
 public/cmaps/
+
+# Claude Code local settings
+.claude/settings.local.json
