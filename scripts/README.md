@@ -181,8 +181,95 @@ npm run build:desktop:linux
 
 ---
 
+---
+
+## Code Signing Scripts
+
+### GPG Signing for Releases
+
+These scripts help you sign TidyCode releases with GPG signatures for integrity verification across all platforms.
+
+#### setup-gpg.sh
+
+**Interactive wizard for generating and configuring GPG keys**
+
+```bash
+bash scripts/setup-gpg.sh
+```
+
+**Features**:
+- Generates 4096-bit RSA GPG key
+- Configures GPG to avoid SHA1 (deprecated in Debian Feb 2026)
+- Exports public/private keys for backup
+- Generates revocation certificate
+- Uploads public key to keyservers
+- Creates `.env.local` with key configuration
+
+#### sign-release.sh / sign-release.ps1
+
+**Sign release files with GPG signatures**
+
+**Bash** (Linux/macOS/WSL/Git Bash):
+```bash
+# Auto-detect and sign all release files
+bash scripts/sign-release.sh --auto
+
+# Sign specific files
+bash scripts/sign-release.sh file1.msi file2.AppImage
+
+# Verify signatures
+bash scripts/sign-release.sh --verify --auto
+```
+
+**PowerShell** (Windows):
+```powershell
+# Auto-detect and sign all release files
+.\scripts\sign-release.ps1 -Auto
+
+# Sign specific files
+.\scripts\sign-release.ps1 -Files file1.msi,file2.AppImage
+
+# Verify signatures
+.\scripts\sign-release.ps1 -Verify -Auto
+```
+
+**What gets signed**:
+- Windows: `.msi`, `.exe` installers
+- macOS: `.dmg`, `.pkg` packages
+- Linux: `.AppImage`, `.deb`, `.rpm` packages
+
+**Created files**:
+- `*.asc` - GPG signature for each file
+- `SHA256SUMS` - Checksums for all files
+- `SHA256SUMS.asc` - Signature of checksums
+- `PUBLIC_KEY.asc` - Your public GPG key
+
+#### Complete Release Workflow
+
+```bash
+# 1. Build the app (clean build recommended)
+npm run clean:build:win   # Windows
+npm run clean:build        # macOS/Linux
+
+# 2. Build desktop app
+npm run build:desktop
+
+# 3. Sign all release files
+bash scripts/sign-release.sh --auto
+
+# 4. Verify signatures
+bash scripts/sign-release.sh --verify --auto
+
+# 5. Distribute from releases/ directory
+```
+
+For detailed GPG signing documentation, see [Code Signing Scripts README](./code-signing-README.md) or [docs/CODE_SIGNING.md](../docs/CODE_SIGNING.md).
+
+---
+
 ## See Also
 
 - [WINDOWS_BUILD_GUIDE.md](../WINDOWS_BUILD_GUIDE.md) - Windows-specific build instructions
 - [PDF_TROUBLESHOOTING.md](../PDF_TROUBLESHOOTING.md) - PDF viewer troubleshooting
+- [CODE_SIGNING.md](../docs/CODE_SIGNING.md) - Complete code signing guide (Windows/macOS/Linux)
 - [package.json](../package.json) - All available npm scripts
