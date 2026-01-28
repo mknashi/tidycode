@@ -14,7 +14,7 @@ param(
 )
 
 # Configuration
-$script:ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$script:ProjectRoot = Split-Path -Parent $PSScriptRoot
 $script:ReleasesDir = if ($ReleasesDir) { $ReleasesDir } else { Join-Path $ProjectRoot "releases" }
 $script:GpgKeyId = if ($KeyId) { $KeyId } else { $env:GPG_KEY_ID }
 $script:GpgEmail = if ($Email) { $Email } else { $env:GPG_EMAIL }
@@ -238,52 +238,73 @@ function Export-PublicKey {
 function Find-ReleaseFiles {
     $files = @()
 
-    # Look in releases directory
+    # Look in releases directory first
     if (Test-Path $script:ReleasesDir) {
         $files += Get-ChildItem -Path $script:ReleasesDir -File | Where-Object {
             $_.Extension -in @('.msi', '.exe', '.dmg', '.pkg', '.AppImage', '.deb', '.rpm')
         } | Select-Object -ExpandProperty FullName
     }
 
-    # Also check Tauri output directories
-    $bundleDir = Join-Path $script:ProjectRoot "src-tauri\target\release\bundle"
+    # Define all Tauri bundle directories to search (same as upload-to-r2.ps1)
+    $bundleDirs = @(
+        (Join-Path $script:ProjectRoot "src-tauri\target\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\universal-apple-darwin\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\x86_64-apple-darwin\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\aarch64-apple-darwin\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\x86_64-pc-windows-msvc\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\aarch64-pc-windows-msvc\release\bundle"),
+        (Join-Path $script:ProjectRoot "src-tauri\target\x86_64-unknown-linux-gnu\release\bundle")
+    )
 
-    if (Test-Path $bundleDir) {
-        # Windows
-        $msiDir = Join-Path $bundleDir "msi"
-        if (Test-Path $msiDir) {
-            $files += Get-ChildItem -Path $msiDir -Filter "*.msi" -Recurse | Select-Object -ExpandProperty FullName
-        }
-
-        $nsisDir = Join-Path $bundleDir "nsis"
-        if (Test-Path $nsisDir) {
-            $files += Get-ChildItem -Path $nsisDir -Filter "*.exe" -Recurse | Select-Object -ExpandProperty FullName
-        }
-
+    # File patterns to search for (same as upload-to-r2.ps1)
+    $filePatterns = @(
         # macOS
-        $dmgDir = Join-Path $bundleDir "dmg"
-        if (Test-Path $dmgDir) {
-            $files += Get-ChildItem -Path $dmgDir -Filter "*.dmg" -Recurse | Select-Object -ExpandProperty FullName
-        }
-
+        @{ Pattern = "TidyCode_*_universal.dmg"; Subdir = "dmg"; Description = "macOS Universal DMG" },
+        @{ Pattern = "TidyCode_*_aarch64.dmg"; Subdir = "dmg"; Description = "macOS ARM64 DMG" },
+        @{ Pattern = "TidyCode_*_x64.dmg"; Subdir = "dmg"; Description = "macOS x64 DMG" },
+        # Windows MSI
+        @{ Pattern = "TidyCode_*_x64_en-US.msi"; Subdir = "msi"; Description = "Windows x64 MSI" },
+        @{ Pattern = "TidyCode_*_arm64_en-US.msi"; Subdir = "msi"; Description = "Windows ARM64 MSI" },
+        # Windows NSIS
+        @{ Pattern = "TidyCode_*_x64-setup.exe"; Subdir = "nsis"; Description = "Windows x64 Installer" },
+        @{ Pattern = "TidyCode_*_arm64-setup.exe"; Subdir = "nsis"; Description = "Windows ARM64 Installer" },
         # Linux
-        $appimageDir = Join-Path $bundleDir "appimage"
-        if (Test-Path $appimageDir) {
-            $files += Get-ChildItem -Path $appimageDir -Filter "*.AppImage" -Recurse | Select-Object -ExpandProperty FullName
-        }
+        @{ Pattern = "TidyCode_*_amd64.AppImage"; Subdir = "appimage"; Description = "Linux AppImage" },
+        @{ Pattern = "tidycode_*_amd64.deb"; Subdir = "deb"; Description = "Linux DEB" },
+        @{ Pattern = "tidycode-*.x86_64.rpm"; Subdir = "rpm"; Description = "Linux RPM" }
+    )
 
-        $debDir = Join-Path $bundleDir "deb"
-        if (Test-Path $debDir) {
-            $files += Get-ChildItem -Path $debDir -Filter "*.deb" -Recurse | Select-Object -ExpandProperty FullName
-        }
+    # Search each bundle directory
+    foreach ($bundleDir in $bundleDirs) {
+        if (Test-Path $bundleDir) {
+            foreach ($filePattern in $filePatterns) {
+                $searchDir = Join-Path $bundleDir $filePattern.Subdir
+                if (Test-Path $searchDir) {
+                    $foundFiles = Get-ChildItem -Path $searchDir -Filter $filePattern.Pattern -Recurse -ErrorAction SilentlyContinue
+                    foreach ($file in $foundFiles) {
+                        # Avoid duplicates
+                        if ($files -notcontains $file.FullName) {
+                            $files += $file.FullName
+                        }
+                    }
+                }
+            }
 
-        $rpmDir = Join-Path $bundleDir "rpm"
-        if (Test-Path $rpmDir) {
-            $files += Get-ChildItem -Path $rpmDir -Filter "*.rpm" -Recurse | Select-Object -ExpandProperty FullName
+            # Also do a generic search for any installers we might have missed
+            $genericPatterns = @("*.msi", "*.exe", "*.dmg", "*.AppImage", "*.deb", "*.rpm")
+            foreach ($pattern in $genericPatterns) {
+                $foundFiles = Get-ChildItem -Path $bundleDir -Filter $pattern -Recurse -ErrorAction SilentlyContinue
+                foreach ($file in $foundFiles) {
+                    if ($files -notcontains $file.FullName) {
+                        $files += $file.FullName
+                    }
+                }
+            }
         }
     }
 
-    return $files
+    # Remove duplicates and return
+    return $files | Select-Object -Unique
 }
 
 # Display usage
@@ -375,6 +396,12 @@ function Main {
             Write-Host "Searched in:"
             Write-Host "  - $script:ReleasesDir"
             Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\universal-apple-darwin\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\x86_64-apple-darwin\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\aarch64-apple-darwin\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\x86_64-pc-windows-msvc\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\aarch64-pc-windows-msvc\release\bundle')"
+            Write-Host "  - $(Join-Path $script:ProjectRoot 'src-tauri\target\x86_64-unknown-linux-gnu\release\bundle')"
             exit 1
         }
 

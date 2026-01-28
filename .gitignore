@@ -88,3 +88,6 @@ public/cmaps/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Release signing artifacts
+releases/

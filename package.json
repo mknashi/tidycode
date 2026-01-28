@@ -24,7 +24,7 @@
     "build:desktop:win:all": "npm run build:desktop:win:x64 && npm run build:desktop:win:arm64",
     "build:desktop:win:portable": "powershell -ExecutionPolicy Bypass -File scripts/build-portable.ps1",
     "build:desktop:win:signed": "powershell -ExecutionPolicy Bypass -File scripts/build-signed.ps1",
-    "sign:gpg": "powershell -ExecutionPolicy Bypass -File scripts/sign-with-gpg.ps1",
+    "sign:gpg": "powershell -ExecutionPolicy Bypass -File scripts/sign-release.ps1 -Auto",
     "sign:installer": "powershell -ExecutionPolicy Bypass -File scripts/sign-installer.ps1",
     "build:desktop:linux": "npm run prepare:lsp && tauri build --target x86_64-unknown-linux-gnu",
     "preview": "vite preview",

@@ -217,36 +217,84 @@ export_public_key() {
 find_release_files() {
     local files=()
 
-    # Look for common release artifacts
+    # Look for common release artifacts in releases directory
     if [ -d "$RELEASES_DIR" ]; then
         # Windows installers
-        files+=($(find "$RELEASES_DIR" -maxdepth 1 -name "*.msi" -o -name "*.exe"))
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find "$RELEASES_DIR" -maxdepth 1 \( -name "*.msi" -o -name "*.exe" \) -print0 2>/dev/null)
 
         # macOS packages
-        files+=($(find "$RELEASES_DIR" -maxdepth 1 -name "*.dmg" -o -name "*.pkg"))
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find "$RELEASES_DIR" -maxdepth 1 \( -name "*.dmg" -o -name "*.pkg" \) -print0 2>/dev/null)
 
         # Linux packages
-        files+=($(find "$RELEASES_DIR" -maxdepth 1 -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm"))
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find "$RELEASES_DIR" -maxdepth 1 \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) -print0 2>/dev/null)
     fi
 
-    # Also check Tauri output directories
-    if [ -d "$PROJECT_ROOT/src-tauri/target/release/bundle" ]; then
-        local bundle_dir="$PROJECT_ROOT/src-tauri/target/release/bundle"
+    # Define all Tauri bundle directories to search (same as upload-to-r2.ps1)
+    local bundle_dirs=(
+        "$PROJECT_ROOT/src-tauri/target/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/universal-apple-darwin/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/x86_64-apple-darwin/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/aarch64-apple-darwin/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/aarch64-pc-windows-msvc/release/bundle"
+        "$PROJECT_ROOT/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle"
+    )
 
-        # Windows
-        [ -d "$bundle_dir/msi" ] && files+=($(find "$bundle_dir/msi" -name "*.msi"))
-        [ -d "$bundle_dir/nsis" ] && files+=($(find "$bundle_dir/nsis" -name "*.exe"))
+    # Search each bundle directory
+    for bundle_dir in "${bundle_dirs[@]}"; do
+        if [ -d "$bundle_dir" ]; then
+            # macOS DMG
+            if [ -d "$bundle_dir/dmg" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/dmg" \( -name "TidyCode_*_universal.dmg" -o -name "TidyCode_*_aarch64.dmg" -o -name "TidyCode_*_x64.dmg" -o -name "*.dmg" \) -print0 2>/dev/null)
+            fi
 
-        # macOS
-        [ -d "$bundle_dir/dmg" ] && files+=($(find "$bundle_dir/dmg" -name "*.dmg"))
+            # Windows MSI
+            if [ -d "$bundle_dir/msi" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/msi" \( -name "TidyCode_*_x64_en-US.msi" -o -name "TidyCode_*_arm64_en-US.msi" -o -name "*.msi" \) -print0 2>/dev/null)
+            fi
 
-        # Linux
-        [ -d "$bundle_dir/appimage" ] && files+=($(find "$bundle_dir/appimage" -name "*.AppImage"))
-        [ -d "$bundle_dir/deb" ] && files+=($(find "$bundle_dir/deb" -name "*.deb"))
-        [ -d "$bundle_dir/rpm" ] && files+=($(find "$bundle_dir/rpm" -name "*.rpm"))
-    fi
+            # Windows NSIS
+            if [ -d "$bundle_dir/nsis" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/nsis" \( -name "TidyCode_*_x64-setup.exe" -o -name "TidyCode_*_arm64-setup.exe" -o -name "*.exe" \) -print0 2>/dev/null)
+            fi
 
-    echo "${files[@]}"
+            # Linux AppImage
+            if [ -d "$bundle_dir/appimage" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/appimage" \( -name "TidyCode_*_amd64.AppImage" -o -name "*.AppImage" \) -print0 2>/dev/null)
+            fi
+
+            # Linux DEB
+            if [ -d "$bundle_dir/deb" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/deb" \( -name "tidycode_*_amd64.deb" -o -name "*.deb" \) -print0 2>/dev/null)
+            fi
+
+            # Linux RPM
+            if [ -d "$bundle_dir/rpm" ]; then
+                while IFS= read -r -d '' file; do
+                    files+=("$file")
+                done < <(find "$bundle_dir/rpm" \( -name "tidycode-*.x86_64.rpm" -o -name "*.rpm" \) -print0 2>/dev/null)
+            fi
+        fi
+    done
+
+    # Remove duplicates and output one file per line
+    printf '%s\n' "${files[@]}" | sort -u
 }
 
 # Function to display usage
@@ -366,13 +414,21 @@ main() {
     # Auto-detect files if requested
     if [ "$auto_mode" = true ]; then
         print_info "Auto-detecting release files..."
-        mapfile -t files_to_sign < <(find_release_files)
+        while IFS= read -r file; do
+            [ -n "$file" ] && files_to_sign+=("$file")
+        done < <(find_release_files)
 
         if [ ${#files_to_sign[@]} -eq 0 ]; then
             print_warning "No release files found!"
             echo "Searched in:"
             echo "  - $RELEASES_DIR"
             echo "  - $PROJECT_ROOT/src-tauri/target/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/universal-apple-darwin/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/x86_64-apple-darwin/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/aarch64-apple-darwin/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/x86_64-pc-windows-msvc/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/aarch64-pc-windows-msvc/release/bundle"
+            echo "  - $PROJECT_ROOT/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle"
             exit 1
         fi
 

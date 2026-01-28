@@ -189,12 +189,18 @@ npm run build:desktop:linux
 
 These scripts help you sign TidyCode releases with GPG signatures for integrity verification across all platforms.
 
-#### setup-gpg.sh
+#### setup-gpg.sh / setup-gpg.ps1
 
 **Interactive wizard for generating and configuring GPG keys**
 
+**Bash** (Linux/macOS/WSL/Git Bash):
 ```bash
 bash scripts/setup-gpg.sh
+```
+
+**PowerShell** (Windows - recommended):
+```powershell
+.\scripts\setup-gpg.ps1
 ```
 
 **Features**:
@@ -204,6 +210,8 @@ bash scripts/setup-gpg.sh
 - Generates revocation certificate
 - Uploads public key to keyservers
 - Creates `.env.local` with key configuration
+
+**Note**: If you don't have WSL installed on Windows, use the PowerShell version.
 
 #### sign-release.sh / sign-release.ps1
 
@@ -246,10 +254,27 @@ bash scripts/sign-release.sh --verify --auto
 
 #### Complete Release Workflow
 
+**Windows (PowerShell)**:
+```powershell
+# 1. Build the app (clean build recommended)
+npm run clean:build:win
+
+# 2. Build desktop app
+npm run build:desktop
+
+# 3. Sign all release files
+.\scripts\sign-release.ps1 -Auto
+
+# 4. Verify signatures
+.\scripts\sign-release.ps1 -Verify -Auto
+
+# 5. Distribute from releases/ directory
+```
+
+**Linux/macOS (Bash)**:
 ```bash
 # 1. Build the app (clean build recommended)
-npm run clean:build:win   # Windows
-npm run clean:build        # macOS/Linux
+npm run clean:build
 
 # 2. Build desktop app
 npm run build:desktop

@@ -94,9 +94,12 @@ Use BOTH:
 # Set your key ID once
 $env:GPG_KEY_ID = "YOUR_KEY_ID_HERE"
 
-# Build and sign
-npm run build:desktop:win:portable
-.\scripts\sign-with-gpg.ps1
+# Build and sign all release files automatically
+npm run build:desktop
+.\scripts\sign-release.ps1 -Auto
+
+# Or sign specific files
+.\scripts\sign-release.ps1 -Files path\to\file.msi
 ```
 
 **Option 2: Manual signing**
