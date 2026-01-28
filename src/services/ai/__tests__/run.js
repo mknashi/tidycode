@@ -15,6 +15,7 @@ import { runSuites, colors } from './testUtils.js';
 import { allSuites as providerInterfaceSuites } from './ProviderInterface.test.js';
 import { allSuites as providersSuites } from './providers.test.js';
 import { allSuites as providerManagerSuites } from './ProviderManager.test.js';
+import { allSuites as actionsSuites } from './actions.test.js';
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -66,6 +67,7 @@ ${colors.bright}${colors.cyan}╚═══════════════�
     ...providerInterfaceSuites,
     ...providersSuites,
     ...providerManagerSuites,
+    ...actionsSuites,
   ];
 
   console.log(`${colors.gray}Running ${unitSuites.length} test suites...${colors.reset}\n`);

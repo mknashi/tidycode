@@ -48,6 +48,47 @@ export { GroqProvider } from './providers/GroqProvider.js';
 export { MistralProvider } from './providers/MistralProvider.js';
 export { OllamaProvider } from './providers/OllamaProvider.js';
 
+// Actions
+export {
+  ActionManager,
+  ActionResult,
+  ActionContext,
+  ACTION_IDS,
+  actionManager,
+  // Explain
+  explainAction,
+  explainActionStream,
+  EXPLANATION_LEVELS,
+  AUDIENCE_TYPES,
+  // Refactor
+  refactorAction,
+  refactorActionStream,
+  REFACTOR_TYPES,
+  getRefactorTypes,
+  // Convert
+  convertAction,
+  SUPPORTED_FORMATS,
+  detectFormat,
+  getConversionOptions,
+  validateFormat,
+  // Schema
+  inferSchemaAction,
+  SCHEMA_FORMATS,
+  getSchemaFormats,
+  // Logs
+  summarizeLogsAction,
+  summarizeLogsActionStream,
+  ANALYSIS_TYPES,
+  getAnalysisTypes,
+  // Tests
+  generateTestAction,
+  generateTestActionStream,
+  TEST_FRAMEWORKS,
+  TEST_TYPES,
+  getTestFrameworks,
+  getTestTypes,
+} from './actions/index.js';
+
 /**
  * Provider IDs for reference
  */
