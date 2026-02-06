@@ -198,6 +198,8 @@ const isBinaryFile = (filename = '') => {
 // Detect language from content patterns
 const detectLanguageFromContent = (content = '') => {
   if (!content || content.trim().length === 0) return null;
+  // Skip expensive detection for large content (> 1MB)
+  if (content.length > 1024 * 1024) return null;
 
   const trimmed = content.trim();
   const firstLine = trimmed.split('\n')[0].trim();
@@ -523,6 +525,13 @@ const looksLikeJSON = (text = '') => {
   if (!trimmed) return false;
   const startsWith = trimmed[0];
   if (startsWith !== '{' && startsWith !== '[') return false;
+  // For large files (> 1MB), just check structure without full parsing
+  // Full JSON.parse on large files can freeze the UI
+  if (trimmed.length > 1024 * 1024) {
+    // Quick heuristic: starts with { or [ and ends with } or ]
+    const endsWith = trimmed[trimmed.length - 1];
+    return (startsWith === '{' && endsWith === '}') || (startsWith === '[' && endsWith === ']');
+  }
   try {
     const parsed = JSON.parse(trimmed);
     return typeof parsed === 'object' && parsed !== null;
@@ -547,6 +556,8 @@ const looksLikeXML = (text = '') => {
 
 const detectCSVContent = (text = '', filename = '') => {
   if (!text) return false;
+  // Skip detection for large files (> 1MB) to avoid performance issues
+  if (text.length > 1024 * 1024) return false;
   const trimmed = String(text).trim();
   if (!trimmed) return false;
 
@@ -587,6 +598,8 @@ const detectMarkdownContent = (text = '', filename = '') => {
   if (filename && filename.toLowerCase().endsWith('.md')) return true;
 
   if (!text) return false;
+  // Skip content-based detection for large files (> 1MB) to avoid performance issues
+  if (text.length > 1024 * 1024) return false;
   const trimmed = String(text).trim();
   if (!trimmed) return false;
 
@@ -6953,7 +6966,16 @@ const TidyCode = () => {
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const editorLines = activeTab && activeTab.content ? String(activeTab.content).split('\n') : [];
+  // Count lines efficiently without creating an array (important for large files)
+  const editorLineCount = useMemo(() => {
+    if (!activeTab?.content) return 0;
+    const content = String(activeTab.content);
+    let count = 1;
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] === '\n') count++;
+    }
+    return count;
+  }, [activeTab?.content]);
 
   // Detect if current file should have syntax highlighting - needs to be before CSV/Markdown detection
   const syntaxLanguage = useMemo(() => {
@@ -7192,6 +7214,13 @@ const TidyCode = () => {
     const trimmed = String(activeTab.content).trim();
     if (!trimmed) return { type: null, nodes: [] };
 
+    // Skip structure tree for large files to avoid freezing the UI
+    // 1MB is a reasonable limit for parsing JSON/XML structure
+    const MAX_STRUCTURE_TREE_SIZE = 1 * 1024 * 1024; // 1MB
+    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE) {
+      return { type: null, nodes: [] };
+    }
+
     // Check file type - only show structure for JSON, XML, YAML, and TOML files
     const fileName = activeTab?.filePath || activeTab?.title || '';
     const fileType = getFileType(fileName);
@@ -7423,7 +7452,7 @@ const TidyCode = () => {
     const offsetTop = getOffset(target, container);
     const desiredTop = Math.max(0, offsetTop - container.clientHeight / 2 + target.offsetHeight / 2);
     container.scrollTo({ top: desiredTop, behavior: 'auto' });
-  }, [activeStructureId, structureTree, editorLines.length]);
+  }, [activeStructureId, structureTree, editorLineCount]);
 
   const errorsByLine = useMemo(() => {
     const map = new Map();
