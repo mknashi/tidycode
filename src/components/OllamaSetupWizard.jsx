@@ -6,6 +6,14 @@ const OllamaSetupWizard = ({ onClose, onComplete, theme, desktopAIService, defau
   const [ollamaStatus, setOllamaStatus] = useState(null);
   const [selectedModel, setSelectedModel] = useState(defaultModel || 'llama3.1:8b');
   const [isChecking, setIsChecking] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState(''); // status text during download
+  const [downloadProgress, setDownloadProgress] = useState({
+    progress: 0,
+    completedBytes: 0,
+    totalBytes: 0,
+    speed: '',
+    status: 'starting'
+  });
 
   const models = {
     'llama3.1:8b': {
@@ -105,13 +113,70 @@ const OllamaSetupWizard = ({ onClose, onComplete, theme, desktopAIService, defau
     }
   };
 
+  // Format bytes to human-readable string
+  const formatBytes = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1000;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
   const handleDownloadModel = async () => {
+    console.log('[OllamaSetupWizard] Starting download of:', selectedModel);
     setStep('downloading');
+    setDownloadStatus('Starting download...');
+    setDownloadProgress({
+      progress: 0,
+      completedBytes: 0,
+      totalBytes: 0,
+      speed: '',
+      status: 'starting'
+    });
+
     try {
       await desktopAIService.pullModel(selectedModel, (progress) => {
         console.log('Download progress:', progress);
+        if (progress?.text) setDownloadStatus(progress.text);
+
+        // Update progress state for the progress bar
+        setDownloadProgress({
+          progress: progress?.progress || 0,
+          completedBytes: progress?.completedBytes || 0,
+          totalBytes: progress?.totalBytes || 0,
+          speed: progress?.speed || '',
+          status: progress?.status || 'downloading'
+        });
       });
-      setStep('completed');
+      setDownloadStatus('Verifying download...');
+      console.log('[OllamaSetupWizard] pullModel resolved, verifying model is available...');
+
+      // Verify the model is actually available after download
+      const status = await desktopAIService.checkOllamaStatus();
+      setOllamaStatus(status);
+      const modelPresent = status.models && status.models.some(
+        (m) => m === selectedModel || m.startsWith(selectedModel.split(':')[0])
+      );
+      console.log('[OllamaSetupWizard] Post-download models:', status.models, 'modelPresent:', modelPresent);
+
+      if (modelPresent) {
+        setStep('completed');
+      } else {
+        console.warn('[OllamaSetupWizard] Model not found after download, retrying check...');
+        // Wait a moment and retry — ollama may need time to register the model
+        await new Promise((r) => setTimeout(r, 2000));
+        const retryStatus = await desktopAIService.checkOllamaStatus();
+        setOllamaStatus(retryStatus);
+        const retryPresent = retryStatus.models && retryStatus.models.some(
+          (m) => m === selectedModel || m.startsWith(selectedModel.split(':')[0])
+        );
+        if (retryPresent) {
+          setStep('completed');
+        } else {
+          setStep('no-models');
+          alert(`Download appeared to succeed but "${selectedModel}" was not found. Please try again or run "ollama pull ${selectedModel}" manually in your terminal.`);
+        }
+      }
     } catch (error) {
       console.error('Failed to download model:', error);
       alert(`Failed to download model: ${error.message}`);
@@ -395,7 +460,9 @@ const OllamaSetupWizard = ({ onClose, onComplete, theme, desktopAIService, defau
           {/* Step 4: Downloading */}
           {step === 'downloading' && (
             <div className="text-center py-8">
-              <Download className={`w-16 h-16 mx-auto mb-4 animate-pulse ${
+              <Download className={`w-16 h-16 mx-auto mb-4 ${
+                downloadProgress.progress > 0 && downloadProgress.progress < 100 ? '' : 'animate-pulse'
+              } ${
                 theme === 'dark' ? 'text-purple-400' : 'text-purple-500'
               }`} />
               <h3 className={`text-lg font-semibold mb-2 ${
@@ -403,17 +470,60 @@ const OllamaSetupWizard = ({ onClose, onComplete, theme, desktopAIService, defau
               }`}>
                 Downloading {models[selectedModel].name}...
               </h3>
-              <p className={`text-sm ${
+              <p className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                This may take a few minutes depending on your connection
+                {downloadProgress.status === 'verifying'
+                  ? 'Verifying download...'
+                  : 'This may take a few minutes depending on your connection'}
               </p>
-              <div className={`mt-4 px-8 ${
+
+              {/* Progress Bar */}
+              <div className="px-8 mb-4">
+                <div className={`w-full h-3 rounded-full overflow-hidden ${
+                  theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                }`}>
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      theme === 'dark' ? 'bg-purple-500' : 'bg-purple-600'
+                    }`}
+                    style={{ width: `${Math.min(downloadProgress.progress, 100)}%` }}
+                  />
+                </div>
+
+                {/* Progress Details */}
+                <div className={`flex justify-between items-center mt-2 text-xs ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  <span>
+                    {downloadProgress.progress > 0
+                      ? `${downloadProgress.progress.toFixed(1)}%`
+                      : 'Connecting...'}
+                  </span>
+                  {downloadProgress.totalBytes > 0 && (
+                    <span>
+                      {formatBytes(downloadProgress.completedBytes)} / {formatBytes(downloadProgress.totalBytes)}
+                    </span>
+                  )}
+                  {downloadProgress.speed && (
+                    <span>{downloadProgress.speed}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className={`px-8 ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}>
                 <p className="text-xs">
-                  Size: {models[selectedModel].size}
+                  Model size: {models[selectedModel]?.size || 'Unknown'}
                 </p>
+                {downloadStatus && (
+                  <p className={`text-xs mt-2 font-mono truncate ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    {downloadStatus}
+                  </p>
+                )}
               </div>
             </div>
           )}

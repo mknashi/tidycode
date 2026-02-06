@@ -118,12 +118,20 @@ const CodeMirrorEditor = forwardRef(({
   aiSettings = null, // AI completion settings
   lspSettings = null, // LSP settings
   searchTerm = '', // Search term to highlight
-  caseSensitive = false // Case sensitivity for search
+  caseSensitive = false, // Case sensitivity for search
+  onContextMenu = null, // Right-click handler for AI actions
+  onSelectionChange = null, // Selection change handler for floating toolbar
 }, ref) => {
   const editorRef = useRef(null);
   const vimModeRef = useRef('normal');
   const viewRef = useRef(null);
   const [viewReady, setViewReady] = React.useState(false);
+
+  // Stable refs for callbacks used inside extensions (avoids rebuilding extensions on every render)
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
+  const onContextMenuRef = useRef(onContextMenu);
+  onContextMenuRef.current = onContextMenu;
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -241,33 +249,61 @@ const CodeMirrorEditor = forwardRef(({
       }
     }));
 
-    // Add cursor position tracking
-    if (onCursorChange) {
-      exts.push(EditorView.updateListener.of((update) => {
-        if (update.selectionSet) {
-          const pos = update.state.selection.main.head;
-          onCursorChange(pos);
+    // Add cursor position and selection tracking
+    // Uses refs for onSelectionChange to avoid rebuilding extensions on callback changes
+    exts.push(EditorView.updateListener.of((update) => {
+      if (update.selectionSet) {
+        const sel = update.state.selection.main;
+        onCursorChange?.(sel.head);
+        const selCb = onSelectionChangeRef.current;
+        if (selCb) {
+          if (!sel.empty) {
+            const coords = update.view.coordsAtPos(sel.from);
+            const endCoords = update.view.coordsAtPos(sel.to);
+            selCb({
+              text: update.state.sliceDoc(sel.from, sel.to),
+              from: sel.from,
+              to: sel.to,
+              coords: coords ? { top: coords.top, left: coords.left, bottom: endCoords?.bottom || coords.bottom } : null,
+            });
+          } else {
+            selCb(null);
+          }
         }
-      }));
-    }
+      }
+    }));
 
-    // Add DOM-level Tab key handler with highest precedence for Tab completion
+    // Add DOM-level event handlers with highest precedence
     exts.push(Prec.highest(EditorView.domEventHandlers({
       keydown: (event, view) => {
         // Handle Tab for completion
         if (event.key === 'Tab') {
           const status = completionStatus(view.state);
           if (status === 'active') {
-            // Prevent default browser Tab navigation
             event.preventDefault();
             event.stopPropagation();
-            // Accept the completion
             acceptCompletion(view);
             return true;
           }
         }
         return false;
-      }
+      },
+      contextmenu: (event, view) => {
+        const ctxCb = onContextMenuRef.current;
+        if (ctxCb) {
+          const sel = view.state.selection.main;
+          const selectedText = sel.empty ? '' : view.state.sliceDoc(sel.from, sel.to);
+          ctxCb({
+            x: event.clientX,
+            y: event.clientY,
+            selectedText,
+            selectionRange: sel.empty ? null : { from: sel.from, to: sel.to },
+          });
+          event.preventDefault();
+          return true;
+        }
+        return false;
+      },
     })));
 
 

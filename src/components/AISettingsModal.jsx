@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Cloud, Check, AlertCircle, Monitor, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS } from '../services/AIService';
+import { X, Sparkles, Cloud, Check, AlertCircle, Monitor, ExternalLink, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS } from '../services/AIService';
 import { LSP_SERVERS } from '../services/LSPService';
 
 // Default Ollama models (will be replaced if desktop version is available)
@@ -33,6 +33,10 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
   const [showGroqApiKey, setShowGroqApiKey] = useState(false);
   const [showOpenAIApiKey, setShowOpenAIApiKey] = useState(false);
   const [showClaudeApiKey, setShowClaudeApiKey] = useState(false);
+  const [showGeminiApiKey, setShowGeminiApiKey] = useState(false);
+  const [showMistralApiKey, setShowMistralApiKey] = useState(false);
+  const [showCerebrasApiKey, setShowCerebrasApiKey] = useState(false);
+  const [showSambanovaApiKey, setShowSambanovaApiKey] = useState(false);
   const [ollamaModels, setOllamaModels] = useState(DEFAULT_OLLAMA_MODELS);
   const [checkingModel, setCheckingModel] = useState(false);
 
@@ -135,7 +139,11 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
     const urls = {
       groq: 'https://console.groq.com/keys',
       openai: 'https://platform.openai.com/api-keys',
-      claude: 'https://console.anthropic.com/settings/keys'
+      claude: 'https://console.anthropic.com/settings/keys',
+      gemini: 'https://aistudio.google.com/apikey',
+      mistral: 'https://console.mistral.ai/api-keys/',
+      cerebras: 'https://cloud.cerebras.ai/',
+      sambanova: 'https://cloud.sambanova.ai/apis',
     };
 
     const url = urls[provider];
@@ -306,7 +314,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
             <h2 className={`text-xl font-bold ${
               theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
             }`}>
-              AI Fix Settings
+              AI Settings
             </h2>
           </div>
 
@@ -331,6 +339,29 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
             }`}>
               AI Provider
             </label>
+
+            {/* Privacy-First Recommendation */}
+            <div className={`p-3 rounded-lg mb-3 ${
+              theme === 'dark' ? 'bg-green-900/20 border border-green-800' : 'bg-green-50 border border-green-200'
+            }`}>
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
+                <div>
+                  <p className={`text-sm font-semibold ${
+                    theme === 'dark' ? 'text-green-300' : 'text-green-800'
+                  }`}>
+                    Privacy Tip
+                  </p>
+                  <p className={`text-xs mt-0.5 ${
+                    theme === 'dark' ? 'text-green-400' : 'text-green-700'
+                  }`}>
+                    {isDesktop
+                      ? 'For maximum privacy, use Ollama — your data never leaves your device. Cloud providers send your content to external APIs for processing.'
+                      : 'For maximum privacy, use the desktop app with Ollama — your data never leaves your device. Cloud providers send your content to external APIs for processing.'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-3">
               {/* TinyLLM Mode */}
@@ -370,6 +401,11 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                   }`}>
                     Browser-based AI • JSON & XML only • 2-5MB model • 50-100ms processing
+                  </p>
+                  <p className={`text-xs mt-1 ${
+                    theme === 'dark' ? 'text-green-500' : 'text-green-600'
+                  }`}>
+                    Data: Stays in your browser. No external requests.
                   </p>
                   <p className={`text-xs mt-1 ${
                     theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
@@ -414,6 +450,9 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   }`}>
                     Fast cloud inference • Requires API key • Free tier available
                   </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: Groq does not use API data for training. 30-day log retention.
+                  </p>
                 </div>
               </label>
 
@@ -448,6 +487,9 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                   }`}>
                     Most capable models • Requires API key • Pay per use
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: OpenAI does not train on API data by default. 30-day log retention.
                   </p>
                 </div>
               </label>
@@ -487,6 +529,216 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                       theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                     }`}>
                       Advanced reasoning • Requires API key • Pay per use
+                    </p>
+                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Data: Anthropic does not train on API data. 30-day log retention.
+                    </p>
+                  </div>
+                </label>
+              )}
+
+              {/* Gemini Mode */}
+              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                localSettings.provider === AI_PROVIDERS.GEMINI
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-900/20'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-gray-700 hover:border-gray-600'
+                    : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="provider"
+                  value={AI_PROVIDERS.GEMINI}
+                  checked={localSettings.provider === AI_PROVIDERS.GEMINI}
+                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      Google Gemini
+                    </span>
+                  </div>
+                  <p className={`text-sm mt-1 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    1M+ token context • Requires API key • Free tier available
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: Google may use free-tier data for improvement. Paid API data not used for training.
+                  </p>
+                </div>
+              </label>
+
+              {/* Mistral Mode */}
+              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                localSettings.provider === AI_PROVIDERS.MISTRAL
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-900/20'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-gray-700 hover:border-gray-600'
+                    : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="provider"
+                  value={AI_PROVIDERS.MISTRAL}
+                  checked={localSettings.provider === AI_PROVIDERS.MISTRAL}
+                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-5 h-5" />
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      Mistral
+                    </span>
+                  </div>
+                  <p className={`text-sm mt-1 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    European AI • Code-optimized models • Requires API key
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: Mistral does not train on API data. 30-day log retention.
+                  </p>
+                </div>
+              </label>
+
+              {/* Cerebras Mode (Free) */}
+              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                localSettings.provider === AI_PROVIDERS.CEREBRAS
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-900/20'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-gray-700 hover:border-gray-600'
+                    : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="provider"
+                  value={AI_PROVIDERS.CEREBRAS}
+                  checked={localSettings.provider === AI_PROVIDERS.CEREBRAS}
+                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-5 h-5" />
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      Cerebras
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
+                      Free
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                      1M tokens/day
+                    </span>
+                  </div>
+                  <p className={`text-sm mt-1 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Blazing fast inference • No credit card needed • Free API key
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: Cerebras does not use API data for training.
+                  </p>
+                </div>
+              </label>
+
+              {/* SambaNova Mode (Free) */}
+              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                localSettings.provider === AI_PROVIDERS.SAMBANOVA
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-900/20'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-gray-700 hover:border-gray-600'
+                    : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="provider"
+                  value={AI_PROVIDERS.SAMBANOVA}
+                  checked={localSettings.provider === AI_PROVIDERS.SAMBANOVA}
+                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-5 h-5" />
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      SambaNova
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
+                      Free
+                    </span>
+                  </div>
+                  <p className={`text-sm mt-1 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Free Llama 405B access • Fast inference • Free API key
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: SambaNova does not use API data for model training.
+                  </p>
+                </div>
+              </label>
+
+              {/* Ollama Mode - Desktop only (fully local) */}
+              {isDesktop && (
+                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  localSettings.provider === AI_PROVIDERS.OLLAMA
+                    ? theme === 'dark'
+                      ? 'border-green-500 bg-green-900/20'
+                      : 'border-green-500 bg-green-50'
+                    : theme === 'dark'
+                      ? 'border-gray-700 hover:border-gray-600'
+                      : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <input
+                    type="radio"
+                    name="provider"
+                    value={AI_PROVIDERS.OLLAMA}
+                    checked={localSettings.provider === AI_PROVIDERS.OLLAMA}
+                    onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-5 h-5" />
+                      <span className={`font-semibold ${
+                        theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        Ollama
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
+                        Local
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        Desktop
+                      </span>
+                    </div>
+                    <p className={`text-sm mt-1 ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      Fully local AI • No API key needed • Best for privacy
+                    </p>
+                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                      Data: Fully local. No data leaves your device.
                     </p>
                   </div>
                 </label>
@@ -810,6 +1062,331 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
             </div>
           )}
 
+          {/* Gemini Settings */}
+          {localSettings.provider === AI_PROVIDERS.GEMINI && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Gemini API Key
+                </label>
+                <button
+                  type="button"
+                  onClick={() => openApiKeyPage('gemini')}
+                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                    theme === 'dark'
+                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+                  }`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="font-medium">Get API Key from Google AI Studio</span>
+                </button>
+                <div className="relative">
+                  <input
+                    type={showGeminiApiKey ? 'text' : 'password'}
+                    value={localSettings.geminiApiKey || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, geminiApiKey: e.target.value.trim() })}
+                    placeholder="Paste your Gemini API key"
+                    className={`w-full px-4 py-2 pr-20 rounded border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGeminiApiKey(!showGeminiApiKey)}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {showGeminiApiKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Gemini Model
+                </label>
+                <select
+                  value={localSettings.geminiModel || GEMINI_MODELS['gemini-2.0-flash'].id}
+                  onChange={(e) => setLocalSettings({ ...localSettings, geminiModel: e.target.value })}
+                  className={`w-full px-4 py-2 rounded border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {Object.entries(GEMINI_MODELS).map(([key, model]) => (
+                    <option key={key} value={model.id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Mistral Settings */}
+          {localSettings.provider === AI_PROVIDERS.MISTRAL && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Mistral API Key
+                </label>
+                <button
+                  type="button"
+                  onClick={() => openApiKeyPage('mistral')}
+                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                    theme === 'dark'
+                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+                  }`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="font-medium">Get API Key from Mistral</span>
+                </button>
+                <div className="relative">
+                  <input
+                    type={showMistralApiKey ? 'text' : 'password'}
+                    value={localSettings.mistralApiKey || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, mistralApiKey: e.target.value.trim() })}
+                    placeholder="Paste your Mistral API key"
+                    className={`w-full px-4 py-2 pr-20 rounded border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMistralApiKey(!showMistralApiKey)}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {showMistralApiKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Mistral Model
+                </label>
+                <select
+                  value={localSettings.mistralModel || MISTRAL_MODELS['mistral-large-latest'].id}
+                  onChange={(e) => setLocalSettings({ ...localSettings, mistralModel: e.target.value })}
+                  className={`w-full px-4 py-2 rounded border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {Object.entries(MISTRAL_MODELS).map(([key, model]) => (
+                    <option key={key} value={model.id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Cerebras Settings */}
+          {localSettings.provider === AI_PROVIDERS.CEREBRAS && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Cerebras API Key
+                </label>
+                <button
+                  type="button"
+                  onClick={() => openApiKeyPage('cerebras')}
+                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                    theme === 'dark'
+                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+                  }`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="font-medium">Get Free API Key from Cerebras</span>
+                </button>
+                <p className={`text-xs mb-3 ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                }`}>
+                  Free: 1M tokens/day, no credit card required
+                </p>
+                <div className="relative">
+                  <input
+                    type={showCerebrasApiKey ? 'text' : 'password'}
+                    value={localSettings.cerebrasApiKey || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, cerebrasApiKey: e.target.value.trim() })}
+                    placeholder="Paste your Cerebras API key"
+                    className={`w-full px-4 py-2 pr-20 rounded border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCerebrasApiKey(!showCerebrasApiKey)}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {showCerebrasApiKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Cerebras Model
+                </label>
+                <select
+                  value={localSettings.cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id}
+                  onChange={(e) => setLocalSettings({ ...localSettings, cerebrasModel: e.target.value })}
+                  className={`w-full px-4 py-2 rounded border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {Object.entries(CEREBRAS_MODELS).map(([key, model]) => (
+                    <option key={key} value={model.id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* SambaNova Settings */}
+          {localSettings.provider === AI_PROVIDERS.SAMBANOVA && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  SambaNova API Key
+                </label>
+                <button
+                  type="button"
+                  onClick={() => openApiKeyPage('sambanova')}
+                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                    theme === 'dark'
+                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+                  }`}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="font-medium">Get Free API Key from SambaNova</span>
+                </button>
+                <p className={`text-xs mb-3 ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                }`}>
+                  Free tier available with access to Llama 405B
+                </p>
+                <div className="relative">
+                  <input
+                    type={showSambanovaApiKey ? 'text' : 'password'}
+                    value={localSettings.sambanovaApiKey || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, sambanovaApiKey: e.target.value.trim() })}
+                    placeholder="Paste your SambaNova API key"
+                    className={`w-full px-4 py-2 pr-20 rounded border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSambanovaApiKey(!showSambanovaApiKey)}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {showSambanovaApiKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  SambaNova Model
+                </label>
+                <select
+                  value={localSettings.sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id}
+                  onChange={(e) => setLocalSettings({ ...localSettings, sambanovaModel: e.target.value })}
+                  className={`w-full px-4 py-2 rounded border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {Object.entries(SAMBANOVA_MODELS).map(([key, model]) => (
+                    <option key={key} value={model.id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Ollama Settings - Desktop only */}
+          {isDesktop && localSettings.provider === AI_PROVIDERS.OLLAMA && (
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}>
+                  Ollama Model
+                </label>
+                <p className={`text-xs mb-3 ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                }`}>
+                  No API key required. Models run entirely on your device.
+                </p>
+                <select
+                  value={localSettings.ollamaModel || 'qwen2.5-coder:1.5b'}
+                  onChange={(e) => handleOllamaModelChange(e.target.value)}
+                  disabled={checkingModel}
+                  className={`w-full px-4 py-2 rounded border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                >
+                  {Object.entries(ollamaModels).map(([key, model]) => (
+                    <option key={key} value={model.id}>
+                      {model.name}{model.size ? ` (${model.size})` : ''}{model.speed ? ` - ${model.speed}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {checkingModel && (
+                  <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    Checking model availability...
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* AI Completions Toggle */}
           <div className={`border-t pt-6 ${
             theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
@@ -846,6 +1423,56 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 </p>
               </div>
             </label>
+          </div>
+
+          {/* Privacy Controls */}
+          <div className={`border-t pt-6 ${
+            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Privacy Controls
+              </div>
+            </label>
+
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-xs mb-1 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Max context characters sent to AI (0 = unlimited)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={localSettings.maxContextChars || 0}
+                  onChange={(e) => setLocalSettings({
+                    ...localSettings,
+                    maxContextChars: parseInt(e.target.value, 10) || 0,
+                  })}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 border-gray-700 text-gray-200'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+                <p className={`text-xs mt-1 ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                }`}>
+                  Limits the amount of file content sent in AI requests. Recommended: 10000-50000 for cost and privacy control.
+                </p>
+              </div>
+
+              <p className={`text-xs ${
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+              }`}>
+                TidyCode automatically scans for sensitive data (API keys, tokens, passwords) before sending content to cloud AI providers and will warn you if any are detected.
+              </p>
+            </div>
           </div>
 
           {/* LSP (Language Server Protocol) Settings - Desktop only */}

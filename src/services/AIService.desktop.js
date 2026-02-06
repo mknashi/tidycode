@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS } from './AIService.js';
 
 /**
@@ -99,31 +100,39 @@ export class DesktopAIService {
   }
 
   /**
-   * Pull/download an Ollama model
+   * Pull/download an Ollama model with streaming progress
    */
   async pullModel(modelId, onProgress) {
+    let unlisten = null;
+
     try {
-      if (onProgress) {
-        onProgress({
-          progress: 0,
-          text: `Downloading ${modelId}...`,
-          timeElapsed: 0
-        });
-      }
+      // Set up event listener for progress updates
+      unlisten = await listen('ollama-pull-progress', (event) => {
+        const data = event.payload;
 
+        if (data.model === modelId && onProgress) {
+          onProgress({
+            progress: data.progress,
+            status: data.status,
+            completedBytes: data.completed_bytes,
+            totalBytes: data.total_bytes,
+            speed: data.speed,
+            text: data.message
+          });
+        }
+      });
+
+      // Start the pull (this now emits progress events)
       const result = await invoke('pull_ollama_model', { model: modelId });
-
-      if (onProgress) {
-        onProgress({
-          progress: 100,
-          text: 'Model downloaded successfully',
-          timeElapsed: 0
-        });
-      }
 
       return result;
     } catch (error) {
       throw new Error(`Failed to pull model: ${error}`);
+    } finally {
+      // Clean up event listener
+      if (unlisten) {
+        unlisten();
+      }
     }
   }
 
@@ -380,20 +389,23 @@ Fixed ${errorDetails.type}:`;
 
   /**
    * Main fix function - routes to appropriate provider
+   * For JSON/XML files, uses TinyLLM unless OpenAI is selected (Ollama can hang on these)
    */
   async fix(content, errorDetails, settings, onProgress) {
-    const { provider, ollamaModel, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel } = settings;
+    const { provider, openaiApiKey, openaiModel } = settings;
+    const isJsonOrXml = errorDetails.type === 'JSON' || errorDetails.type === 'XML';
 
     try {
-      // TinyLLM mode (browser-based, JSON/XML only, no API key)
-      if (provider === AI_PROVIDERS.TINYLLM) {
+      // For JSON/XML files, use TinyLLM unless OpenAI is selected
+      // TinyLLM is fast and reliable for JSON/XML, while Ollama can hang
+      if (isJsonOrXml && provider !== AI_PROVIDERS.OPENAI) {
+        console.log(`[DesktopAIService] Using TinyLLM for ${errorDetails.type} fix (provider: ${provider})`);
         return await this.fixWithTinyLLM(content, errorDetails);
       }
 
-      // Ollama (local) mode
-      if (provider === 'ollama') {
-        const modelId = ollamaModel || 'deepseek-r1:8b';
-        return await this.fixWithOllama(content, errorDetails, modelId, onProgress);
+      // TinyLLM mode (explicit selection)
+      if (provider === AI_PROVIDERS.TINYLLM) {
+        return await this.fixWithTinyLLM(content, errorDetails);
       }
 
       if (onProgress) {
@@ -404,22 +416,13 @@ Fixed ${errorDetails.type}:`;
         });
       }
 
-      // Groq mode
-      if (provider === AI_PROVIDERS.GROQ) {
-        return await this.fixWithGroq(content, errorDetails, groqApiKey, groqModel);
-      }
-
-      // OpenAI mode
+      // OpenAI mode (also handles JSON/XML when explicitly selected)
       if (provider === AI_PROVIDERS.OPENAI) {
         return await this.fixWithOpenAI(content, errorDetails, openaiApiKey, openaiModel);
       }
 
-      // Claude mode
-      if (provider === AI_PROVIDERS.CLAUDE) {
-        return await this.fixWithClaude(content, errorDetails, claudeApiKey, claudeModel);
-      }
-
-      throw new Error('Invalid AI provider');
+      // For non-JSON/XML files, other providers are not supported for fixing
+      throw new Error(`${provider} is not supported for fixing ${errorDetails.type} files. Please use OpenAI or TinyLLM.`);
     } catch (error) {
       throw error;
     }

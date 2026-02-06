@@ -29,7 +29,9 @@
     "build:desktop:linux": "npm run prepare:lsp && tauri build --target x86_64-unknown-linux-gnu",
     "preview": "vite preview",
     "start": "node serve.js",
-    "test:smoke": "npm run build && npm run prepare:lsp && tauri build --debug --bundles none"
+    "test:smoke": "npm run build && npm run prepare:lsp && tauri build --debug --bundles none",
+    "test:ai": "node src/services/ai/__tests__/run.js",
+    "test:ai:live": "node src/services/ai/__tests__/run.js --live"
   },
   "dependencies": {
     "@codemirror/lang-cpp": "^6.0.3",
