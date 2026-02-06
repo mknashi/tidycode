@@ -8502,51 +8502,6 @@ const TidyCode = () => {
             Diff
           </button>
 
-          {/* VIM Mode Toggle */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              VIM
-            </span>
-            <button
-              onClick={() => {
-                setVimEnabled(!vimEnabled);
-                if (!vimEnabled) {
-                  setVimMode('normal');
-                  setTimeout(() => {
-                    if (codeMirrorRef.current) {
-                      codeMirrorRef.current.focus();
-                    }
-                  }, 100);
-                }
-              }}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                vimEnabled
-                  ? 'bg-indigo-600 hover:bg-indigo-500'
-                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
-              }`}
-              title={vimEnabled ? "Disable VIM Mode" : "Enable VIM Mode"}
-              role="switch"
-              aria-checked={vimEnabled}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  vimEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            {vimEnabled && (
-              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                vimMode === 'normal' ? 'bg-green-500 text-white' :
-                vimMode === 'insert' ? 'bg-blue-500 text-white' :
-                'bg-purple-500 text-white'
-              }`}>
-                {vimMode === 'normal' ? 'N' : vimMode === 'insert' ? 'I' : 'V'}
-              </span>
-            )}
-          </div>
-
-          <div className={`w-px mx-2 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-
           {/* Format & Convert Group */}
           <button
             onClick={formatContent}
