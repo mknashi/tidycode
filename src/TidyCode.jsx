@@ -5545,16 +5545,52 @@ const TidyCode = () => {
               extensions: ['*']
             },
             {
+              name: 'Code Files',
+              extensions: [
+                // JavaScript/TypeScript
+                'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
+                // Web
+                'html', 'htm', 'css', 'scss', 'sass', 'less',
+                // Data formats
+                'json', 'xml', 'yaml', 'yml', 'toml', 'csv',
+                // C/C++
+                'c', 'h', 'cpp', 'hpp', 'cc', 'cxx', 'hxx',
+                // Java/Kotlin
+                'java', 'kt', 'kts',
+                // Python
+                'py', 'pyw', 'pyx',
+                // PHP
+                'php', 'php3', 'php4', 'php5', 'phtml',
+                // Ruby
+                'rb', 'rbw', 'erb',
+                // Go
+                'go',
+                // Rust
+                'rs',
+                // Swift
+                'swift',
+                // C#
+                'cs',
+                // SQL
+                'sql',
+                // Shell
+                'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd',
+                // Config
+                'ini', 'conf', 'config', 'env', 'properties',
+                // Text/Docs
+                'txt', 'md', 'markdown', 'log', 'rst',
+                // Other
+                'lua', 'r', 'R', 'dart', 'scala', 'groovy', 'gradle',
+                'pl', 'pm', 'asm', 's', 'f', 'f90', 'pas', 'vim'
+              ]
+            },
+            {
               name: 'PDF Documents',
               extensions: ['pdf']
             },
             {
               name: 'SVG Images',
               extensions: ['svg']
-            },
-            {
-              name: 'Text Files',
-              extensions: ['txt', 'md', 'log', 'json', 'xml', 'html', 'css', 'js', 'jsx', 'ts', 'tsx']
             }
           ]
         });
