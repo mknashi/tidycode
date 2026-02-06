@@ -43,8 +43,11 @@ desktop.ini
 test-*.json
 test-*.xml
 test-*.csv
+test-*.log
+test-*.txt
 test.md
 test.sh
+test-files/
 
 # Documentation artifacts (keep only source docs)
 *.md.backup

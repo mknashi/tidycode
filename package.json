@@ -31,7 +31,8 @@
     "start": "node serve.js",
     "test:smoke": "npm run build && npm run prepare:lsp && tauri build --debug --bundles none",
     "test:ai": "node src/services/ai/__tests__/run.js",
-    "test:ai:live": "node src/services/ai/__tests__/run.js --live"
+    "test:ai:live": "node src/services/ai/__tests__/run.js --live",
+    "generate:test-files": "node scripts/generate-test-files.js"
   },
   "dependencies": {
     "@codemirror/lang-cpp": "^6.0.3",
@@ -75,6 +76,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-pdf": "^10.2.0",
+    "react-window": "^2.2.5",
     "react-zoom-pan-pinch": "^3.7.0",
     "smol-toml": "^1.6.0",
     "tinyllm": "github:mknashi/tinyllm"
