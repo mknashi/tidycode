@@ -8642,6 +8642,55 @@ const TidyCode = () => {
 
         {/* Right side controls — AI Group */}
         <div className="flex gap-1.5 ml-auto items-center">
+          <button
+            onClick={() => aiChat.setShowChatPanel(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+              aiChat.showChatPanel
+                ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
+                : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
+            }`}
+            title="AI Chat - Open conversation panel (⇧⌘L)"
+          >
+            <MessageSquare className="w-4 h-4" />
+            AI Chat
+          </button>
+
+          {/* AI Actions Button */}
+          {activeTab && (
+            <button
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                let selection = '';
+                let range = null;
+                try {
+                  const view = codeMirrorRef.current?.getView?.();
+                  if (view) {
+                    const sel = view.state.selection.main;
+                    if (sel && !sel.empty) {
+                      selection = view.state.sliceDoc(sel.from, sel.to);
+                      range = { from: sel.from, to: sel.to };
+                    }
+                  }
+                } catch (_) { /* ignore */ }
+                aiActions.openActionsMenu(
+                  { x: rect.left, y: rect.bottom + 4 },
+                  selection,
+                  range
+                );
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30'
+                  : 'bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300'
+              }`}
+              title="AI Actions (⇧⌘A)"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI Actions
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          )}
+
           {/* VIM Mode Toggle - disabled for VirtualEditor (large files) */}
           <div className={`flex items-center gap-2 ${activeTab?.useVirtualEditor ? 'opacity-50' : ''}`}>
             <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
