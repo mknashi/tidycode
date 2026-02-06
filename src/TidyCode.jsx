@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare } from 'lucide-react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -39,6 +39,15 @@ import 'prismjs/components/prism-markdown';
 import DiffViewerModal from './components/DiffViewerModal';
 import DiffViewer from './components/DiffViewer';
 import AISettingsModal from './components/AISettingsModal';
+import AIActionsMenu, { getFileCategory } from './components/AIActionsMenu.jsx';
+import AIResultsPanel from './components/AIResultsPanel.jsx';
+import AIChatPanel from './components/AIChatPanel.jsx';
+import AISelectionToolbar from './components/AISelectionToolbar.jsx';
+import CodeSuggestionPanel from './components/CodeSuggestionPanel.jsx';
+import { useAIActions } from './hooks/useAIActions.js';
+import { useAIChat } from './hooks/useAIChat.js';
+import { ACTION_IDS } from './services/ai/actions/ActionManager.js';
+import { shouldSuggestMoreProviders } from './services/ai/autoSelect.js';
 import OllamaSetupWizard from './components/OllamaSetupWizard';
 import CodeMirrorEditor from './components/CodeMirrorEditor';
 import TabsExplorer from './components/TabsExplorer';
@@ -50,7 +59,7 @@ import SVGViewer from './components/SVGViewer';
 import { HelpModal } from './components/help/HelpModal';
 import { HELP_URLS } from './components/help/HelpContent';
 import { formatService } from './services/formatters';
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS } from './services/AIService';
+import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS } from './services/AIService';
 import { isDesktop, getAIService } from './utils/platform';
 import { loadSecureSettings, saveSecureSettings } from './utils/secureStorage';
 import Tooltip from './components/Tooltip';
@@ -1116,7 +1125,15 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
   };
 
   const handleAITransform = async (action) => {
-    if (!aiService || !editorRef.current) return;
+    if (!editorRef.current) return;
+    if (!aiService) {
+      notifyUser('AI service not initialized. Please configure an AI provider in AI Settings.', 'error');
+      return;
+    }
+    if (!aiSettings?.provider || aiSettings.provider === 'tinyllm') {
+      notifyUser('Text transformation requires a cloud AI provider. Please select one in AI Settings.', 'error');
+      return;
+    }
 
     setIsAIProcessing(true);
     setShowAIMenu(false);
@@ -1142,7 +1159,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
       setAISuggestion(formatted);
     } catch (error) {
       console.error('AI transformation error:', error);
-      notifyUser(`AI transformation failed: ${error.message}`);
+      notifyUser(`AI transformation failed: ${error.message}`, 'error');
     } finally {
       setIsAIProcessing(false);
     }
@@ -1487,7 +1504,16 @@ const TidyCode = () => {
       openaiModel: 'gpt-4o-mini',
       claudeApiKey: '',
       claudeModel: 'claude-3-5-haiku-20241022',
+      geminiApiKey: '',
+      geminiModel: 'gemini-2.0-flash',
+      mistralApiKey: '',
+      mistralModel: 'mistral-large-latest',
+      cerebrasApiKey: '',
+      cerebrasModel: 'llama-3.3-70b',
+      sambanovaApiKey: '',
+      sambanovaModel: 'Meta-Llama-3.3-70B-Instruct',
       ollamaModel: 'llama3.1:8b', // Desktop only - best for large files
+      maxContextChars: 0, // 0 = unlimited; limits content sent to AI providers
       enableLSP: false,
       lspConfig: {
         javascript: { mode: 'bundled', customCommand: '' },
@@ -1502,6 +1528,91 @@ const TidyCode = () => {
   });
   // AI Service instance (platform-aware)
   const [aiService, setAIService] = useState(null);
+
+  // AI Actions hook - Phase 3 UI integration
+  const aiActions = useAIActions({
+    aiSettings,
+    tabs,
+    activeTabId,
+    setTabs,
+    setActiveTabId,
+    nextIdRef,
+    showTransientMessage,
+  });
+
+  const aiChat = useAIChat({
+    aiSettings,
+    activeTab: tabs?.find(t => t.id === activeTabId) || null,
+    selectedText: aiActions.selectedText,
+    providerInitialized: aiActions.providerInitialized,
+    showTransientMessage,
+    setTabs,
+    setActiveTabId,
+    nextIdRef,
+  });
+
+  // Model selector helpers for AI Chat
+  const MODEL_MAP = {
+    groq: { models: GROQ_MODELS, key: 'groqModel' },
+    openai: { models: OPENAI_MODELS, key: 'openaiModel' },
+    claude: { models: CLAUDE_MODELS, key: 'claudeModel' },
+    gemini: { models: GEMINI_MODELS, key: 'geminiModel' },
+    mistral: { models: MISTRAL_MODELS, key: 'mistralModel' },
+    cerebras: { models: CEREBRAS_MODELS, key: 'cerebrasModel' },
+    sambanova: { models: SAMBANOVA_MODELS, key: 'sambanovaModel' },
+  };
+  const providerModelInfo = MODEL_MAP[aiSettings.provider] || null;
+  const chatCurrentModel = providerModelInfo
+    ? aiSettings[providerModelInfo.key]
+    : aiSettings.provider === 'ollama'
+      ? aiSettings.ollamaModel || ''
+      : '';
+  const chatAvailableModels = providerModelInfo
+    ? Object.values(providerModelInfo.models).map((m) => ({ id: m.id, name: m.name }))
+    : [];
+  const handleChatModelChange = useCallback((modelId) => {
+    if (aiSettings.provider === 'ollama') {
+      setAISettings((prev) => ({ ...prev, ollamaModel: modelId }));
+      return;
+    }
+    if (!providerModelInfo) return;
+    setAISettings((prev) => ({ ...prev, [providerModelInfo.key]: modelId }));
+  }, [aiSettings.provider]);
+
+  // Provider change handler for inline provider selectors
+  const handleProviderChange = useCallback((providerId) => {
+    setAISettings((prev) => ({ ...prev, provider: providerId }));
+  }, []);
+
+  // Refresh key for AIProviderSelector — increments when provider manager initializes
+  const [providerRefreshKey, setProviderRefreshKey] = useState(0);
+  const suggestMoreShownRef = useRef(false);
+  useEffect(() => {
+    if (aiActions.providerInitialized) {
+      setProviderRefreshKey((k) => k + 1);
+      // One-time suggestion to configure more providers
+      if (!suggestMoreShownRef.current && shouldSuggestMoreProviders(aiSettings)) {
+        suggestMoreShownRef.current = true;
+        showTransientMessage('Tip: Configure additional AI providers in Settings for automatic provider selection.', 'info');
+      }
+    }
+  }, [aiActions.providerInitialized]);
+
+  // Floating AI toolbar state (persistent, draggable)
+  const [aiToolbarVisible, setAiToolbarVisible] = useState(true); // shown on load
+  const [aiToolbarSelection, setAiToolbarSelection] = useState(null); // { text, from, to }
+  const selectionTimerRef = useRef(null);
+
+  // Re-show toolbar when switching tabs or opening a file
+  const prevActiveTabIdRef = useRef(activeTabId);
+  useEffect(() => {
+    if (activeTabId !== prevActiveTabIdRef.current) {
+      prevActiveTabIdRef.current = activeTabId;
+      setAiToolbarVisible(true);
+      setAiToolbarSelection(null);
+    }
+  }, [activeTabId]);
+
   const [dragFolderId, setDragFolderId] = useState(null);
   const [dragOverFolderId, setDragOverFolderId] = useState(null);
   const [dragNoteId, setDragNoteId] = useState(null);
@@ -2103,12 +2214,105 @@ const TidyCode = () => {
         setQuickOpenQuery('');
         setQuickOpenSelectedIndex(0);
       }
+      // Ctrl/Cmd + Shift + A for AI Actions Menu
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Get selected text and range from CodeMirror
+        let selection = '';
+        let range = null;
+        try {
+          const view = codeMirrorRef.current?.getView?.();
+          if (view) {
+            const sel = view.state.selection.main;
+            if (sel && !sel.empty) {
+              selection = view.state.sliceDoc(sel.from, sel.to);
+              range = { from: sel.from, to: sel.to };
+            }
+          }
+        } catch (_) { /* ignore */ }
+        // Open menu centered in viewport
+        aiActions.openActionsMenu(
+          { x: window.innerWidth / 2 - 140, y: window.innerHeight / 3 },
+          selection,
+          range
+        );
+      }
+      // Ctrl/Cmd + Shift + E for Explain
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        e.stopPropagation();
+        let selection = '';
+        let range = null;
+        try {
+          const view = codeMirrorRef.current?.getView?.();
+          if (view) {
+            const sel = view.state.selection.main;
+            if (sel && !sel.empty) {
+              selection = view.state.sliceDoc(sel.from, sel.to);
+              range = { from: sel.from, to: sel.to };
+            }
+          }
+        } catch (_) { /* ignore */ }
+        if (selection) {
+          aiActions.openActionsMenu(null, selection, range);
+          aiActions.executeAction(ACTION_IDS.EXPLAIN, {}, selection);
+        }
+      }
+      // Ctrl/Cmd + Shift + R for Refactor (general)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        e.stopPropagation();
+        let selection = '';
+        let range = null;
+        try {
+          const view = codeMirrorRef.current?.getView?.();
+          if (view) {
+            const sel = view.state.selection.main;
+            if (sel && !sel.empty) {
+              selection = view.state.sliceDoc(sel.from, sel.to);
+              range = { from: sel.from, to: sel.to };
+            }
+          }
+        } catch (_) { /* ignore */ }
+        if (selection) {
+          aiActions.openActionsMenu(null, selection, range);
+          aiActions.executeAction(ACTION_IDS.REFACTOR, { type: 'general' }, selection);
+        }
+      }
+      // Ctrl/Cmd + Shift + T for Generate Tests
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault();
+        e.stopPropagation();
+        let selection = '';
+        let range = null;
+        try {
+          const view = codeMirrorRef.current?.getView?.();
+          if (view) {
+            const sel = view.state.selection.main;
+            if (sel && !sel.empty) {
+              selection = view.state.sliceDoc(sel.from, sel.to);
+              range = { from: sel.from, to: sel.to };
+            }
+          }
+        } catch (_) { /* ignore */ }
+        if (selection) {
+          aiActions.openActionsMenu(null, selection, range);
+          aiActions.executeAction(ACTION_IDS.GENERATE_TESTS, {}, selection);
+        }
+      }
+      // Ctrl/Cmd + Shift + L for AI Chat toggle
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault();
+        e.stopPropagation();
+        aiChat.setShowChatPanel(prev => !prev);
+      }
     };
 
     // Use capture phase to intercept before CodeMirror's Vim extension
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeTabId, tabs, vimEnabled]); // Dependencies to ensure we have latest data
+  }, [activeTabId, tabs, vimEnabled, aiActions.openActionsMenu, aiActions.executeAction, aiChat.setShowChatPanel]); // Dependencies to ensure we have latest data
 
   // Load tabs from localStorage on mount
   useEffect(() => {
@@ -5370,28 +5574,78 @@ const TidyCode = () => {
             multiple: false,
             types: [
               {
-                description: 'Text Files',
+                description: 'Code & Text Files',
                 accept: {
+                  // Text
                   'text/plain': ['.txt', '.log'],
                   'text/markdown': ['.md', '.markdown'],
-                  'text/html': ['.html', '.htm'],
-                  'text/css': ['.css'],
-                  'text/javascript': ['.js', '.jsx', '.ts', '.tsx', '.mjs'],
-                  'application/json': ['.json'],
-                  'application/xml': ['.xml'],
-                  'text/csv': ['.csv'],
-                  'application/x-python': ['.py'],
-                  'text/x-python': ['.py'],
-                  'application/x-java': ['.java'],
-                  'text/x-java': ['.java'],
+                  'text/html': ['.html', '.htm', '.xhtml'],
+                  'text/css': ['.css', '.scss', '.sass', '.less'],
+                  // JavaScript/TypeScript
+                  'text/javascript': ['.js', '.jsx', '.mjs', '.cjs'],
+                  'text/typescript': ['.ts', '.tsx', '.mts', '.cts'],
+                  // Data formats
+                  'application/json': ['.json', '.jsonc', '.json5'],
+                  'application/xml': ['.xml', '.xsl', '.xslt', '.xsd', '.dtd'],
+                  'text/csv': ['.csv', '.tsv'],
+                  'text/yaml': ['.yaml', '.yml'],
+                  'text/x-toml': ['.toml'],
+                  // Python
+                  'text/x-python': ['.py', '.pyw', '.pyx', '.pyi'],
+                  // Java/JVM
+                  'text/x-java': ['.java', '.class', '.jar'],
+                  'text/x-kotlin': ['.kt', '.kts'],
+                  'text/x-scala': ['.scala', '.sc'],
+                  'text/x-groovy': ['.groovy', '.gradle'],
+                  // C/C++
                   'text/x-c': ['.c', '.h'],
-                  'text/x-c++': ['.cpp', '.hpp', '.cc', '.hh', '.cxx'],
-                  'application/x-php': ['.php'],
-                  'text/x-php': ['.php'],
-                  'application/x-rust': ['.rs'],
+                  'text/x-c++': ['.cpp', '.hpp', '.cc', '.hh', '.cxx', '.hxx', '.c++', '.h++'],
+                  'text/x-objective-c': ['.m', '.mm'],
+                  // Other compiled languages
+                  'text/x-csharp': ['.cs', '.csx'],
                   'text/x-rust': ['.rs'],
-                  'application/x-sql': ['.sql'],
-                  'text/x-sql': ['.sql'],
+                  'text/x-go': ['.go'],
+                  'text/x-swift': ['.swift'],
+                  'text/x-dart': ['.dart'],
+                  // Web/Scripting
+                  'text/x-php': ['.php', '.php3', '.php4', '.php5', '.phtml'],
+                  'text/x-ruby': ['.rb', '.rbw', '.rake', '.gemspec'],
+                  'text/x-perl': ['.pl', '.pm', '.pod'],
+                  'text/x-lua': ['.lua'],
+                  'text/x-r': ['.r', '.R', '.rmd'],
+                  // Shell
+                  'text/x-shellscript': ['.sh', '.bash', '.zsh', '.fish', '.ksh', '.csh'],
+                  'text/x-powershell': ['.ps1', '.psm1', '.psd1'],
+                  'application/x-bat': ['.bat', '.cmd'],
+                  // Database
+                  'text/x-sql': ['.sql', '.mysql', '.pgsql', '.plsql'],
+                  // Markup/Template
+                  'text/x-vue': ['.vue'],
+                  'text/x-svelte': ['.svelte'],
+                  'text/x-handlebars': ['.hbs', '.handlebars'],
+                  'text/x-ejs': ['.ejs'],
+                  'text/x-pug': ['.pug', '.jade'],
+                  // Config
+                  'text/x-ini': ['.ini', '.conf', '.cfg', '.config'],
+                  'text/x-properties': ['.properties', '.env'],
+                  'text/x-dockerfile': ['Dockerfile', '.dockerfile'],
+                  'text/x-makefile': ['Makefile', '.mk'],
+                  // Other languages
+                  'text/x-asm': ['.asm', '.s', '.S'],
+                  'text/x-fortran': ['.f', '.f90', '.f95', '.f03', '.for'],
+                  'text/x-pascal': ['.pas', '.pp', '.inc'],
+                  'text/x-vb': ['.vb', '.vbs', '.bas'],
+                  'text/x-haskell': ['.hs', '.lhs'],
+                  'text/x-erlang': ['.erl', '.hrl'],
+                  'text/x-elixir': ['.ex', '.exs'],
+                  'text/x-clojure': ['.clj', '.cljs', '.cljc', '.edn'],
+                  'text/x-fsharp': ['.fs', '.fsx', '.fsi'],
+                  'text/x-ocaml': ['.ml', '.mli'],
+                  'text/x-julia': ['.jl'],
+                  'text/x-nim': ['.nim'],
+                  'text/x-zig': ['.zig'],
+                  'text/x-v': ['.v', '.vv'],
+                  // Graphics/Vector
                   'image/svg+xml': ['.svg']
                 }
               },
@@ -6688,7 +6942,6 @@ const TidyCode = () => {
   const activeTab = tabs.find(t => t.id === activeTabId);
   const editorLines = activeTab && activeTab.content ? String(activeTab.content).split('\n') : [];
 
-
   // Detect if current file should have syntax highlighting - needs to be before CSV/Markdown detection
   const syntaxLanguage = useMemo(() => {
     const fileName = activeTab?.filePath || activeTab?.title || '';
@@ -6930,6 +7183,11 @@ const TidyCode = () => {
     const fileName = activeTab?.filePath || activeTab?.title || '';
     const fileType = getFileType(fileName);
 
+    // Skip structure detection for code files (e.g., .cpp, .js, .py, etc.)
+    if (fileType.type === 'code') {
+      return { type: null, nodes: [] };
+    }
+
     // Use format service for detection
     const detection = formatService.detect(trimmed, fileName);
 
@@ -6996,6 +7254,82 @@ const TidyCode = () => {
   useEffect(() => {
     setStructureCollapsed({});
   }, [structureTree.type, activeTabId]);
+
+  // Auto-validate JSON/XML files on open/paste (only for small files < 100KB)
+  const prevTabIdRef = useRef(null);
+  const prevContentHashRef = useRef(null);
+  useEffect(() => {
+    if (!activeTab?.content) return;
+
+    const contentLength = activeTab.content.length;
+    const MAX_AUTO_VALIDATE_SIZE = 100000; // 100KB
+
+    // Skip large files to avoid blocking UI
+    if (contentLength > MAX_AUTO_VALIDATE_SIZE) return;
+
+    // Only auto-validate when tab changes or content is significantly different (paste/open)
+    // Use a simple hash to detect major content changes vs typing
+    const contentHash = contentLength + ':' + activeTab.content.slice(0, 100) + activeTab.content.slice(-100);
+    const isNewTab = prevTabIdRef.current !== activeTab.id;
+    const isSignificantChange = prevContentHashRef.current !== contentHash &&
+      Math.abs(contentLength - (prevContentHashRef.current?.split(':')[0] || 0)) > 50;
+
+    prevTabIdRef.current = activeTab.id;
+    prevContentHashRef.current = contentHash;
+
+    // Only run validation on new tab or significant paste/load (not while typing)
+    if (!isNewTab && !isSignificantChange) return;
+
+    const trimmed = String(activeTab.content).trim();
+    if (!trimmed) return;
+
+    const fileName = activeTab?.filePath || activeTab?.title || '';
+    const detection = formatService.detect(trimmed, fileName);
+
+    // Auto-validate JSON files
+    if (detection.format === 'json' || (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+      try {
+        JSON.parse(trimmed);
+        // Valid JSON - clear any existing error
+        if (errorMessage?.type === 'JSON') {
+          setErrorMessage(null);
+        }
+      } catch (e) {
+        // Invalid JSON - show error panel
+        const errorDetails = buildJSONErrorDetails(activeTab.content, e);
+        setErrorMessage(errorDetails);
+      }
+    }
+    // Auto-validate XML files
+    else if (detection.format === 'xml' || trimmed.startsWith('<')) {
+      try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(trimmed, 'text/xml');
+        const parserError = xmlDoc.getElementsByTagName('parsererror');
+
+        if (parserError.length > 0) {
+          // Invalid XML - show error panel
+          const errorText = parserError[0].textContent;
+          const errorDetails = buildXMLErrorDetails(activeTab.content, errorText);
+          setErrorMessage(errorDetails);
+        } else if (errorMessage?.type === 'XML') {
+          // Valid XML - clear error
+          setErrorMessage(null);
+        }
+      } catch (e) {
+        // Parsing failed - show generic error
+        setErrorMessage({
+          type: 'XML',
+          message: e.message,
+          line: null,
+          column: null,
+          allErrors: [],
+          context: [],
+          tips: ['Check XML syntax']
+        });
+      }
+    }
+  }, [activeTab?.id, activeTab?.content]);
 
   useEffect(() => {
     if (!isCSVTab || !activeTab) return;
@@ -8027,6 +8361,21 @@ const TidyCode = () => {
               }
             }
           }}
+          onContextMenu={({ x, y, selectedText: selText, selectionRange: selRange }) => {
+            aiActions.openActionsMenu({ x, y }, selText, selRange);
+          }}
+          onSelectionChange={(sel) => {
+            if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
+            if (sel && sel.text.length >= 10) {
+              setAiToolbarSelection({ text: sel.text, from: sel.from, to: sel.to });
+              // Re-show toolbar if it was closed and user selects text
+              if (!aiToolbarVisible && !aiActions.actionsMenuPos) {
+                selectionTimerRef.current = setTimeout(() => setAiToolbarVisible(true), 300);
+              }
+            } else if (sel === null && !aiToolbarVisible) {
+              setAiToolbarSelection(null);
+            }
+          }}
           placeholder="Start typing..."
           className="w-full h-full"
           style={{ fontSize: '14px' }}
@@ -8052,6 +8401,7 @@ const TidyCode = () => {
         </div>
 
         <div className="flex gap-1.5 ml-4">
+          {/* File Operations Group */}
           <button
             onClick={createNewTab}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
@@ -8100,6 +8450,66 @@ const TidyCode = () => {
 
           <div className={`w-px mx-2 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
 
+          {/* Diff Button */}
+          <button
+            onClick={() => setShowDiffViewer(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              theme === 'dark'
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-white'
+            }`}
+            title="Diff Viewer - Compare and merge files"
+          >
+            <GitCompare className="w-4 h-4" />
+            Diff
+          </button>
+
+          {/* VIM Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              VIM
+            </span>
+            <button
+              onClick={() => {
+                setVimEnabled(!vimEnabled);
+                if (!vimEnabled) {
+                  setVimMode('normal');
+                  setTimeout(() => {
+                    if (codeMirrorRef.current) {
+                      codeMirrorRef.current.focus();
+                    }
+                  }, 100);
+                }
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                vimEnabled
+                  ? 'bg-indigo-600 hover:bg-indigo-500'
+                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
+              }`}
+              title={vimEnabled ? "Disable VIM Mode" : "Enable VIM Mode"}
+              role="switch"
+              aria-checked={vimEnabled}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  vimEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            {vimEnabled && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                vimMode === 'normal' ? 'bg-green-500 text-white' :
+                vimMode === 'insert' ? 'bg-blue-500 text-white' :
+                'bg-purple-500 text-white'
+              }`}>
+                {vimMode === 'normal' ? 'N' : vimMode === 'insert' ? 'I' : 'V'}
+              </span>
+            )}
+          </div>
+
+          <div className={`w-px mx-2 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+
+          {/* Format & Convert Group */}
           <button
             onClick={formatContent}
             disabled={!activeTab}
@@ -8192,68 +8602,68 @@ const TidyCode = () => {
           )}
         </div>
 
-        {/* Right side controls */}
+        {/* Right side controls — AI Group */}
         <div className="flex gap-1.5 ml-auto items-center">
-          {/* VIM Mode Toggle */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              VIM
-            </span>
+          <button
+            onClick={() => aiChat.setShowChatPanel(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+              aiChat.showChatPanel
+                ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
+                : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
+            }`}
+            title="AI Chat - Open conversation panel (⇧⌘L)"
+          >
+            <MessageSquare className="w-4 h-4" />
+            AI Chat
+          </button>
+
+          {/* AI Actions Button */}
+          {activeTab && (
             <button
-              onClick={() => {
-                setVimEnabled(!vimEnabled);
-                if (!vimEnabled) {
-                  setVimMode('normal'); // Start in normal mode when enabling VIM
-                  // Focus the editor after enabling VIM mode
-                  setTimeout(() => {
-                    if (codeMirrorRef.current) {
-                      codeMirrorRef.current.focus();
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                let selection = '';
+                let range = null;
+                try {
+                  const view = codeMirrorRef.current?.getView?.();
+                  if (view) {
+                    const sel = view.state.selection.main;
+                    if (sel && !sel.empty) {
+                      selection = view.state.sliceDoc(sel.from, sel.to);
+                      range = { from: sel.from, to: sel.to };
                     }
-                  }, 100);
-                }
+                  }
+                } catch (_) { /* ignore */ }
+                aiActions.openActionsMenu(
+                  { x: rect.left, y: rect.bottom + 4 },
+                  selection,
+                  range
+                );
               }}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                vimEnabled
-                  ? 'bg-indigo-600 hover:bg-indigo-500'
-                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30'
+                  : 'bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300'
               }`}
-              title={vimEnabled ? "Disable VIM Mode" : "Enable VIM Mode"}
-              role="switch"
-              aria-checked={vimEnabled}
+              title="AI Actions (⇧⌘A)"
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  vimEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
+              <Sparkles className="w-4 h-4" />
+              AI Actions
+              <ChevronDown className="w-3 h-3" />
             </button>
-            {vimEnabled && (
-              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                vimMode === 'normal' ? 'bg-green-500 text-white' :
-                vimMode === 'insert' ? 'bg-blue-500 text-white' :
-                'bg-purple-500 text-white'
-              }`}>
-                {vimMode === 'normal' ? 'N' : vimMode === 'insert' ? 'I' : 'V'}
-              </span>
-            )}
-          </div>
+          )}
 
           <button
             onClick={() => setShowAISettings(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-            title="AI Settings - Configure AI provider for error fixing"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${
+              theme === 'dark'
+                ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
+                : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+            }`}
+            title="AI Settings - Configure AI provider"
           >
             <Settings className="w-4 h-4" />
             AI Settings
-          </button>
-
-          <button
-            onClick={() => setShowDiffViewer(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-            title="Diff Viewer - Compare and merge files"
-          >
-            <GitCompare className="w-4 h-4" />
-            Diff
           </button>
         </div>
       </div>
@@ -9118,6 +9528,58 @@ const TidyCode = () => {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* AI Results Panel Below Editor */}
+            {aiActions.showResultsPanel && (
+              <AIResultsPanel
+                theme={theme}
+                result={aiActions.actionResult}
+                isLoading={aiActions.actionLoading}
+                error={aiActions.actionError}
+                originalContent={activeTab?.content || ''}
+                onClose={aiActions.closeResults}
+                onCopy={() => showTransientMessage('Copied to clipboard', 'info')}
+                onOpenInNewTab={aiActions.openInNewTab}
+                onRegenerate={aiActions.regenerate}
+                onAccept={aiActions.acceptSuggestion}
+                showDiff={aiActions.showDiff}
+                onToggleDiff={() => aiActions.setShowDiff(d => !d)}
+                height={aiActions.resultsPanelHeight}
+                onHeightChange={aiActions.setResultsPanelHeight}
+                currentProvider={aiSettings.provider || ''}
+                currentModel={chatCurrentModel}
+                onProviderChange={handleProviderChange}
+                onModelChange={handleChatModelChange}
+                refreshKey={providerRefreshKey}
+              />
+            )}
+
+            {/* AI Chat Panel Below Editor */}
+            {aiChat.showChatPanel && (
+              <AIChatPanel
+                theme={theme}
+                messages={aiChat.messages}
+                isStreaming={aiChat.isStreaming}
+                error={aiChat.error}
+                onSend={aiChat.sendMessage}
+                onAbort={aiChat.abortResponse}
+                onClear={aiChat.clearHistory}
+                onClose={() => aiChat.setShowChatPanel(false)}
+                onRetry={aiChat.retryLastMessage}
+                height={aiChat.chatPanelHeight}
+                onHeightChange={aiChat.setChatPanelHeight}
+                activeFileName={activeTab?.title || ''}
+                onApplyCode={aiChat.applyCodeToEditor}
+                onOpenInNewTab={aiChat.openCodeInNewTab}
+                currentProvider={aiSettings.provider || ''}
+                currentModel={chatCurrentModel}
+                availableModels={chatAvailableModels}
+                onProviderChange={handleProviderChange}
+                onModelChange={handleChatModelChange}
+                refreshKey={providerRefreshKey}
+                providerName={aiSettings.provider || ''}
+              />
             )}
 
             {/* Full-width Error/Warning Panel Below Editor */}
@@ -10429,6 +10891,73 @@ const TidyCode = () => {
           onReject={handleRejectFix}
           theme={theme}
         />
+      )}
+
+      {/* AI Floating Selection Toolbar (draggable, persistent) */}
+      {aiToolbarVisible && !aiActions.actionsMenuPos && activeTab?.title !== 'Welcome' && (
+        <AISelectionToolbar
+          theme={theme}
+          selectedText={aiToolbarSelection?.text || ''}
+          fileCategory={getFileCategory(syntaxLanguage || '', activeTab?.title || activeTab?.filePath || '')}
+          onAction={(actionId) => {
+            const selText = aiToolbarSelection?.text || '';
+            const range = aiToolbarSelection
+              ? { from: aiToolbarSelection.from, to: aiToolbarSelection.to }
+              : null;
+            aiActions.openActionsMenu(null, selText, range);
+            aiActions.executeAction(actionId, {}, selText);
+          }}
+          onOpenFullMenu={() => {
+            const selText = aiToolbarSelection?.text || '';
+            const range = aiToolbarSelection
+              ? { from: aiToolbarSelection.from, to: aiToolbarSelection.to }
+              : null;
+            setAiToolbarVisible(false);
+            aiActions.openActionsMenu(
+              { x: window.innerWidth / 2 - 140, y: window.innerHeight / 3 },
+              selText,
+              range
+            );
+          }}
+          onClose={() => {
+            setAiToolbarVisible(false);
+            setAiToolbarSelection(null);
+          }}
+        />
+      )}
+
+      {/* AI Actions Menu (Cmd+Shift+A) */}
+      {aiActions.actionsMenuPos && (
+        <AIActionsMenu
+          theme={theme}
+          position={aiActions.actionsMenuPos}
+          selectedText={aiActions.selectedText}
+          language={syntaxLanguage || ''}
+          fileCategory={getFileCategory(syntaxLanguage || '', activeTab?.title || activeTab?.filePath || '')}
+          onActionExecute={(actionId, options) => {
+            aiActions.closeActionsMenu();
+            aiActions.executeAction(actionId, options);
+          }}
+          onClose={aiActions.closeActionsMenu}
+        />
+      )}
+
+      {/* AI Code Suggestion Panel (for refactor/convert) */}
+      {aiActions.suggestion && (
+        <div className="fixed bottom-24 right-8 z-50">
+          <CodeSuggestionPanel
+            theme={theme}
+            suggestion={aiActions.suggestion}
+            isLoading={aiActions.actionLoading}
+            onAccept={() => aiActions.acceptSuggestion(aiActions.suggestion.suggestedCode)}
+            onReject={() => {
+              aiActions.setSuggestion(null);
+              showTransientMessage('Suggestion rejected', 'info');
+            }}
+            onEdit={(editedCode) => aiActions.acceptSuggestion(editedCode)}
+            onRegenerate={aiActions.regenerate}
+          />
+        </div>
       )}
 
       {/* AI Settings Modal */}

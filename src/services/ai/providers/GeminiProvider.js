@@ -136,7 +136,42 @@ export class GeminiProvider extends AIProvider {
    * Build API URL with model and action
    */
   buildUrl(model, action = 'generateContent') {
-    return `${this.baseUrl}/models/${model}:${action}?key=${this.apiKey}`;
+    const url = `${this.baseUrl}/models/${model}:${action}?key=${this.apiKey}`;
+    // Use SSE format for streaming endpoints for better browser compatibility
+    if (action === 'streamGenerateContent') {
+      return `${url}&alt=sse`;
+    }
+    return url;
+  }
+
+  /**
+   * Check if a model supports systemInstruction
+   * (Thinking / experimental reasoning models do not)
+   */
+  supportsSystemInstruction(modelId) {
+    return !modelId || !modelId.includes('thinking');
+  }
+
+  /**
+   * Build the request body for Gemini API calls
+   */
+  buildRequestBody(contents, { systemPrompt, maxTokens, temperature, modelId }) {
+    const body = {
+      contents,
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature,
+      },
+    };
+
+    // Only include systemInstruction when supported and when we have a valid prompt
+    if (systemPrompt && this.supportsSystemInstruction(modelId)) {
+      body.systemInstruction = {
+        parts: [{ text: systemPrompt }],
+      };
+    }
+
+    return body;
   }
 
   /**
@@ -203,24 +238,13 @@ export class GeminiProvider extends AIProvider {
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
     const modelId = model || this.getCurrentModelId();
 
+    const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+    const body = this.buildRequestBody(contents, { systemPrompt, maxTokens, temperature, modelId });
+
     const response = await fetch(this.buildUrl(modelId, 'generateContent'), {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature,
-        },
-      }),
+      body: JSON.stringify(body),
       signal: options.signal,
     });
 
@@ -265,24 +289,13 @@ export class GeminiProvider extends AIProvider {
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
     const modelId = model || this.getCurrentModelId();
 
+    const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+    const body = this.buildRequestBody(contents, { systemPrompt, maxTokens, temperature, modelId });
+
     const response = await fetch(this.buildUrl(modelId, 'streamGenerateContent'), {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature,
-        },
-      }),
+      body: JSON.stringify(body),
       signal: options.signal,
     });
 
@@ -291,6 +304,17 @@ export class GeminiProvider extends AIProvider {
       throw new Error(error);
     }
 
+    return this._readSSEStream(response, onChunk);
+  }
+
+  /**
+   * Read an SSE stream response from Gemini and emit chunks
+   * @param {Response} response - Fetch response with SSE body
+   * @param {Function} onChunk - Callback (text, isDone)
+   * @returns {Promise<CompletionResult>}
+   * @private
+   */
+  async _readSSEStream(response, onChunk) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullText = '';
@@ -302,28 +326,32 @@ export class GeminiProvider extends AIProvider {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-
-        // Gemini streams JSON objects separated by newlines
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (!line.trim()) continue;
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          // SSE format: lines starting with "data: " contain the JSON payload
+          let jsonStr = trimmed;
+          if (trimmed.startsWith('data: ')) {
+            jsonStr = trimmed.slice(6);
+          } else {
+            // Also handle raw JSON array streaming (non-SSE fallback)
+            jsonStr = trimmed.replace(/^,?\s*/, '');
+            if (jsonStr.startsWith('[') || jsonStr === ']') continue;
+          }
 
           try {
-            // Remove potential leading comma from array streaming
-            const cleanLine = line.replace(/^,?\s*/, '');
-            if (cleanLine.startsWith('[')) continue; // Skip array start
-            if (cleanLine === ']') continue; // Skip array end
-
-            const parsed = JSON.parse(cleanLine);
+            const parsed = JSON.parse(jsonStr);
             const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
             if (text) {
               fullText += text;
               onChunk(text, false);
             }
           } catch {
-            // Skip invalid JSON
+            // Skip unparseable lines
           }
         }
       }
@@ -357,19 +385,14 @@ export class GeminiProvider extends AIProvider {
     const systemMessage = messages.find(m => m.role === 'system');
     const system = systemPrompt || systemMessage?.content || 'You are a helpful assistant.';
 
+    const body = this.buildRequestBody(geminiMessages, {
+      systemPrompt: system, maxTokens, temperature, modelId,
+    });
+
     const response = await fetch(this.buildUrl(modelId, 'generateContent'), {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        contents: geminiMessages,
-        systemInstruction: {
-          parts: [{ text: system }],
-        },
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature,
-        },
-      }),
+      body: JSON.stringify(body),
       signal: options.signal,
     });
 
@@ -411,19 +434,14 @@ export class GeminiProvider extends AIProvider {
     const systemMessage = messages.find(m => m.role === 'system');
     const system = systemPrompt || systemMessage?.content || 'You are a helpful assistant.';
 
+    const body = this.buildRequestBody(geminiMessages, {
+      systemPrompt: system, maxTokens, temperature, modelId,
+    });
+
     const response = await fetch(this.buildUrl(modelId, 'streamGenerateContent'), {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        contents: geminiMessages,
-        systemInstruction: {
-          parts: [{ text: system }],
-        },
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature,
-        },
-      }),
+      body: JSON.stringify(body),
       signal: options.signal,
     });
 
@@ -432,45 +450,7 @@ export class GeminiProvider extends AIProvider {
       throw new Error(error);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText = '';
-    let buffer = '';
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          try {
-            const cleanLine = line.replace(/^,?\s*/, '');
-            if (cleanLine.startsWith('[') || cleanLine === ']') continue;
-
-            const parsed = JSON.parse(cleanLine);
-            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (text) {
-              fullText += text;
-              onChunk(text, false);
-            }
-          } catch {
-            // Skip invalid JSON
-          }
-        }
-      }
-
-      onChunk('', true);
-    } finally {
-      reader.releaseLock();
-    }
-
-    return new CompletionResult({ text: fullText });
+    return this._readSSEStream(response, onChunk);
   }
 
   /**

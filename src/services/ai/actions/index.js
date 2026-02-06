@@ -5,6 +5,8 @@
  */
 
 // Core
+import { actionManager as _actionManager } from './ActionManager.js';
+
 export {
   ActionManager,
   ActionResult,
@@ -59,4 +61,4 @@ export {
 } from './generateTestAction.js';
 
 // Default export - the action manager instance
-export default actionManager;
+export default _actionManager;

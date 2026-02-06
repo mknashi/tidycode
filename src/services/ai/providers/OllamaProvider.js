@@ -338,23 +338,28 @@ export class OllamaProvider extends AIProvider {
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-        options: {
-          num_predict: maxTokens,
-          temperature,
-        },
-        stream: false,
-      }),
-      signal: options.signal,
-    });
+    let response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: this.getRequestHeaders(),
+        body: JSON.stringify({
+          model: model || this.getCurrentModelId(),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          options: {
+            num_predict: maxTokens,
+            temperature,
+          },
+          stream: false,
+        }),
+        signal: options.signal,
+      });
+    } catch (fetchErr) {
+      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+    }
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
@@ -395,23 +400,28 @@ export class OllamaProvider extends AIProvider {
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-        options: {
-          num_predict: maxTokens,
-          temperature,
-        },
-        stream: true,
-      }),
-      signal: options.signal,
-    });
+    let response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: this.getRequestHeaders(),
+        body: JSON.stringify({
+          model: model || this.getCurrentModelId(),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          options: {
+            num_predict: maxTokens,
+            temperature,
+          },
+          stream: true,
+        }),
+        signal: options.signal,
+      });
+    } catch (fetchErr) {
+      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+    }
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
@@ -471,20 +481,25 @@ export class OllamaProvider extends AIProvider {
       content: m.content,
     }));
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        messages: ollamaMessages,
-        options: {
-          num_predict: maxTokens,
-          temperature,
-        },
-        stream: false,
-      }),
-      signal: options.signal,
-    });
+    let response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: this.getRequestHeaders(),
+        body: JSON.stringify({
+          model: model || this.getCurrentModelId(),
+          messages: ollamaMessages,
+          options: {
+            num_predict: maxTokens,
+            temperature,
+          },
+          stream: false,
+        }),
+        signal: options.signal,
+      });
+    } catch (fetchErr) {
+      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+    }
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
@@ -521,20 +536,25 @@ export class OllamaProvider extends AIProvider {
       content: m.content,
     }));
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        messages: ollamaMessages,
-        options: {
-          num_predict: maxTokens,
-          temperature,
-        },
-        stream: true,
-      }),
-      signal: options.signal,
-    });
+    let response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: this.getRequestHeaders(),
+        body: JSON.stringify({
+          model: model || this.getCurrentModelId(),
+          messages: ollamaMessages,
+          options: {
+            num_predict: maxTokens,
+            temperature,
+          },
+          stream: true,
+        }),
+        signal: options.signal,
+      });
+    } catch (fetchErr) {
+      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+    }
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
@@ -582,8 +602,15 @@ export class OllamaProvider extends AIProvider {
   async parseErrorResponse(response) {
     try {
       const data = await response.json();
+      if (response.status === 404 && data.error) {
+        // Ollama returns 404 when a model isn't downloaded
+        return `${data.error}. Open AI Settings to download the model first.`;
+      }
       return data.error || `Ollama error: ${response.status}`;
     } catch {
+      if (response.status === 404) {
+        return 'Model not found. Make sure the model is downloaded in AI Settings → Ollama.';
+      }
       return `Ollama error: ${response.status} ${response.statusText}`;
     }
   }

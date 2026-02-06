@@ -980,22 +980,284 @@ async fn check_ollama_status() -> Result<serde_json::Value, String> {
     }
 }
 
-// Pull an Ollama model
+// Progress event payload for Ollama model download
+#[derive(Clone, Serialize)]
+struct OllamaPullProgress {
+    model: String,
+    status: String,         // "downloading", "verifying", "completed", "error"
+    progress: f64,          // 0.0 to 100.0
+    completed_bytes: u64,
+    total_bytes: u64,
+    speed: String,          // e.g., "15 MB/s"
+    message: String,        // Human-readable status message
+}
+
+// Pull an Ollama model with streaming progress
 #[tauri::command]
-async fn pull_ollama_model(model: String) -> Result<String, String> {
-    let output = Command::new("ollama")
+async fn pull_ollama_model(app: tauri::AppHandle, model: String) -> Result<String, String> {
+    use std::io::BufRead;
+
+    let mut child = Command::new("ollama")
         .args(&["pull", &model])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("Failed to pull model: {}", e))?;
+        .spawn()
+        .map_err(|e| format!("Failed to start ollama pull: {}", e))?;
 
-    if output.status.success() {
+    // Ollama outputs progress to stderr
+    let stderr = child.stderr.take()
+        .ok_or_else(|| "Failed to capture stderr".to_string())?;
+
+    let model_clone = model.clone();
+    let app_clone = app.clone();
+
+    // Spawn a thread to read stderr and emit progress events
+    let progress_thread = thread::spawn(move || {
+        let reader = std::io::BufReader::new(stderr);
+
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                // Parse ollama pull output
+                // Format examples:
+                // "pulling manifest"
+                // "pulling 8fbd8b2a7e50... 45% ▏██████████████                    ▏ 2.1 GB/4.7 GB  15 MB/s"
+                // "verifying sha256 digest"
+                // "writing manifest"
+                // "success"
+
+                let progress = parse_ollama_progress(&line);
+
+                let event = OllamaPullProgress {
+                    model: model_clone.clone(),
+                    status: progress.status,
+                    progress: progress.percentage,
+                    completed_bytes: progress.completed_bytes,
+                    total_bytes: progress.total_bytes,
+                    speed: progress.speed,
+                    message: line.clone(),
+                };
+
+                // Emit progress event to frontend
+                let _ = app_clone.emit("ollama-pull-progress", event);
+            }
+        }
+    });
+
+    // Wait for the process to complete
+    let status = child.wait()
+        .map_err(|e| format!("Failed to wait for ollama: {}", e))?;
+
+    // Wait for progress thread to finish
+    let _ = progress_thread.join();
+
+    if status.success() {
+        // Emit completion event
+        let completion = OllamaPullProgress {
+            model: model.clone(),
+            status: "completed".to_string(),
+            progress: 100.0,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+            message: format!("Successfully pulled {}", model),
+        };
+        let _ = app.emit("ollama-pull-progress", completion);
+
         Ok(format!("Successfully pulled model: {}", model))
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Failed to pull model: {}", stderr))
+        // Emit error event
+        let error_event = OllamaPullProgress {
+            model: model.clone(),
+            status: "error".to_string(),
+            progress: 0.0,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+            message: "Download failed".to_string(),
+        };
+        let _ = app.emit("ollama-pull-progress", error_event);
+
+        Err(format!("Failed to pull model: {}", model))
     }
+}
+
+// Helper struct for parsed progress
+struct ParsedProgress {
+    status: String,
+    percentage: f64,
+    completed_bytes: u64,
+    total_bytes: u64,
+    speed: String,
+}
+
+// Parse ollama pull output line
+fn parse_ollama_progress(line: &str) -> ParsedProgress {
+    let line_lower = line.to_lowercase();
+
+    // Check for specific status messages
+    if line_lower.contains("pulling manifest") {
+        return ParsedProgress {
+            status: "downloading".to_string(),
+            percentage: 0.0,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+        };
+    }
+
+    if line_lower.contains("verifying") {
+        return ParsedProgress {
+            status: "verifying".to_string(),
+            percentage: 99.0,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+        };
+    }
+
+    if line_lower.contains("writing manifest") {
+        return ParsedProgress {
+            status: "verifying".to_string(),
+            percentage: 99.5,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+        };
+    }
+
+    if line_lower.contains("success") {
+        return ParsedProgress {
+            status: "completed".to_string(),
+            percentage: 100.0,
+            completed_bytes: 0,
+            total_bytes: 0,
+            speed: "".to_string(),
+        };
+    }
+
+    // Try to parse progress percentage (format: "pulling abc123... 45%")
+    if let Some(pct_idx) = line.find('%') {
+        // Find the number before the %
+        let before_pct = &line[..pct_idx];
+        let mut num_start = pct_idx;
+        for (i, c) in before_pct.char_indices().rev() {
+            if c.is_ascii_digit() || c == '.' {
+                num_start = i;
+            } else {
+                break;
+            }
+        }
+
+        if num_start < pct_idx {
+            if let Ok(percentage) = before_pct[num_start..].trim().parse::<f64>() {
+                // Try to parse bytes and speed
+                // Format: "2.1 GB/4.7 GB  15 MB/s"
+                let (completed_bytes, total_bytes) = parse_bytes(line);
+                let speed = parse_speed(line);
+
+                return ParsedProgress {
+                    status: "downloading".to_string(),
+                    percentage,
+                    completed_bytes,
+                    total_bytes,
+                    speed,
+                };
+            }
+        }
+    }
+
+    // Default fallback
+    ParsedProgress {
+        status: "downloading".to_string(),
+        percentage: 0.0,
+        completed_bytes: 0,
+        total_bytes: 0,
+        speed: "".to_string(),
+    }
+}
+
+// Parse bytes from ollama output (e.g., "2.1 GB/4.7 GB")
+fn parse_bytes(line: &str) -> (u64, u64) {
+    // Look for pattern like "2.1 GB/4.7 GB"
+    let re_pattern = regex_lite_match(line);
+    re_pattern
+}
+
+// Simple regex-free parsing for bytes
+fn regex_lite_match(line: &str) -> (u64, u64) {
+    // Find the "/" that separates completed/total
+    if let Some(slash_idx) = line.rfind('/') {
+        // Look backwards for the completed bytes
+        let before_slash = &line[..slash_idx];
+        let after_slash = &line[slash_idx + 1..];
+
+        if let Some(completed) = parse_size_string(before_slash) {
+            if let Some(total) = parse_size_string(after_slash) {
+                return (completed, total);
+            }
+        }
+    }
+    (0, 0)
+}
+
+// Parse a size string like "2.1 GB" into bytes
+fn parse_size_string(s: &str) -> Option<u64> {
+    let s = s.trim();
+
+    // Find the last number and unit
+    let units = ["GB", "MB", "KB", "B"];
+    let multipliers: [u64; 4] = [1_000_000_000, 1_000_000, 1_000, 1];
+
+    for (unit, mult) in units.iter().zip(multipliers.iter()) {
+        if let Some(idx) = s.to_uppercase().rfind(unit) {
+            // Get the number before the unit
+            let num_part = s[..idx].trim();
+            // Find the start of the number (going backwards from the end)
+            let mut start = 0;
+            for (i, c) in num_part.char_indices().rev() {
+                if c.is_ascii_digit() || c == '.' {
+                    start = i;
+                } else if !c.is_whitespace() {
+                    break;
+                }
+            }
+
+            if let Ok(num) = num_part[start..].trim().parse::<f64>() {
+                return Some((num * (*mult as f64)) as u64);
+            }
+        }
+    }
+    None
+}
+
+// Parse speed from ollama output (e.g., "15 MB/s")
+fn parse_speed(line: &str) -> String {
+    // Look for pattern like "15 MB/s" or "1.2 GB/s"
+    let units = ["GB/s", "MB/s", "KB/s", "B/s"];
+
+    for unit in units {
+        if let Some(idx) = line.find(unit) {
+            // Find the number before the unit
+            let before = &line[..idx];
+            let mut start = idx;
+            for (i, c) in before.char_indices().rev() {
+                if c.is_ascii_digit() || c == '.' {
+                    start = i;
+                } else if c.is_whitespace() {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+
+            if start < idx {
+                let speed_str = line[start..idx + unit.len()].trim();
+                return speed_str.to_string();
+            }
+        }
+    }
+
+    "".to_string()
 }
 
 // Fix JSON/XML errors using Ollama

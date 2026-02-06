@@ -3,7 +3,12 @@ export const AI_PROVIDERS = {
   TINYLLM: 'tinyllm', // Lightweight browser-based model for JSON/XML only
   GROQ: 'groq',
   OPENAI: 'openai',
-  CLAUDE: 'claude' // Available in desktop mode (CORS restrictions apply in browser)
+  CLAUDE: 'claude', // Available in desktop mode (CORS restrictions apply in browser)
+  GEMINI: 'gemini',
+  MISTRAL: 'mistral',
+  CEREBRAS: 'cerebras', // Free: 1M tokens/day, no credit card
+  SAMBANOVA: 'sambanova', // Free tier available
+  OLLAMA: 'ollama', // Desktop only - fully local, no data leaves device
 };
 
 // Groq models
@@ -30,7 +35,27 @@ export const OPENAI_MODELS = {
   'gpt-4o': {
     id: 'gpt-4o',
     name: 'GPT-4o',
-    description: 'Most capable'
+    description: 'Most capable current model'
+  },
+  'gpt-5': {
+    id: 'gpt-5',
+    name: 'GPT-5',
+    description: 'Next-gen model (256K context)'
+  },
+  'gpt-5-mini': {
+    id: 'gpt-5-mini',
+    name: 'GPT-5 Mini',
+    description: 'Efficient GPT-5 variant'
+  },
+  'o1-preview': {
+    id: 'o1-preview',
+    name: 'O1 Preview',
+    description: 'Advanced reasoning'
+  },
+  'o1-mini': {
+    id: 'o1-mini',
+    name: 'O1 Mini',
+    description: 'Fast reasoning'
   }
 };
 
@@ -45,6 +70,82 @@ export const CLAUDE_MODELS = {
     id: 'claude-3-5-sonnet-20241022',
     name: 'Claude 3.5 Sonnet',
     description: 'Balanced intelligence'
+  }
+};
+
+// Gemini models
+export const GEMINI_MODELS = {
+  'gemini-2.0-flash': {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    description: 'Fast and versatile'
+  },
+  'gemini-2.0-pro': {
+    id: 'gemini-2.0-pro',
+    name: 'Gemini 2.0 Pro',
+    description: 'Most capable'
+  },
+  'gemini-1.5-pro': {
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+    description: '2M context'
+  },
+  'gemini-1.5-flash': {
+    id: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    description: 'Fast and efficient'
+  }
+};
+
+// Mistral models
+export const MISTRAL_MODELS = {
+  'mistral-large-latest': {
+    id: 'mistral-large-latest',
+    name: 'Mistral Large',
+    description: 'Most capable'
+  },
+  'mistral-small-latest': {
+    id: 'mistral-small-latest',
+    name: 'Mistral Small',
+    description: 'Fast and efficient'
+  },
+  'codestral-latest': {
+    id: 'codestral-latest',
+    name: 'Codestral',
+    description: 'Code-optimized'
+  }
+};
+
+// Cerebras models (free: 1M tokens/day)
+export const CEREBRAS_MODELS = {
+  'llama-3.3-70b': {
+    id: 'llama-3.3-70b',
+    name: 'Llama 3.3 70B',
+    description: 'Fast and capable'
+  },
+  'llama3.1-8b': {
+    id: 'llama3.1-8b',
+    name: 'Llama 3.1 8B',
+    description: 'Lightweight and fast'
+  }
+};
+
+// SambaNova models (free tier)
+export const SAMBANOVA_MODELS = {
+  'Meta-Llama-3.3-70B-Instruct': {
+    id: 'Meta-Llama-3.3-70B-Instruct',
+    name: 'Llama 3.3 70B',
+    description: 'Fast and capable'
+  },
+  'Meta-Llama-3.1-405B-Instruct': {
+    id: 'Meta-Llama-3.1-405B-Instruct',
+    name: 'Llama 3.1 405B',
+    description: 'Most powerful open model'
+  },
+  'Meta-Llama-3.1-8B-Instruct': {
+    id: 'Meta-Llama-3.1-8B-Instruct',
+    name: 'Llama 3.1 8B',
+    description: 'Lightweight and fast'
   }
 };
 
@@ -413,9 +514,92 @@ Fixed ${errorDetails.type}:`;
     }
   }
 
+  // Fix with OpenAI-compatible API (Gemini excluded - uses different format)
+  async fixWithOpenAICompatible(content, errorDetails, apiKey, model, baseUrl, providerName) {
+    if (!apiKey) throw new Error(`${providerName} API key is required`);
+
+    const prompt = this.buildFixPrompt(content, errorDetails);
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.` },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 16000
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      throw new Error(error.error?.message || `${providerName} API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let fixed = data.choices[0]?.message?.content || '';
+    if (fixed.includes('```')) {
+      const lines = fixed.split('\n');
+      const codeLines = [];
+      let inCodeBlock = false;
+      for (const line of lines) {
+        if (line.trim().startsWith('```')) { inCodeBlock = !inCodeBlock; }
+        else if (inCodeBlock) { codeLines.push(line); }
+      }
+      fixed = codeLines.length > 0 ? codeLines.join('\n') : lines.filter(l => !l.trim().startsWith('```')).join('\n');
+    }
+    fixed = this.extractContent(fixed, errorDetails.type);
+    return fixed.trim();
+  }
+
+  // Fix with Gemini API (different format)
+  async fixWithGemini(content, errorDetails, apiKey, model = GEMINI_MODELS['gemini-2.0-flash'].id) {
+    if (!apiKey) throw new Error('Gemini API key is required');
+
+    const prompt = this.buildFixPrompt(content, errorDetails);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.\n\n${prompt}` }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 16000 }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let fixed = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (fixed.includes('```')) {
+      const lines = fixed.split('\n');
+      const codeLines = [];
+      let inCodeBlock = false;
+      for (const line of lines) {
+        if (line.trim().startsWith('```')) { inCodeBlock = !inCodeBlock; }
+        else if (inCodeBlock) { codeLines.push(line); }
+      }
+      fixed = codeLines.length > 0 ? codeLines.join('\n') : lines.filter(l => !l.trim().startsWith('```')).join('\n');
+    }
+    fixed = this.extractContent(fixed, errorDetails.type);
+    return fixed.trim();
+  }
+
   // Main fix function
   async fix(content, errorDetails, settings, onProgress) {
-    const { provider, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel } = settings;
+    const { provider, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel,
+            geminiApiKey, geminiModel, mistralApiKey, mistralModel,
+            cerebrasApiKey, cerebrasModel, sambanovaApiKey, sambanovaModel } = settings;
 
     if (onProgress) {
       onProgress({
@@ -446,15 +630,71 @@ Fixed ${errorDetails.type}:`;
         return await this.fixWithClaude(content, errorDetails, claudeApiKey, claudeModel);
       }
 
+      // Gemini mode
+      if (provider === AI_PROVIDERS.GEMINI) {
+        return await this.fixWithGemini(content, errorDetails, geminiApiKey, geminiModel);
+      }
+
+      // Mistral mode (OpenAI-compatible)
+      if (provider === AI_PROVIDERS.MISTRAL) {
+        return await this.fixWithOpenAICompatible(content, errorDetails, mistralApiKey,
+          mistralModel || MISTRAL_MODELS['mistral-large-latest'].id,
+          'https://api.mistral.ai/v1', 'Mistral');
+      }
+
+      // Cerebras mode (OpenAI-compatible, free)
+      if (provider === AI_PROVIDERS.CEREBRAS) {
+        return await this.fixWithOpenAICompatible(content, errorDetails, cerebrasApiKey,
+          cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id,
+          'https://api.cerebras.ai/v1', 'Cerebras');
+      }
+
+      // SambaNova mode (OpenAI-compatible, free)
+      if (provider === AI_PROVIDERS.SAMBANOVA) {
+        return await this.fixWithOpenAICompatible(content, errorDetails, sambanovaApiKey,
+          sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id,
+          'https://api.sambanova.ai/v1', 'SambaNova');
+      }
+
       throw new Error('Invalid AI provider');
     } catch (error) {
       throw error;
     }
   }
 
+  // Helper: call an OpenAI-compatible chat completions endpoint
+  async _chatComplete(baseUrl, apiKey, model, systemPrompt, userPrompt, providerName) {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      throw new Error(error.error?.message || `${providerName} API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content?.trim() || '';
+  }
+
   // Transform text with AI (for notes editor)
   async transformText(text, action, settings) {
-    const { provider, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel } = settings;
+    const { provider, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel,
+            geminiApiKey, geminiModel, mistralApiKey, mistralModel,
+            cerebrasApiKey, cerebrasModel, sambanovaApiKey, sambanovaModel } = settings;
 
     // TinyLLM doesn't support text transformation (JSON/XML only)
     if (provider === AI_PROVIDERS.TINYLLM) {
@@ -590,6 +830,56 @@ Fixed ${errorDetails.type}:`;
           }
           throw new Error(`Browser CORS restriction: Claude API cannot be called directly from web browsers. Please use the desktop app for Claude AI features, or switch to Groq/OpenAI providers.`);
         }
+      }
+
+      // Gemini mode
+      if (provider === AI_PROVIDERS.GEMINI) {
+        if (!geminiApiKey) throw new Error('Gemini API key is required');
+
+        const model = geminiModel || GEMINI_MODELS['gemini-2.0-flash'].id;
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `You are a helpful writing assistant. Output only the transformed text, no explanations.\n\n${prompt}` }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+          throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
+      }
+
+      // Mistral mode (OpenAI-compatible)
+      if (provider === AI_PROVIDERS.MISTRAL) {
+        if (!mistralApiKey) throw new Error('Mistral API key is required');
+        const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
+        return await this._chatComplete('https://api.mistral.ai/v1', mistralApiKey,
+          mistralModel || MISTRAL_MODELS['mistral-large-latest'].id, sysPrompt, prompt, 'Mistral') || text;
+      }
+
+      // Cerebras mode (OpenAI-compatible, free)
+      if (provider === AI_PROVIDERS.CEREBRAS) {
+        if (!cerebrasApiKey) throw new Error('Cerebras API key is required');
+        const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
+        return await this._chatComplete('https://api.cerebras.ai/v1', cerebrasApiKey,
+          cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id, sysPrompt, prompt, 'Cerebras') || text;
+      }
+
+      // SambaNova mode (OpenAI-compatible, free)
+      if (provider === AI_PROVIDERS.SAMBANOVA) {
+        if (!sambanovaApiKey) throw new Error('SambaNova API key is required');
+        const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
+        return await this._chatComplete('https://api.sambanova.ai/v1', sambanovaApiKey,
+          sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id, sysPrompt, prompt, 'SambaNova') || text;
       }
 
       throw new Error('Invalid AI provider');

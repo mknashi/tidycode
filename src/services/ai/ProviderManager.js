@@ -12,6 +12,7 @@ import { GeminiProvider } from './providers/GeminiProvider.js';
 import { GroqProvider } from './providers/GroqProvider.js';
 import { MistralProvider } from './providers/MistralProvider.js';
 import { OllamaProvider } from './providers/OllamaProvider.js';
+import { scanForSecrets, truncateContent, isLocalProvider } from './privacyGuard.js';
 
 /**
  * Provider registry with constructors
@@ -65,6 +66,81 @@ export class ProviderManager {
      * @type {Map<string, Set<Function>>}
      */
     this._listeners = new Map();
+
+    /**
+     * Privacy guard configuration
+     */
+    this.privacyConfig = {
+      enableScanning: true,
+      scanAction: 'warn', // 'warn' | 'redact' | 'block'
+      maxContextChars: 0, // 0 = unlimited
+    };
+  }
+
+  /**
+   * Update privacy configuration
+   * @param {Object} config - Partial privacy config to merge
+   */
+  setPrivacyConfig(config) {
+    this.privacyConfig = { ...this.privacyConfig, ...config };
+  }
+
+  /**
+   * Apply privacy guard (scanning + truncation) to a text string.
+   * Skips processing for local providers (ollama, tinyllm).
+   * @param {string} text - Content to guard
+   * @returns {string} Processed text
+   * @throws {Error} With 'PRIVACY_WARNING:' prefix if secrets detected in warn mode
+   * @private
+   */
+  _applyPrivacyGuard(text) {
+    if (!text || typeof text !== 'string') return text;
+
+    // Local providers never send data externally — skip all guards
+    if (this.activeProvider && isLocalProvider(this.activeProvider.id)) {
+      return text;
+    }
+
+    // Apply truncation first
+    let processed = truncateContent(text, this.privacyConfig.maxContextChars);
+
+    // Scan for secrets if enabled
+    if (this.privacyConfig.enableScanning) {
+      const findings = scanForSecrets(processed);
+      if (findings.length > 0) {
+        const action = this.privacyConfig.scanAction;
+        if (action === 'warn') {
+          throw new Error('PRIVACY_WARNING:' + JSON.stringify(findings));
+        }
+        if (action === 'block') {
+          throw new Error('Content contains sensitive data and was blocked from being sent.');
+        }
+      }
+    }
+
+    return processed;
+  }
+
+  /**
+   * Process completion params through privacy guard.
+   * @private
+   */
+  _processParams(params) {
+    if (!params.prompt) return params;
+    return { ...params, prompt: this._applyPrivacyGuard(params.prompt) };
+  }
+
+  /**
+   * Process chat messages through privacy guard.
+   * @private
+   */
+  _processMessages(messages) {
+    return messages.map(msg => {
+      if ((msg.role === 'system' || msg.role === 'user') && msg.content) {
+        return { ...msg, content: this._applyPrivacyGuard(msg.content) };
+      }
+      return msg;
+    });
   }
 
   /**
@@ -83,8 +159,10 @@ export class ProviderManager {
       const providerConfig = config.providers?.[id] || {};
       const provider = new ProviderClass(providerConfig);
 
-      // Initialize provider if it has an API key or doesn't require one
-      if (providerConfig.apiKey || !provider.requiresApiKey) {
+      // Initialize provider if it has an API key, or if it doesn't require
+      // one but was explicitly included in the config (e.g. Ollama when selected)
+      const hasExplicitConfig = config.providers?.[id] && Object.keys(config.providers[id]).length > 0;
+      if (providerConfig.apiKey || (!provider.requiresApiKey && hasExplicitConfig)) {
         await provider.initialize({
           apiKey: providerConfig.apiKey,
           model: providerConfig.defaultModel,
@@ -255,9 +333,10 @@ export class ProviderManager {
    */
   async complete(params) {
     this._ensureActiveProvider();
+    const processed = this._processParams(params);
     return this.activeProvider.complete({
-      ...params,
-      model: params.model || this.activeModel,
+      ...processed,
+      model: processed.model || this.activeModel,
     });
   }
 
@@ -269,9 +348,10 @@ export class ProviderManager {
    */
   async streamComplete(params, onChunk) {
     this._ensureActiveProvider();
+    const processed = this._processParams(params);
     return this.activeProvider.streamComplete({
-      ...params,
-      model: params.model || this.activeModel,
+      ...processed,
+      model: processed.model || this.activeModel,
     }, onChunk);
   }
 
@@ -283,7 +363,8 @@ export class ProviderManager {
    */
   async chat(messages, options = {}) {
     this._ensureActiveProvider();
-    return this.activeProvider.chat(messages, {
+    const processed = this._processMessages(messages);
+    return this.activeProvider.chat(processed, {
       ...options,
       model: options.model || this.activeModel,
     });
@@ -298,7 +379,8 @@ export class ProviderManager {
    */
   async streamChat(messages, onChunk, options = {}) {
     this._ensureActiveProvider();
-    return this.activeProvider.streamChat(messages, onChunk, {
+    const processed = this._processMessages(messages);
+    return this.activeProvider.streamChat(processed, onChunk, {
       ...options,
       model: options.model || this.activeModel,
     });

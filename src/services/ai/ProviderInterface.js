@@ -448,16 +448,21 @@ export class AIProvider {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = this.getRequestHeaders(options);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal: options.signal,
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: options.signal,
+      });
+    } catch (networkError) {
+      throw new Error(this._classifyNetworkError(networkError));
+    }
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
-      throw new Error(error);
+      throw new Error(this._classifyHttpError(response.status, error));
     }
 
     return response.json();
@@ -488,6 +493,43 @@ export class AIProvider {
     } catch {
       return `API error: ${response.status} ${response.statusText}`;
     }
+  }
+
+  /**
+   * Classify a network-level fetch error into a user-friendly message.
+   * @param {Error} error - The network error from fetch()
+   * @returns {string}
+   * @private
+   */
+  _classifyNetworkError(error) {
+    const msg = error.message || '';
+    if (error.name === 'AbortError') {
+      return `Request to ${this.name} was cancelled or timed out.`;
+    }
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS') || msg.includes('Load failed')) {
+      return `Network error connecting to ${this.name}. This is likely a browser CORS restriction or an invalid API key. Check your API key in AI Settings, or try Groq which has better browser CORS support.`;
+    }
+    return `Could not reach ${this.name}: ${msg}`;
+  }
+
+  /**
+   * Classify an HTTP status error into a user-friendly message.
+   * @param {number} status - HTTP status code
+   * @param {string} rawMessage - Raw error message from parseErrorResponse
+   * @returns {string}
+   * @private
+   */
+  _classifyHttpError(status, rawMessage) {
+    if (status === 401 || status === 403) {
+      return `Authentication failed for ${this.name}. Please check your API key in AI Settings.`;
+    }
+    if (status === 429) {
+      return `Rate limit exceeded for ${this.name}. Please wait a moment and try again.`;
+    }
+    if (status >= 500) {
+      return `${this.name} is experiencing issues (${status}). Please try again later.`;
+    }
+    return rawMessage;
   }
 
   /**

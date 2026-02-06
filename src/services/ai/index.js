@@ -34,6 +34,8 @@ export {
 } from './ProviderInterface.js';
 
 // Provider Manager
+import { providerManager as _providerManager } from './ProviderManager.js';
+
 export {
   ProviderManager,
   providerManager,
@@ -89,6 +91,16 @@ export {
   getTestTypes,
 } from './actions/index.js';
 
+// Privacy Guard
+export {
+  scanForSecrets,
+  redactSecrets,
+  truncateContent,
+  isLocalProvider,
+  LOCAL_PROVIDERS,
+  SECRET_PATTERNS,
+} from './privacyGuard.js';
+
 /**
  * Provider IDs for reference
  */
@@ -115,4 +127,4 @@ export async function initializeAI(config) {
 /**
  * Default export - the provider manager singleton
  */
-export default providerManager;
+export default _providerManager;

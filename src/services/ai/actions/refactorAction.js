@@ -194,7 +194,16 @@ export async function refactorActionStream(context, onChunk, options = {}) {
       onChunk
     );
 
-    return ActionResult.success('refactor', result.text, {
+    // Extract code from response (remove markdown code blocks if present)
+    let refactoredCode = result.text;
+    if (refactoredCode.includes('```')) {
+      const match = refactoredCode.match(/```(?:\w+)?\n?([\s\S]*?)```/);
+      if (match) {
+        refactoredCode = match[1].trim();
+      }
+    }
+
+    return ActionResult.success('refactor', refactoredCode, {
       language: context.language,
       refactorType: type,
       streamed: true,
