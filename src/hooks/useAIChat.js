@@ -74,6 +74,12 @@ export function useAIChat({
   // Message ID counter
   const nextMsgIdRef = useRef(1);
 
+  // Keep a ref in sync with messages so sendMessage always has the latest
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // Retry: store last sent message params
   const lastSentRef = useRef(null);
 
@@ -119,17 +125,14 @@ export function useAIChat({
       const userMsg = { ...ChatMessage.user(userText.trim()), id: nextMsgIdRef.current++ };
       const assistantPlaceholder = { ...ChatMessage.assistant(''), id: nextMsgIdRef.current++ };
 
-      // Read current messages via functional update to avoid stale closure
-      let apiMessages;
-      setMessages((prev) => {
-        const updatedMessages = [...prev, userMsg];
-        // Capture for the API call
-        apiMessages = [
-          ChatMessage.system(systemPrompt),
-          ...updatedMessages,
-        ];
-        return [...updatedMessages, assistantPlaceholder];
-      });
+      // Build API messages from the ref (always up-to-date) before updating state
+      const currentMessages = messagesRef.current;
+      const apiMessages = [
+        ChatMessage.system(systemPrompt),
+        ...currentMessages,
+        userMsg,
+      ];
+      setMessages([...currentMessages, userMsg, assistantPlaceholder]);
 
       setIsStreaming(true);
       setError(null);
