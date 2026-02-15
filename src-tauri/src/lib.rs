@@ -1489,6 +1489,7 @@ async fn ollama_chat(
             "messages": msgs,
             "stream": false,
             "options": {
+                "num_ctx": 32768,
                 "num_predict": max_tokens.unwrap_or(2048),
                 "temperature": temperature.unwrap_or(0.7),
             }
@@ -1543,6 +1544,7 @@ async fn ollama_chat_stream(
             "messages": msgs,
             "stream": true,
             "options": {
+                "num_ctx": 32768,
                 "num_predict": max_tokens.unwrap_or(2048),
                 "temperature": temperature.unwrap_or(0.7),
             }

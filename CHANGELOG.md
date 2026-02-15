@@ -5,6 +5,38 @@ All notable changes to TidyCode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-02-15
+
+### Added
+
+#### Ollama Desktop CORS Fix
+- **Tauri backend proxy for Ollama** — all Ollama HTTP requests are now routed through the Rust backend in the desktop app, eliminating CORS errors
+  - New Tauri commands: `ollama_api_get`, `ollama_chat`, `ollama_chat_stream`
+  - Streaming chat via Tauri events (`ollama-chat-chunk`) with `tokio::spawn`
+  - Web mode retains direct `fetch()` as fallback
+  - End users no longer need to manually configure `OLLAMA_ORIGINS`
+
+#### AI Chat File Context Improvements
+- **File context truncation** — files larger than 100K characters (~25K tokens) are automatically truncated with a warning
+- **Cloud provider cost warnings** — when included file context exceeds ~5K tokens, users see an estimated cost warning
+- **Improved Ollama system prompt** — explicitly instructs local models that file content is provided, preventing "I can't access files" responses
+- **Increased Ollama context window** — set `num_ctx: 32768` on all Ollama API calls (default was 2048 tokens, which silently truncated larger files)
+
+#### Documentation
+- New `docs/AI_CHAT_CONTEXT.md` — documents file context flow, token estimation, context window limits, cost tables, and Ollama-specific details
+
+### Fixed
+- **Large file performance** — auto-format and structure tree parsing now skip files larger than 100KB, preventing UI blocking on session restore with large files
+- **Ollama CORS error** — "Cannot connect to Ollama" error in desktop app resolved via Tauri backend proxy
+- **Ollama ignoring file context** — local models no longer respond with "I can't access files" when file content is included
+- **Ollama context truncation** — larger files now fully processed with 32K token context window
+
+### Changed
+- `OllamaProvider.js` uses `isDesktop()` detection to choose between Tauri `invoke` and browser `fetch`
+- `useAIChat.js` `buildSystemPrompt()` now returns `{ prompt, fileContextInfo }` with truncation and cost metadata
+
+---
+
 ## [0.2.4] - 2026-01-12
 
 ### Added
