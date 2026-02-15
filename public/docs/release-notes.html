@@ -372,18 +372,63 @@
 
         <p class="lead">
             What's new in Tidy Code - Latest features, improvements, and updates. Track our
-            development progress including YAML/TOML format support, format conversion between
-            JSON, XML, YAML, and TOML, PDF viewer capabilities, SVG support, WASM-powered
-            large file handling, AI integrations, and cross-platform desktop app releases for
-            macOS, Windows, and Linux.
+            development progress including Ollama AI Chat improvements, file context safeguards,
+            YAML/TOML format support, format conversion between JSON, XML, YAML, and TOML,
+            PDF viewer capabilities, SVG support, WASM-powered large file handling, AI integrations,
+            and cross-platform desktop app releases for macOS, Windows, and Linux.
         </p>
 
         <div class="section">
             <!-- Latest Release -->
             <div class="release highlight-release">
                 <div class="release-header">
-                    <h2>Version 0.2.4 - January 12, 2026</h2>
+                    <h2>Version 0.2.5 - February 15, 2026</h2>
                     <span class="badge badge-current">Current</span>
+                </div>
+
+                <div class="release-section">
+                    <h3>🔌 Ollama Desktop CORS Fix</h3>
+                    <ul class="feature-list">
+                        <li><strong>Tauri backend proxy for Ollama</strong> — all Ollama HTTP requests routed through Rust backend, eliminating CORS errors</li>
+                        <li>New Tauri commands: <code>ollama_api_get</code>, <code>ollama_chat</code>, <code>ollama_chat_stream</code></li>
+                        <li>Streaming chat via Tauri events with async Rust tasks</li>
+                        <li>Web mode retains direct fetch as fallback</li>
+                        <li>End users no longer need to manually configure OLLAMA_ORIGINS</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <h3>🤖 AI Chat File Context Improvements</h3>
+                    <ul class="feature-list">
+                        <li><strong>File context truncation</strong> — files larger than 100K characters (~25K tokens) automatically truncated with warning</li>
+                        <li><strong>Cloud provider cost warnings</strong> — estimated cost shown when file context exceeds ~5K tokens</li>
+                        <li><strong>Improved Ollama system prompt</strong> — prevents local models from responding "I can't access files"</li>
+                        <li><strong>Increased Ollama context window</strong> — set num_ctx to 32,768 tokens (was 2,048 by default)</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <h3>🐛 Bug Fixes</h3>
+                    <ul class="feature-list">
+                        <li><strong>Large file performance</strong> — auto-format and structure tree skip files over 100KB, preventing UI blocking</li>
+                        <li>Fixed Ollama CORS error ("Cannot connect to Ollama") in desktop app</li>
+                        <li>Fixed Ollama ignoring file context for larger files due to small default context window</li>
+                        <li>Fixed session restore causing slowdown when restoring large file tabs</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <h3>📚 Documentation</h3>
+                    <ul class="feature-list">
+                        <li>New <code>docs/AI_CHAT_CONTEXT.md</code> — file context flow, token estimation, cost tables, and Ollama details</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="release">
+                <div class="release-header">
+                    <h2>Version 0.2.4 - January 12, 2026</h2>
+                    <span class="badge badge-previous">Previous</span>
                 </div>
 
                 <div class="release-section">
