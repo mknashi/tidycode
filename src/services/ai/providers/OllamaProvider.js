@@ -11,6 +11,19 @@ import {
   ModelInfo,
   AI_CAPABILITIES,
 } from '../ProviderInterface.js';
+import { isDesktop } from '../../../utils/platform.js';
+
+// Lazy-loaded Tauri APIs (only on desktop)
+let _tauriCore = null;
+let _tauriEvent = null;
+
+async function getTauriAPIs() {
+  if (!_tauriCore) {
+    _tauriCore = await import('@tauri-apps/api/core');
+    _tauriEvent = await import('@tauri-apps/api/event');
+  }
+  return { invoke: _tauriCore.invoke, listen: _tauriEvent.listen };
+}
 
 /**
  * Common Ollama models (fetched dynamically when available)
@@ -217,15 +230,25 @@ export class OllamaProvider extends AIProvider {
    */
   async validateConfig() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`, {
-        method: 'GET',
-      });
+      let data;
+      if (isDesktop()) {
+        const { invoke } = await getTauriAPIs();
+        const responseText = await invoke('ollama_api_get', {
+          url: `${this.baseUrl}/api/tags`,
+        });
+        data = JSON.parse(responseText);
+      } else {
+        const response = await fetch(`${this.baseUrl}/api/tags`, {
+          method: 'GET',
+        });
 
-      if (!response.ok) {
-        return { valid: false, error: 'Ollama is not responding' };
+        if (!response.ok) {
+          return { valid: false, error: 'Ollama is not responding' };
+        }
+
+        data = await response.json();
       }
 
-      const data = await response.json();
       this._availableModels = data.models || [];
 
       return {
@@ -245,15 +268,25 @@ export class OllamaProvider extends AIProvider {
    */
   async getAvailableModels() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`, {
-        method: 'GET',
-      });
+      let data;
+      if (isDesktop()) {
+        const { invoke } = await getTauriAPIs();
+        const responseText = await invoke('ollama_api_get', {
+          url: `${this.baseUrl}/api/tags`,
+        });
+        data = JSON.parse(responseText);
+      } else {
+        const response = await fetch(`${this.baseUrl}/api/tags`, {
+          method: 'GET',
+        });
 
-      if (!response.ok) {
-        return this.models; // Fall back to default models
+        if (!response.ok) {
+          return this.models;
+        }
+
+        data = await response.json();
       }
 
-      const data = await response.json();
       this._availableModels = data.models || [];
 
       // Convert to ModelInfo format
@@ -337,41 +370,56 @@ export class OllamaProvider extends AIProvider {
     } = params;
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
+    const chatMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ];
 
-    let response;
-    try {
-      response = await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: this.getRequestHeaders(),
-        body: JSON.stringify({
-          model: model || this.getCurrentModelId(),
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          options: {
-            num_predict: maxTokens,
-            temperature,
-          },
-          stream: false,
-        }),
-        signal: options.signal,
+    let data;
+    if (isDesktop()) {
+      const { invoke } = await getTauriAPIs();
+      const responseText = await invoke('ollama_chat', {
+        messages: JSON.stringify(chatMessages),
+        model: model || this.getCurrentModelId(),
+        baseUrl: this.baseUrl,
+        maxTokens,
+        temperature,
       });
-    } catch (fetchErr) {
-      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+      data = JSON.parse(responseText);
+    } else {
+      let response;
+      try {
+        response = await fetch(`${this.baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: this.getRequestHeaders(),
+          body: JSON.stringify({
+            model: model || this.getCurrentModelId(),
+            messages: chatMessages,
+            options: {
+              num_predict: maxTokens,
+              temperature,
+            },
+            stream: false,
+          }),
+          signal: options.signal,
+        });
+      } catch (fetchErr) {
+        throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+      }
+
+      if (!response.ok) {
+        const error = await this.parseErrorResponse(response);
+        throw new Error(error);
+      }
+
+      data = await response.json();
     }
 
-    if (!response.ok) {
-      const error = await this.parseErrorResponse(response);
-      throw new Error(error);
-    }
-
-    const data = await response.json();
     const text = data.message?.content || '';
 
     return new CompletionResult({
       text: options.extractFormat ? this.extractContent(text, options.extractFormat) : text,
-      confidence: 0.8, // Local models don't provide confidence
+      confidence: 0.8,
       metadata: {
         model: data.model,
         doneReason: data.done_reason,
@@ -399,6 +447,14 @@ export class OllamaProvider extends AIProvider {
     } = params;
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
+    const chatMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ];
+
+    if (isDesktop()) {
+      return this._streamViaTauri(chatMessages, model, maxTokens, temperature, onChunk, options);
+    }
 
     let response;
     try {
@@ -407,10 +463,7 @@ export class OllamaProvider extends AIProvider {
         headers: this.getRequestHeaders(),
         body: JSON.stringify({
           model: model || this.getCurrentModelId(),
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
+          messages: chatMessages,
           options: {
             num_predict: maxTokens,
             temperature,
@@ -481,32 +534,45 @@ export class OllamaProvider extends AIProvider {
       content: m.content,
     }));
 
-    let response;
-    try {
-      response = await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: this.getRequestHeaders(),
-        body: JSON.stringify({
-          model: model || this.getCurrentModelId(),
-          messages: ollamaMessages,
-          options: {
-            num_predict: maxTokens,
-            temperature,
-          },
-          stream: false,
-        }),
-        signal: options.signal,
+    let data;
+    if (isDesktop()) {
+      const { invoke } = await getTauriAPIs();
+      const responseText = await invoke('ollama_chat', {
+        messages: JSON.stringify(ollamaMessages),
+        model: model || this.getCurrentModelId(),
+        baseUrl: this.baseUrl,
+        maxTokens,
+        temperature,
       });
-    } catch (fetchErr) {
-      throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
-    }
+      data = JSON.parse(responseText);
+    } else {
+      let response;
+      try {
+        response = await fetch(`${this.baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: this.getRequestHeaders(),
+          body: JSON.stringify({
+            model: model || this.getCurrentModelId(),
+            messages: ollamaMessages,
+            options: {
+              num_predict: maxTokens,
+              temperature,
+            },
+            stream: false,
+          }),
+          signal: options.signal,
+        });
+      } catch (fetchErr) {
+        throw new Error(`Cannot connect to Ollama at ${this.baseUrl}. Is Ollama running?`);
+      }
 
-    if (!response.ok) {
-      const error = await this.parseErrorResponse(response);
-      throw new Error(error);
-    }
+      if (!response.ok) {
+        const error = await this.parseErrorResponse(response);
+        throw new Error(error);
+      }
 
-    const data = await response.json();
+      data = await response.json();
+    }
 
     return new CompletionResult({
       text: data.message?.content || '',
@@ -535,6 +601,10 @@ export class OllamaProvider extends AIProvider {
       role: m.role,
       content: m.content,
     }));
+
+    if (isDesktop()) {
+      return this._streamViaTauri(ollamaMessages, model, maxTokens, temperature, onChunk, options);
+    }
 
     let response;
     try {
@@ -594,6 +664,71 @@ export class OllamaProvider extends AIProvider {
     }
 
     return new CompletionResult({ text: fullText });
+  }
+
+  /**
+   * Stream chat via Tauri backend (bypasses CORS)
+   */
+  async _streamViaTauri(messages, model, maxTokens, temperature, onChunk, options = {}) {
+    const { invoke, listen } = await getTauriAPIs();
+    const sessionId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    let fullText = '';
+    let resolvePromise, rejectPromise;
+    const resultPromise = new Promise((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+
+    const unlisten = await listen('ollama-chat-chunk', (event) => {
+      const { session_id, content, done, error, prompt_eval_count, eval_count } = event.payload;
+      if (session_id !== sessionId) return;
+
+      if (error) {
+        rejectPromise(new Error(error));
+        return;
+      }
+
+      if (content) {
+        fullText += content;
+        onChunk(content, false);
+      }
+
+      if (done) {
+        onChunk('', true);
+        resolvePromise(new CompletionResult({
+          text: fullText,
+          metadata: { streamed: true },
+          usage: {
+            promptTokens: prompt_eval_count || 0,
+            completionTokens: eval_count || 0,
+            totalTokens: (prompt_eval_count || 0) + (eval_count || 0),
+          },
+        }));
+      }
+    });
+
+    if (options.signal) {
+      options.signal.addEventListener('abort', () => {
+        unlisten();
+        rejectPromise(new DOMException('Aborted', 'AbortError'));
+      });
+    }
+
+    try {
+      await invoke('ollama_chat_stream', {
+        sessionId,
+        messages: JSON.stringify(messages),
+        model: model || this.getCurrentModelId(),
+        baseUrl: this.baseUrl,
+        maxTokens,
+        temperature,
+      });
+
+      return await resultPromise;
+    } finally {
+      unlisten();
+    }
   }
 
   /**

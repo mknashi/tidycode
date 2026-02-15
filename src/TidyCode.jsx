@@ -3743,12 +3743,16 @@ const TidyCode = () => {
     });
   }, [tabs, activeTabId]);
 
-  // Auto-format JSON/XML when a file is opened
+  // Auto-format JSON/XML when a file is opened (only for small files < 100KB)
   useEffect(() => {
     if (!pendingAutoFormat) return;
 
     const { tabId, content, fileName } = pendingAutoFormat;
     setPendingAutoFormat(null);
+
+    // Skip auto-format for large files to avoid blocking UI
+    const MAX_AUTO_FORMAT_SIZE = 100000; // 100KB
+    if (String(content).length > MAX_AUTO_FORMAT_SIZE) return;
 
     const trimmed = String(content).trim();
     const fileType = getFileType(fileName);
@@ -7193,6 +7197,10 @@ const TidyCode = () => {
     if (!activeTab?.content) return { type: null, nodes: [] };
     const trimmed = String(activeTab.content).trim();
     if (!trimmed) return { type: null, nodes: [] };
+
+    // Skip structure tree for large files to avoid blocking UI
+    const MAX_STRUCTURE_TREE_SIZE = 100000; // 100KB
+    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE) return { type: null, nodes: [] };
 
     // Check file type - only show structure for JSON, XML, YAML, and TOML files
     const fileName = activeTab?.filePath || activeTab?.title || '';
