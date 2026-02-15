@@ -1446,6 +1446,176 @@ async fn check_model_available(model: String) -> Result<bool, String> {
     }
 }
 
+// Generic GET proxy for Ollama API (bypasses CORS in webview)
+#[tauri::command]
+async fn ollama_api_get(url: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Cannot connect to Ollama: {}", e))?;
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    Ok(body)
+}
+
+// Non-streaming Ollama chat (bypasses CORS in webview)
+#[tauri::command]
+async fn ollama_chat(
+    messages: String,
+    model: String,
+    base_url: Option<String>,
+    max_tokens: Option<i32>,
+    temperature: Option<f64>,
+) -> Result<String, String> {
+    let base = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+    let msgs: Vec<serde_json::Value> = serde_json::from_str(&messages)
+        .map_err(|e| format!("Invalid messages JSON: {}", e))?;
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let response = client
+        .post(format!("{}/api/chat", base))
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": msgs,
+            "stream": false,
+            "options": {
+                "num_predict": max_tokens.unwrap_or(2048),
+                "temperature": temperature.unwrap_or(0.7),
+            }
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Cannot connect to Ollama at {}: {}", base, e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Ollama error: HTTP {}", response.status()));
+    }
+
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    Ok(body)
+}
+
+// Streaming Ollama chat event payload
+#[derive(Clone, Serialize)]
+struct OllamaChatChunk {
+    session_id: String,
+    content: String,
+    done: bool,
+    error: Option<String>,
+    prompt_eval_count: Option<u64>,
+    eval_count: Option<u64>,
+}
+
+// Streaming Ollama chat (bypasses CORS in webview, streams via events)
+#[tauri::command]
+async fn ollama_chat_stream(
+    app: tauri::AppHandle,
+    session_id: String,
+    messages: String,
+    model: String,
+    base_url: Option<String>,
+    max_tokens: Option<i32>,
+    temperature: Option<f64>,
+) -> Result<String, String> {
+    let base = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+    let msgs: Vec<serde_json::Value> = serde_json::from_str(&messages)
+        .map_err(|e| format!("Invalid messages JSON: {}", e))?;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/api/chat", base))
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": msgs,
+            "stream": true,
+            "options": {
+                "num_predict": max_tokens.unwrap_or(2048),
+                "temperature": temperature.unwrap_or(0.7),
+            }
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Cannot connect to Ollama at {}: {}", base, e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Ollama error: HTTP {}", response.status()));
+    }
+
+    let sid = session_id.clone();
+    let app_clone = app.clone();
+
+    tokio::spawn(async move {
+        let mut response = response;
+        let mut buffer = String::new();
+
+        loop {
+            match response.chunk().await {
+                Ok(Some(bytes)) => {
+                    buffer.push_str(&String::from_utf8_lossy(&bytes));
+
+                    while let Some(newline_pos) = buffer.find('\n') {
+                        let line = buffer[..newline_pos].trim().to_string();
+                        buffer = buffer[newline_pos + 1..].to_string();
+
+                        if line.is_empty() {
+                            continue;
+                        }
+
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&line) {
+                            let content = parsed["message"]["content"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_string();
+                            let done = parsed["done"].as_bool().unwrap_or(false);
+
+                            let chunk = OllamaChatChunk {
+                                session_id: sid.clone(),
+                                content,
+                                done,
+                                error: None,
+                                prompt_eval_count: parsed["prompt_eval_count"].as_u64(),
+                                eval_count: parsed["eval_count"].as_u64(),
+                            };
+                            let _ = app_clone.emit("ollama-chat-chunk", chunk);
+                        }
+                    }
+                }
+                Ok(None) => break,
+                Err(e) => {
+                    let _ = app_clone.emit(
+                        "ollama-chat-chunk",
+                        OllamaChatChunk {
+                            session_id: sid.clone(),
+                            content: String::new(),
+                            done: true,
+                            error: Some(e.to_string()),
+                            prompt_eval_count: None,
+                            eval_count: None,
+                        },
+                    );
+                    break;
+                }
+            }
+        }
+    });
+
+    Ok(session_id)
+}
+
 // Save file content to a specific path
 #[tauri::command]
 async fn save_file_to_path(file_path: String, content: String) -> Result<String, String> {
@@ -2931,6 +3101,9 @@ pub fn run() {
             fix_with_openai,
             get_claude_completion,
             check_model_available,
+            ollama_api_get,
+            ollama_chat,
+            ollama_chat_stream,
             save_file_to_path,
             store_security_bookmark,
             read_file_from_path,
