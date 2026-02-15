@@ -11,15 +11,30 @@ import { providerManager, ChatMessage, isLocalProvider } from '../services/ai/in
 /** Session-level flag so privacy toast only fires once per page load */
 let _privacyToastShown = false;
 
+// ~4 chars per token is a rough estimate for most text
+const CHARS_PER_TOKEN = 4;
+// Max file content to include in context (characters)
+const MAX_FILE_CONTEXT_CHARS = 100000; // ~25K tokens
+// Threshold for showing cost warning on cloud providers (characters)
+const CLOUD_COST_WARN_CHARS = 20000; // ~5K tokens
+
+/**
+ * Estimate token count from character length
+ */
+function estimateTokens(charCount) {
+  return Math.ceil(charCount / CHARS_PER_TOKEN);
+}
+
 /**
  * Build a context-aware system prompt
  * @param {Object} activeTab - Current editor tab
  * @param {string} selectedText - Currently selected text
  * @param {boolean} includeFileContent - Whether to include full file content
- * @returns {string}
+ * @returns {{ prompt: string, fileContextInfo: { included: boolean, truncated: boolean, originalSize: number, includedSize: number } }}
  */
 function buildSystemPrompt(activeTab, selectedText, includeFileContent) {
   let prompt = 'You are a helpful coding assistant integrated into the TidyCode editor.';
+  const fileContextInfo = { included: false, truncated: false, originalSize: 0, includedSize: 0 };
 
   if (activeTab?.title) {
     prompt += `\n\nThe user is currently editing a file named "${activeTab.title}"`;
@@ -30,14 +45,29 @@ function buildSystemPrompt(activeTab, selectedText, includeFileContent) {
   }
 
   if (includeFileContent && activeTab?.content) {
-    prompt += `\n\nFull file content:\n\`\`\`\n${activeTab.content}\n\`\`\``;
+    let fileContent = activeTab.content;
+    fileContextInfo.included = true;
+    fileContextInfo.originalSize = fileContent.length;
+
+    if (fileContent.length > MAX_FILE_CONTEXT_CHARS) {
+      fileContent = fileContent.slice(0, MAX_FILE_CONTEXT_CHARS);
+      fileContextInfo.truncated = true;
+    }
+
+    fileContextInfo.includedSize = fileContent.length;
+
+    prompt += `\n\nThe file content has been provided to you below. You have full access to it — analyze it directly. Do NOT say you cannot access files.`;
+    if (fileContextInfo.truncated) {
+      prompt += ` Note: The file was too large to include in full. Only the first ${Math.round(MAX_FILE_CONTEXT_CHARS / 1000)}K characters are shown.`;
+    }
+    prompt += `\n\nFile content of "${activeTab.title}":\n\`\`\`\n${fileContent}\n\`\`\``;
   }
 
   if (selectedText) {
     prompt += `\n\nThe user has the following text selected:\n\`\`\`\n${selectedText}\n\`\`\``;
   }
 
-  return prompt;
+  return { prompt, fileContextInfo };
 }
 
 /**
@@ -121,7 +151,27 @@ export function useAIChat({
       // Store for retry
       lastSentRef.current = { userText: userText.trim(), includeFileContent };
 
-      const systemPrompt = buildSystemPrompt(activeTab, selectedText, includeFileContent);
+      const { prompt: systemPrompt, fileContextInfo } = buildSystemPrompt(activeTab, selectedText, includeFileContent);
+
+      // Warn about large file context
+      if (fileContextInfo.included) {
+        const isLocal = isLocalProvider(aiSettings?.provider);
+        const tokenEstimate = estimateTokens(fileContextInfo.includedSize);
+
+        if (fileContextInfo.truncated) {
+          const originalTokens = estimateTokens(fileContextInfo.originalSize);
+          showTransientMessage?.(
+            `File too large (~${Math.round(originalTokens / 1000)}K tokens). Truncated to ~${Math.round(tokenEstimate / 1000)}K tokens.`,
+            'warn'
+          );
+        } else if (!isLocal && fileContextInfo.originalSize > CLOUD_COST_WARN_CHARS) {
+          showTransientMessage?.(
+            `Including ~${Math.round(tokenEstimate / 1000)}K tokens of file content. This will increase API costs.`,
+            'warn'
+          );
+        }
+      }
+
       const userMsg = { ...ChatMessage.user(userText.trim()), id: nextMsgIdRef.current++ };
       const assistantPlaceholder = { ...ChatMessage.assistant(''), id: nextMsgIdRef.current++ };
 

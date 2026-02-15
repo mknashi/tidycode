@@ -396,6 +396,7 @@ export class OllamaProvider extends AIProvider {
             model: model || this.getCurrentModelId(),
             messages: chatMessages,
             options: {
+              num_ctx: 32768,
               num_predict: maxTokens,
               temperature,
             },
@@ -465,6 +466,7 @@ export class OllamaProvider extends AIProvider {
           model: model || this.getCurrentModelId(),
           messages: chatMessages,
           options: {
+            num_ctx: 32768,
             num_predict: maxTokens,
             temperature,
           },
@@ -555,6 +557,7 @@ export class OllamaProvider extends AIProvider {
             model: model || this.getCurrentModelId(),
             messages: ollamaMessages,
             options: {
+              num_ctx: 32768,
               num_predict: maxTokens,
               temperature,
             },
@@ -615,6 +618,7 @@ export class OllamaProvider extends AIProvider {
           model: model || this.getCurrentModelId(),
           messages: ollamaMessages,
           options: {
+            num_ctx: 32768,
             num_predict: maxTokens,
             temperature,
           },
