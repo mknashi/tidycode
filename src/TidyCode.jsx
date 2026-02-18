@@ -5647,8 +5647,8 @@ const TidyCode = () => {
                   // Config
                   'text/x-ini': ['.ini', '.conf', '.cfg', '.config'],
                   'text/x-properties': ['.properties', '.env'],
-                  'text/x-dockerfile': ['Dockerfile', '.dockerfile'],
-                  'text/x-makefile': ['Makefile', '.mk'],
+                  'text/x-dockerfile': ['.dockerfile'],
+                  'text/x-makefile': ['.mk'],
                   // Other languages
                   'text/x-asm': ['.asm', '.s', '.S'],
                   'text/x-fortran': ['.f', '.f90', '.f95', '.f03', '.for'],
