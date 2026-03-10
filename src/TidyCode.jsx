@@ -2460,9 +2460,10 @@ const TidyCode = () => {
         // Sanitize tabs to only include serializable properties
         // For large files or files with absolutePath, don't save content (will reload from disk)
         const sanitizedTabs = tabs.map(tab => {
-          // Don't save content if file is from disk (has absolutePath) or content is large
-          const shouldSaveContent = !tab.absolutePath &&
-                                   (!tab.content || tab.content.length < 100000); // 100KB limit
+          // Save content if: no absolutePath, OR tab has unsaved modifications
+          // Skip if content is too large (over 100KB) and not modified
+          const shouldSaveContent = tab.isModified ||
+                                   (!tab.absolutePath && (!tab.content || tab.content.length < 100000));
 
           return {
             id: tab.id,
@@ -5539,10 +5540,9 @@ const TidyCode = () => {
           console.log('[Autosave] Saved to filesystem (Browser):', modifiedTab.title);
           setAutosaveStatus('saved');
         } else {
-          // No filesystem path - content is auto-persisted to localStorage
-          // by the debounced tabs useEffect (notepad-tabs)
+          // No filesystem path - save content to localStorage
           setAutosaveStatus('saving');
-          // localStorage save is already triggered by tabs state change, just show status
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
           console.log('[Autosave] Saved to local storage:', modifiedTab.title);
           setAutosaveStatus('saved');
         }
