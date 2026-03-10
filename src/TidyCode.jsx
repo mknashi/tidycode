@@ -7556,6 +7556,51 @@ const TidyCode = () => {
     return map;
   }, [braceMatch]);
 
+  const renderAIButtons = () => (
+    <div className="flex gap-1.5 items-center">
+      <button
+        onClick={() => aiChat.setShowChatPanel(prev => !prev)}
+        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-sm transition-colors ${
+          aiChat.showChatPanel
+            ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
+            : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
+        }`}
+        title="AI Chat - Open conversation panel (⇧⌘L)"
+      >
+        <MessageSquare className="w-4 h-4" />
+        <span className="hidden lg:inline">AI Chat</span>
+      </button>
+      <div className="relative" ref={currentPanel !== 'dev' ? aiDropdownRef : undefined}>
+        <button
+          onClick={() => setShowAIDropdown(!showAIDropdown)}
+          className={`flex items-center gap-1 px-2 py-1.5 rounded text-sm transition-colors ${
+            theme === 'dark'
+              ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
+              : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+          }`}
+          title="AI Actions & Settings"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="hidden lg:inline">AI</span>
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        {showAIDropdown && currentPanel !== 'dev' && (
+          <div className={`absolute top-full right-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+            <button
+              onClick={() => { setShowAISettings(true); setShowAIDropdown(false); }}
+              className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
+                theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              AI Settings
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderNotesPanel = () => {
     const sidebarStyle = { width: `${Math.round(notesSidebarWidth)}px` };
     const modalNote = openNoteModalId ? notes.find(note => note.id === openNoteModalId) : null;
@@ -7748,6 +7793,7 @@ const TidyCode = () => {
               <div className="text-sm font-semibold text-white">{activeFolderName}</div>
               <div className="text-xs text-gray-500">{visibleNotes.length} note{visibleNotes.length === 1 ? '' : 's'}</div>
             </div>
+            {renderAIButtons()}
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div
@@ -8113,8 +8159,12 @@ const TidyCode = () => {
       >
         <span className="h-8 w-0.5 bg-gray-500 rounded-full" />
       </button>
-      <div className="flex-1 flex flex-col px-6 py-4">
-      <div className="flex-1 overflow-y-auto space-y-3">
+      <div className="flex-1 flex flex-col">
+      <div className="px-6 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div className="text-sm font-semibold text-white">{activeTodoTab?.title || 'Tasks'}</div>
+        {renderAIButtons()}
+      </div>
+      <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
         {activeTodoTab?.items?.map((item) => (
           <div
             key={item.id}
@@ -8183,7 +8233,7 @@ const TidyCode = () => {
         ))}
         {(activeTodoTab?.items?.length || 0) === 0 && <p className="text-gray-500">No tasks yet.</p>}
       </div>
-      <div className="flex items-center gap-2 mt-4">
+      <div className="flex items-center gap-2 px-6 py-4 border-t border-gray-800">
         <input
           ref={newTodoInputRef}
           type="text"
