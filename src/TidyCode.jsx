@@ -2460,9 +2460,8 @@ const TidyCode = () => {
         // Sanitize tabs to only include serializable properties
         // For large files or files with absolutePath, don't save content (will reload from disk)
         const sanitizedTabs = tabs.map(tab => {
-          // Save content if: no absolutePath, OR tab has unsaved modifications
-          // Skip if content is too large (over 100KB) and not modified
-          const shouldSaveContent = tab.isModified ||
+          // Save content if: no absolutePath, OR tab has unsaved modifications, OR autosaved to localStorage
+          const shouldSaveContent = tab.isModified || tab.autosavedToLocalStorage ||
                                    (!tab.absolutePath && (!tab.content || tab.content.length < 100000));
 
           return {
@@ -2472,7 +2471,8 @@ const TidyCode = () => {
             isModified: tab.isModified,
             filePath: tab.filePath,
             absolutePath: tab.absolutePath ? normalizeForComparison(tab.absolutePath) : null,
-            isPDF: tab.isPDF || false  // Save PDF flag so we can reload it properly
+            isPDF: tab.isPDF || false,
+            autosavedToLocalStorage: tab.autosavedToLocalStorage || false
           };
         });
         localStorage.setItem('notepad-tabs', JSON.stringify(sanitizedTabs));
@@ -5542,7 +5542,7 @@ const TidyCode = () => {
         } else {
           // No filesystem path - save content to localStorage
           setAutosaveStatus('saving');
-          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false, autosavedToLocalStorage: true } : tab));
           console.log('[Autosave] Saved to local storage:', modifiedTab.title);
           setAutosaveStatus('saved');
         }
