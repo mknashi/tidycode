@@ -314,7 +314,7 @@ Fixed ${errorDetails.type}:`;
           }
         ],
         temperature: 0.1,
-        max_tokens: 16000
+        max_completion_tokens: 16000
       })
     });
 
@@ -532,7 +532,7 @@ Fixed ${errorDetails.type}:`;
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
-        max_tokens: 16000
+        max_completion_tokens: 16000
       })
     });
 
@@ -677,7 +677,7 @@ Fixed ${errorDetails.type}:`;
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_completion_tokens: 4000
       })
     });
 
@@ -772,7 +772,7 @@ Fixed ${errorDetails.type}:`;
               }
             ],
             temperature: 0.7,
-            max_tokens: 4000
+            max_completion_tokens: 4000
           })
         });
 

@@ -224,7 +224,7 @@ export class OpenAIProvider extends AIProvider {
 
     const response = await this.makeRequest('/chat/completions', {
       model: model || this.getCurrentModelId(),
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
       temperature,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -270,7 +270,7 @@ export class OpenAIProvider extends AIProvider {
       headers: this.getRequestHeaders(),
       body: JSON.stringify({
         model: model || this.getCurrentModelId(),
-        max_tokens: maxTokens,
+        max_completion_tokens: maxTokens,
         temperature,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -347,7 +347,7 @@ export class OpenAIProvider extends AIProvider {
 
     const response = await this.makeRequest('/chat/completions', {
       model: model || this.getCurrentModelId(),
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
       temperature,
       messages: openaiMessages,
     });
@@ -386,7 +386,7 @@ export class OpenAIProvider extends AIProvider {
       headers: this.getRequestHeaders(),
       body: JSON.stringify({
         model: model || this.getCurrentModelId(),
-        max_tokens: maxTokens,
+        max_completion_tokens: maxTokens,
         temperature,
         messages: openaiMessages,
         stream: true,

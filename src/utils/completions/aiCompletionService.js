@@ -194,7 +194,7 @@ Completion (1-3 words only):`;
           }
         ],
         temperature: 0.2,
-        max_tokens: 50,
+        max_completion_tokens: 50,
         top_p: 0.9
       })
     });
