@@ -165,6 +165,31 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
+   * Check if a model is a reasoning model (o1, o3, etc.) that doesn't support temperature
+   */
+  isReasoningModel(modelId) {
+    const id = (modelId || this.getCurrentModelId() || '').toLowerCase();
+    return id.startsWith('o1') || id.startsWith('o3');
+  }
+
+  /**
+   * Build request body with correct parameters for the model
+   */
+  buildRequestBody(modelId, maxTokens, temperature, messages, extra = {}) {
+    const model = modelId || this.getCurrentModelId();
+    const body = {
+      model,
+      max_completion_tokens: maxTokens,
+      messages,
+      ...extra,
+    };
+    if (!this.isReasoningModel(model)) {
+      body.temperature = temperature;
+    }
+    return body;
+  }
+
+  /**
    * Get request headers for OpenAI API
    */
   getRequestHeaders(options = {}) {
@@ -222,15 +247,12 @@ export class OpenAIProvider extends AIProvider {
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
 
-    const response = await this.makeRequest('/chat/completions', {
-      model: model || this.getCurrentModelId(),
-      max_completion_tokens: maxTokens,
-      temperature,
-      messages: [
+    const response = await this.makeRequest('/chat/completions',
+      this.buildRequestBody(model, maxTokens, temperature, [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
-      ],
-    });
+      ])
+    );
 
     const text = response.choices?.[0]?.message?.content || '';
 
@@ -268,16 +290,10 @@ export class OpenAIProvider extends AIProvider {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        max_completion_tokens: maxTokens,
-        temperature,
-        messages: [
+      body: JSON.stringify(this.buildRequestBody(model, maxTokens, temperature, [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt },
-        ],
-        stream: true,
-      }),
+        ], { stream: true })),
       signal: options.signal,
     });
 
@@ -345,12 +361,9 @@ export class OpenAIProvider extends AIProvider {
       content: m.content,
     }));
 
-    const response = await this.makeRequest('/chat/completions', {
-      model: model || this.getCurrentModelId(),
-      max_completion_tokens: maxTokens,
-      temperature,
-      messages: openaiMessages,
-    });
+    const response = await this.makeRequest('/chat/completions',
+      this.buildRequestBody(model, maxTokens, temperature, openaiMessages)
+    );
 
     return new CompletionResult({
       text: response.choices?.[0]?.message?.content || '',
@@ -384,13 +397,7 @@ export class OpenAIProvider extends AIProvider {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify({
-        model: model || this.getCurrentModelId(),
-        max_completion_tokens: maxTokens,
-        temperature,
-        messages: openaiMessages,
-        stream: true,
-      }),
+      body: JSON.stringify(this.buildRequestBody(model, maxTokens, temperature, openaiMessages, { stream: true })),
       signal: options.signal,
     });
 

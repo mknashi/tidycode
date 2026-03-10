@@ -174,29 +174,43 @@ Completion (1-3 words only):`;
   /**
    * Get completion from OpenAI
    */
+  /**
+   * Check if an OpenAI model is a reasoning model (o1, o3) that doesn't support temperature
+   */
+  isOpenAIReasoningModel(model) {
+    const id = (model || '').toLowerCase();
+    return id.startsWith('o1') || id.startsWith('o3');
+  }
+
   async getOpenAICompletion(prompt, apiKey, model) {
+    const body = {
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a code completion assistant. Return only the completion text, no explanations or markdown.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_completion_tokens: 50,
+    };
+
+    // Reasoning models (o1, o3) don't support temperature or top_p
+    if (!this.isOpenAIReasoningModel(model)) {
+      body.temperature = 0.2;
+      body.top_p = 0.9;
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a code completion assistant. Return only the completion text, no explanations or markdown.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_completion_tokens: 50,
-        top_p: 0.9
-      })
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {

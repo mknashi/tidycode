@@ -155,6 +155,26 @@ class AIService {
     this.tinyLLMEngine = null;
   }
 
+  // Check if an OpenAI model is a reasoning model that doesn't support temperature
+  isOpenAIReasoningModel(model) {
+    const id = (model || '').toLowerCase();
+    return id.startsWith('o1') || id.startsWith('o3');
+  }
+
+  // Build OpenAI request body with correct parameters for the model
+  buildOpenAIRequestBody(model, messages, temperature, maxTokens, extra = {}) {
+    const body = {
+      model,
+      messages,
+      max_completion_tokens: maxTokens,
+      ...extra,
+    };
+    if (!this.isOpenAIReasoningModel(model)) {
+      body.temperature = temperature;
+    }
+    return body;
+  }
+
   // Build prompt for fixing JSON/XML errors
   buildFixPrompt(content, errorDetails) {
     const errorList = errorDetails.allErrors
@@ -301,9 +321,7 @@ Fixed ${errorDetails.type}:`;
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model,
-        messages: [
+      body: JSON.stringify(this.buildOpenAIRequestBody(model, [
           {
             role: 'system',
             content: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.`
@@ -312,10 +330,7 @@ Fixed ${errorDetails.type}:`;
             role: 'user',
             content: prompt
           }
-        ],
-        temperature: 0.1,
-        max_completion_tokens: 16000
-      })
+        ], 0.1, 16000))
     });
 
     if (!response.ok) {
@@ -532,7 +547,7 @@ Fixed ${errorDetails.type}:`;
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
-        max_completion_tokens: 16000
+        max_tokens: 16000
       })
     });
 
@@ -677,7 +692,7 @@ Fixed ${errorDetails.type}:`;
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_completion_tokens: 4000
+        max_tokens: 4000
       })
     });
 
@@ -753,15 +768,14 @@ Fixed ${errorDetails.type}:`;
       if (provider === AI_PROVIDERS.OPENAI) {
         if (!openaiApiKey) throw new Error('OpenAI API key is required');
 
+        const effectiveModel = openaiModel || OPENAI_MODELS['gpt-4o-mini'].id;
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${openaiApiKey}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            model: openaiModel || OPENAI_MODELS['gpt-4o-mini'].id,
-            messages: [
+          body: JSON.stringify(this.buildOpenAIRequestBody(effectiveModel, [
               {
                 role: 'system',
                 content: 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
@@ -770,10 +784,7 @@ Fixed ${errorDetails.type}:`;
                 role: 'user',
                 content: prompt
               }
-            ],
-            temperature: 0.7,
-            max_completion_tokens: 4000
-          })
+            ], 0.7, 4000))
         });
 
         if (!response.ok) {
