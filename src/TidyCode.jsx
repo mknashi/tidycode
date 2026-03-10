@@ -10906,6 +10906,7 @@ const TidyCode = () => {
               ref={terminalPanelRef}
               theme={theme}
               onClose={() => setShowTerminalPanel(false)}
+              renderExtraControls={renderAIButtons}
             />
           </div>
         )}

@@ -12,7 +12,7 @@ import { isDesktop } from '../utils/platform';
  * Provides an integrated terminal emulator using xterm.js
  * Supports multiple terminal instances and shell command execution
  */
-const TerminalPanel = forwardRef(({ theme, onClose }, ref) => {
+const TerminalPanel = forwardRef(({ theme, onClose, renderExtraControls }, ref) => {
   const terminalRefs = useRef([]);
   const xtermInstances = useRef([]);
   const fitAddons = useRef([]);
@@ -654,6 +654,7 @@ const TerminalPanel = forwardRef(({ theme, onClose }, ref) => {
 
         {/* Controls */}
         <div className="flex items-center gap-1 px-2 py-1">
+          {renderExtraControls && renderExtraControls()}
           <button
             onClick={clearTerminal}
             className={`p-1 rounded transition-colors ${
