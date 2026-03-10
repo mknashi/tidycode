@@ -1409,8 +1409,10 @@ const TidyCode = () => {
   const [markdownDetectionMessage, setMarkdownDetectionMessage] = useState(null);
   const [markdownPreviewHeight, setMarkdownPreviewHeight] = useState(DEFAULT_CSV_PREVIEW_HEIGHT);
   const [isMarkdownPreviewCollapsed, setIsMarkdownPreviewCollapsed] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState(null); // null | 'saving' | 'saved'
   const [appMessage, setAppMessage] = useState(null);
   const appMessageTimeoutRef = useRef(null);
+  const autosaveStatusTimeoutRef = useRef(null);
 
   const showTransientMessage = useCallback((message, tone = 'info') => {
     if (!message) return;
@@ -1706,6 +1708,12 @@ const TidyCode = () => {
       }
       if (markdownDetectionMessageTimeoutRef.current) {
         clearTimeout(markdownDetectionMessageTimeoutRef.current);
+      }
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+      if (autosaveStatusTimeoutRef.current) {
+        clearTimeout(autosaveStatusTimeoutRef.current);
       }
     };
   }, []);
@@ -5493,19 +5501,60 @@ const TidyCode = () => {
     const modifiedTab = tabs.find(t => t.id === activeTabId && t.isModified);
     if (!modifiedTab || modifiedTab.title === 'Welcome') return;
 
+    const isTauri = window.__TAURI_INTERNALS__;
     const hasFileHandle = !!modifiedTab.fileHandle;
     const hasRealPath = modifiedTab.absolutePath && !String(modifiedTab.absolutePath).startsWith('virtual:');
-    const canSaveToFile = hasFileHandle || (window.__TAURI_INTERNALS__ && hasRealPath);
 
-    if (canSaveToFile) {
-      // Autosave to filesystem after 2 seconds of inactivity
-      autosaveTimeoutRef.current = setTimeout(() => {
-        console.log('[Autosave] Saving to filesystem:', modifiedTab.title);
-        saveFileRef.current?.(modifiedTab.id);
-      }, 2000);
-    }
-    // Files without a local path are already auto-persisted to localStorage
-    // by the debounced tabs useEffect (notepad-tabs), so no extra action needed
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      const tabId = modifiedTab.id;
+      try {
+        // Get content to save
+        let contentToSave;
+        if (modifiedTab.isLargeFile && modifiedTab.wasmFileHandle) {
+          contentToSave = await getContentFromWasm(modifiedTab.wasmFileHandle);
+        } else if (modifiedTab.isTruncated) {
+          contentToSave = modifiedTab.fullContent || modifiedTab.content;
+        } else {
+          contentToSave = modifiedTab.content;
+        }
+
+        if (isTauri && hasRealPath) {
+          // Tauri desktop: save directly via backend
+          setAutosaveStatus('saving');
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('save_file_to_path', {
+            filePath: modifiedTab.absolutePath,
+            content: String(contentToSave || '')
+          });
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
+          console.log('[Autosave] Saved to filesystem (Tauri):', modifiedTab.title);
+          setAutosaveStatus('saved');
+        } else if (hasFileHandle) {
+          // Browser: save via File System Access API (works without user gesture if permission already granted)
+          setAutosaveStatus('saving');
+          const writable = await modifiedTab.fileHandle.createWritable();
+          await writable.write(String(contentToSave || ''));
+          await writable.close();
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
+          console.log('[Autosave] Saved to filesystem (Browser):', modifiedTab.title);
+          setAutosaveStatus('saved');
+        } else {
+          // No filesystem path - content is auto-persisted to localStorage
+          // by the debounced tabs useEffect (notepad-tabs)
+          setAutosaveStatus('saving');
+          // localStorage save is already triggered by tabs state change, just show status
+          console.log('[Autosave] Saved to local storage:', modifiedTab.title);
+          setAutosaveStatus('saved');
+        }
+
+        // Clear "saved" indicator after 3 seconds
+        if (autosaveStatusTimeoutRef.current) clearTimeout(autosaveStatusTimeoutRef.current);
+        autosaveStatusTimeoutRef.current = setTimeout(() => setAutosaveStatus(null), 3000);
+      } catch (err) {
+        console.warn('[Autosave] Failed:', err);
+        setAutosaveStatus(null);
+      }
+    }, 2000);
 
     return () => {
       if (autosaveTimeoutRef.current) {
@@ -8498,6 +8547,7 @@ const TidyCode = () => {
                       ? 'opacity-40 cursor-not-allowed text-gray-500'
                       : theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
                   }`}
+                  title="Autosave is enabled — files are saved automatically"
                 >
                   <Save className="w-4 h-4" />
                   Save
@@ -10175,7 +10225,9 @@ const TidyCode = () => {
             )}
           </div>
           <div className="flex gap-4 items-center">
-            {activeTab?.isModified && <span className="text-yellow-400">● Modified</span>}
+            {autosaveStatus === 'saving' && <span className="text-blue-400">Autosaving...</span>}
+            {autosaveStatus === 'saved' && <span className="text-green-400">Autosaved</span>}
+            {!autosaveStatus && activeTab?.isModified && <span className="text-yellow-400">● Modified</span>}
             <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>v{appVersion}</span>
           </div>
         </div>
