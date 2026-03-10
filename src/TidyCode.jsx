@@ -1405,7 +1405,12 @@ const TidyCode = () => {
   const [csvEditMap, setCsvEditMap] = useState({});
   const [activeCsvRowIndex, setActiveCsvRowIndex] = useState(null);
   const [csvDetectionMessage, setCsvDetectionMessage] = useState(null);
-  const [csvDetectionLocks, setCsvDetectionLocks] = useState({});
+  const [csvDetectionLocks, setCsvDetectionLocks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tidycode-csv-detection-decisions');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [markdownDetectionMessage, setMarkdownDetectionMessage] = useState(null);
   const [markdownPreviewHeight, setMarkdownPreviewHeight] = useState(DEFAULT_CSV_PREVIEW_HEIGHT);
   const [isMarkdownPreviewCollapsed, setIsMarkdownPreviewCollapsed] = useState(false);
@@ -7081,12 +7086,14 @@ const TidyCode = () => {
     if (syntaxLanguage && syntaxLanguage !== 'markdown') return false;
     return detectCSVContent(activeTab.content, activeTab?.title || activeTab?.filePath || '');
   }, [activeTab?.content, activeTab?.title, activeTab?.filePath, isCsvFileName, syntaxLanguage]);
+  const csvDetectionKey = useMemo(() => {
+    return activeTab?.absolutePath || activeTab?.title || null;
+  }, [activeTab?.absolutePath, activeTab?.title]);
   const shouldAutoCsv = useMemo(() => {
     if (isCsvFileName) return true;
-    const tabId = activeTab?.id;
-    if (tabId && csvDetectionLocks[tabId]) return true;
+    if (csvDetectionKey && csvDetectionLocks[csvDetectionKey] === 'yes') return true;
     return false;
-  }, [isCsvFileName, csvDetectionLocks, activeTab?.id]);
+  }, [isCsvFileName, csvDetectionLocks, csvDetectionKey]);
   const isCSVTab = shouldAutoCsv;
 
   // Markdown detection
@@ -7254,13 +7261,14 @@ const TidyCode = () => {
   useEffect(() => {
     if (!activeTab || isCsvFileName) return;
     if (!isCsvByContent) return;
-    const tabId = activeTab.id;
-    if (csvDetectionLocks[tabId]) return;
+    if (!csvDetectionKey) return;
+    // Skip if user already made a decision for this file
+    if (csvDetectionLocks[csvDetectionKey]) return;
     setCsvDetectionMessage('CSV content detected. Would you like to open the CSV editor?');
     if (csvDetectionMessageTimeoutRef.current) {
       clearTimeout(csvDetectionMessageTimeoutRef.current);
     }
-  }, [activeTab?.id, isCsvFileName, isCsvByContent, csvDetectionLocks]);
+  }, [activeTab?.id, isCsvFileName, isCsvByContent, csvDetectionLocks, csvDetectionKey]);
 
   // Markdown detection message
   useEffect(() => {
@@ -9055,13 +9063,16 @@ const TidyCode = () => {
         <div className="bg-yellow-400 border-b-2 border-yellow-500 text-red-800 px-5 py-3 text-sm flex items-center gap-3 shadow-lg font-semibold">
           <Info className="w-4 h-4" />
           <span className="tracking-wide">{csvDetectionMessage}</span>
-          {activeTab && !csvDetectionLocks[activeTab.id] && isCsvByContent && (
+          {activeTab && csvDetectionKey && !csvDetectionLocks[csvDetectionKey] && isCsvByContent && (
             <div className="flex items-center gap-2 ml-auto">
               <button
                 className="px-3 py-1 rounded bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors cursor-pointer"
                 onClick={() => {
-                  const tabId = activeTab.id;
-                  setCsvDetectionLocks(prev => ({ ...prev, [tabId]: true }));
+                  setCsvDetectionLocks(prev => {
+                    const next = { ...prev, [csvDetectionKey]: 'yes' };
+                    try { localStorage.setItem('tidycode-csv-detection-decisions', JSON.stringify(next)); } catch {}
+                    return next;
+                  });
                   setCsvDetectionMessage(null);
                 }}
               >
@@ -9070,6 +9081,11 @@ const TidyCode = () => {
               <button
                 className="px-3 py-1 rounded bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer"
                 onClick={() => {
+                  setCsvDetectionLocks(prev => {
+                    const next = { ...prev, [csvDetectionKey]: 'no' };
+                    try { localStorage.setItem('tidycode-csv-detection-decisions', JSON.stringify(next)); } catch {}
+                    return next;
+                  });
                   setCsvDetectionMessage(null);
                 }}
               >
