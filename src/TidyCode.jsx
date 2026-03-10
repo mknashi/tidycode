@@ -1663,6 +1663,7 @@ const TidyCode = () => {
   const csvEditorRowRefs = useRef(new Map());
   const csvDetectionMessageTimeoutRef = useRef(null);
   const markdownDetectionMessageTimeoutRef = useRef(null);
+  const autosaveTimeoutRef = useRef(null);
   const settingsMenuRef = useRef(null);
   const newTodoInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -5482,6 +5483,36 @@ const TidyCode = () => {
 
   // Keep ref updated
   saveFileRef.current = saveFile;
+
+  // Autosave: save modified tabs to filesystem or localStorage after a delay
+  useEffect(() => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    const modifiedTab = tabs.find(t => t.id === activeTabId && t.isModified);
+    if (!modifiedTab || modifiedTab.title === 'Welcome') return;
+
+    const hasFileHandle = !!modifiedTab.fileHandle;
+    const hasRealPath = modifiedTab.absolutePath && !String(modifiedTab.absolutePath).startsWith('virtual:');
+    const canSaveToFile = hasFileHandle || (window.__TAURI_INTERNALS__ && hasRealPath);
+
+    if (canSaveToFile) {
+      // Autosave to filesystem after 2 seconds of inactivity
+      autosaveTimeoutRef.current = setTimeout(() => {
+        console.log('[Autosave] Saving to filesystem:', modifiedTab.title);
+        saveFileRef.current?.(modifiedTab.id);
+      }, 2000);
+    }
+    // Files without a local path are already auto-persisted to localStorage
+    // by the debounced tabs useEffect (notepad-tabs), so no extra action needed
+
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [tabs, activeTabId]);
 
   const openFile = (e) => {
     const file = e.target.files[0];
