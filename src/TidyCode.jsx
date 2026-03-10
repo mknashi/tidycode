@@ -2895,9 +2895,12 @@ const TidyCode = () => {
     const pathKey = normalizeForComparison(normalizedPath);
     const fileName = getSafeFileName(displayName || (normalizedPath.split(/[/\\]/).pop() || 'untitled'));
 
-    // Already open? focus it
+    // Already open? focus it, and update fileHandle if a new one was provided
     const existing = tabsRef.current.find(tab => tab.absolutePath && normalizeForComparison(tab.absolutePath) === pathKey);
     if (existing) {
+      if (fileHandle && !existing.fileHandle) {
+        setTabs(prev => prev.map(tab => tab.id === existing.id ? { ...tab, fileHandle } : tab));
+      }
       setActiveTabId(existing.id);
       requestEditorFocus(existing.id);
       setTimeout(() => scrollTabIntoView(existing.id), 0);
@@ -2908,7 +2911,7 @@ const TidyCode = () => {
     // Attach real path to an untitled tab with matching filename
     const filenameMatch = tabsRef.current.find(tab => !tab.absolutePath && tab.filePath === fileName);
     if (filenameMatch) {
-      setTabs(prev => prev.map(tab => tab.id === filenameMatch.id ? { ...tab, absolutePath: normalizedPath } : tab));
+      setTabs(prev => prev.map(tab => tab.id === filenameMatch.id ? { ...tab, absolutePath: normalizedPath, fileHandle: fileHandle || tab.fileHandle || null } : tab));
       setActiveTabId(filenameMatch.id);
       requestEditorFocus(filenameMatch.id);
       setTimeout(() => scrollTabIntoView(filenameMatch.id), 0);
@@ -3352,10 +3355,10 @@ const TidyCode = () => {
               } else {
                 const content = await readFileFromHandle(fileHandle);
 
-                // Update tab with restored content
+                // Update tab with restored content and file handle for autosave
                 setTabs(prev => prev.map(t =>
                   t.id === tab.id
-                    ? { ...t, content, isModified: false }
+                    ? { ...t, content, isModified: false, fileHandle: fileHandle }
                     : t
                 ));
 
@@ -5506,6 +5509,8 @@ const TidyCode = () => {
     const isTauri = window.__TAURI_INTERNALS__;
     const hasFileHandle = !!modifiedTab.fileHandle;
     const hasRealPath = modifiedTab.absolutePath && !String(modifiedTab.absolutePath).startsWith('virtual:');
+
+    console.log('[Autosave] Scheduling autosave for:', modifiedTab.title, { hasFileHandle, hasRealPath, isTauri: !!isTauri, absolutePath: modifiedTab.absolutePath });
 
     autosaveTimeoutRef.current = setTimeout(async () => {
       const tabId = modifiedTab.id;
