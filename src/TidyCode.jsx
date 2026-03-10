@@ -3215,6 +3215,7 @@ const TidyCode = () => {
         isModified: false,
         filePath: fileName,
         absolutePath: normalizedPath,
+        fileHandle: fileHandle || null,
         // WASM metadata
         wasmFileHandle: wasmFileHandle,
         fileSize: fileSize,
