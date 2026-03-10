@@ -9739,33 +9739,6 @@ const TidyCode = () => {
               />
             )}
 
-            {/* AI Chat Panel Below Editor */}
-            {aiChat.showChatPanel && (
-              <AIChatPanel
-                theme={theme}
-                messages={aiChat.messages}
-                isStreaming={aiChat.isStreaming}
-                error={aiChat.error}
-                onSend={aiChat.sendMessage}
-                onAbort={aiChat.abortResponse}
-                onClear={aiChat.clearHistory}
-                onClose={() => aiChat.setShowChatPanel(false)}
-                onRetry={aiChat.retryLastMessage}
-                height={aiChat.chatPanelHeight}
-                onHeightChange={aiChat.setChatPanelHeight}
-                activeFileName={activeTab?.title || ''}
-                onApplyCode={aiChat.applyCodeToEditor}
-                onOpenInNewTab={aiChat.openCodeInNewTab}
-                currentProvider={aiSettings.provider || ''}
-                currentModel={chatCurrentModel}
-                availableModels={chatAvailableModels}
-                onProviderChange={handleProviderChange}
-                onModelChange={handleChatModelChange}
-                refreshKey={providerRefreshKey}
-                providerName={aiSettings.provider || ''}
-              />
-            )}
-
             {/* Full-width Error/Warning Panel Below Editor */}
             {errorMessage && (
               <div
@@ -10848,6 +10821,33 @@ const TidyCode = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderPanel()}
         </div>
+
+        {/* AI Chat Panel - available across all panels */}
+        {aiChat.showChatPanel && (
+          <AIChatPanel
+            theme={theme}
+            messages={aiChat.messages}
+            isStreaming={aiChat.isStreaming}
+            error={aiChat.error}
+            onSend={aiChat.sendMessage}
+            onAbort={aiChat.abortResponse}
+            onClear={aiChat.clearHistory}
+            onClose={() => aiChat.setShowChatPanel(false)}
+            onRetry={aiChat.retryLastMessage}
+            height={aiChat.chatPanelHeight}
+            onHeightChange={aiChat.setChatPanelHeight}
+            activeFileName={activeTab?.title || ''}
+            onApplyCode={aiChat.applyCodeToEditor}
+            onOpenInNewTab={aiChat.openCodeInNewTab}
+            currentProvider={aiSettings.provider || ''}
+            currentModel={chatCurrentModel}
+            availableModels={chatAvailableModels}
+            onProviderChange={handleProviderChange}
+            onModelChange={handleChatModelChange}
+            refreshKey={providerRefreshKey}
+            providerName={aiSettings.provider || ''}
+          />
+        )}
 
         {/* Terminal Panel */}
         {isDesktop() && (
