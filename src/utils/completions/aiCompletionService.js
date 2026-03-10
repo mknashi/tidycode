@@ -205,7 +205,7 @@ Completion (1-3 words only):`;
       body.top_p = 0.9;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    let response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -213,6 +213,25 @@ Completion (1-3 words only):`;
       },
       body: JSON.stringify(body)
     });
+
+    // If temperature is rejected, retry without it
+    if (!response.ok && body.temperature !== undefined) {
+      const errorData = await response.json().catch(() => null);
+      const errorMsg = errorData?.error?.message || '';
+      if (errorMsg.toLowerCase().includes('temperature')) {
+        const retryBody = { ...body };
+        delete retryBody.temperature;
+        delete retryBody.top_p;
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(retryBody)
+        });
+      }
+    }
 
     if (!response.ok) {
       throw new Error(`OpenAI API error: ${response.status}`);

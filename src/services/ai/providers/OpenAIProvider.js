@@ -210,6 +210,30 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
+   * Make a fetch request with automatic retry if temperature is rejected
+   */
+  async fetchWithRetry(url, options, requestBody) {
+    const response = await fetch(url, options);
+
+    if (!response.ok && requestBody.temperature !== undefined) {
+      const errorData = await response.json().catch(() => null);
+      const errorMsg = errorData?.error?.message || '';
+      if (errorMsg.toLowerCase().includes('temperature')) {
+        const retryBody = { ...requestBody };
+        delete retryBody.temperature;
+        const retryResponse = await fetch(url, {
+          ...options,
+          body: JSON.stringify(retryBody),
+        });
+        return retryResponse;
+      }
+      throw new Error(errorData?.error?.message || `OpenAI API error: ${response.status}`);
+    }
+
+    return response;
+  }
+
+  /**
    * Get request headers for OpenAI API
    */
   getRequestHeaders(options = {}) {
@@ -307,15 +331,19 @@ export class OpenAIProvider extends AIProvider {
 
     const systemPrompt = options.systemPrompt || this.buildSystemPrompt(task, { language });
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const requestBody = this.buildRequestBody(model, maxTokens, temperature, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ], { stream: true });
+
+    const fetchOptions = {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify(this.buildRequestBody(model, maxTokens, temperature, [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ], { stream: true })),
+      body: JSON.stringify(requestBody),
       signal: options.signal,
-    });
+    };
+
+    const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, fetchOptions, requestBody);
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);
@@ -414,12 +442,15 @@ export class OpenAIProvider extends AIProvider {
       content: m.content,
     }));
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const requestBody = this.buildRequestBody(model, maxTokens, temperature, openaiMessages, { stream: true });
+    const fetchOptions = {
       method: 'POST',
       headers: this.getRequestHeaders(),
-      body: JSON.stringify(this.buildRequestBody(model, maxTokens, temperature, openaiMessages, { stream: true })),
+      body: JSON.stringify(requestBody),
       signal: options.signal,
-    });
+    };
+
+    const response = await this.fetchWithRetry(`${this.baseUrl}/chat/completions`, fetchOptions, requestBody);
 
     if (!response.ok) {
       const error = await this.parseErrorResponse(response);

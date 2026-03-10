@@ -186,6 +186,44 @@ class AIService {
     return body;
   }
 
+  // Make an OpenAI API request with automatic retry if temperature is rejected
+  async fetchOpenAI(url, apiKey, requestBody) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    // If the error is about temperature, retry without it
+    if (!response.ok && requestBody.temperature !== undefined) {
+      const errorData = await response.json().catch(() => null);
+      const errorMsg = errorData?.error?.message || '';
+      if (errorMsg.toLowerCase().includes('temperature')) {
+        const retryBody = { ...requestBody };
+        delete retryBody.temperature;
+        const retryResponse = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(retryBody)
+        });
+        if (!retryResponse.ok) {
+          const retryError = await retryResponse.json().catch(() => ({ error: { message: 'Unknown error' } }));
+          throw new Error(retryError.error?.message || `OpenAI API error: ${retryResponse.status}`);
+        }
+        return retryResponse;
+      }
+      throw new Error(errorData?.error?.message || `OpenAI API error: ${response.status}`);
+    }
+
+    return response;
+  }
+
   // Build prompt for fixing JSON/XML errors
   buildFixPrompt(content, errorDetails) {
     const errorList = errorDetails.allErrors
@@ -326,28 +364,18 @@ Fixed ${errorDetails.type}:`;
 
     const prompt = this.buildFixPrompt(content, errorDetails);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(this.buildOpenAIRequestBody(model, [
-          {
-            role: 'system',
-            content: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ], 0.1, 16000))
-    });
+    const requestBody = this.buildOpenAIRequestBody(model, [
+        {
+          role: 'system',
+          content: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.`
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ], 0.1, 16000);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
-    }
+    const response = await this.fetchOpenAI('https://api.openai.com/v1/chat/completions', apiKey, requestBody);
 
     const data = await response.json();
     let fixed = data.choices[0]?.message?.content || '';
@@ -780,28 +808,18 @@ Fixed ${errorDetails.type}:`;
         if (!openaiApiKey) throw new Error('OpenAI API key is required');
 
         const effectiveModel = openaiModel || OPENAI_MODELS['gpt-4o-mini'].id;
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(this.buildOpenAIRequestBody(effectiveModel, [
-              {
-                role: 'system',
-                content: 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ], 0.7, 4000))
-        });
+        const requestBody = this.buildOpenAIRequestBody(effectiveModel, [
+            {
+              role: 'system',
+              content: 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ], 0.7, 4000);
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-          throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
-        }
+        const response = await this.fetchOpenAI('https://api.openai.com/v1/chat/completions', openaiApiKey, requestBody);
 
         const data = await response.json();
         return data.choices[0]?.message?.content?.trim() || text;
