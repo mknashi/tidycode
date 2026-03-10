@@ -175,11 +175,12 @@ Completion (1-3 words only):`;
    * Get completion from OpenAI
    */
   /**
-   * Check if an OpenAI model is a reasoning model (o1, o3) that doesn't support temperature
+   * Check if an OpenAI model is a reasoning model that doesn't support temperature
+   * Covers o1, o3, o4-mini, and future o-series models
    */
   isOpenAIReasoningModel(model) {
     const id = (model || '').toLowerCase();
-    return id.startsWith('o1') || id.startsWith('o3');
+    return /^o\d/.test(id);
   }
 
   async getOpenAICompletion(prompt, apiKey, model) {

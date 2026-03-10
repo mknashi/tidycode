@@ -56,6 +56,16 @@ export const OPENAI_MODELS = {
     id: 'o1-mini',
     name: 'O1 Mini',
     description: 'Fast reasoning'
+  },
+  'o3-mini': {
+    id: 'o3-mini',
+    name: 'O3 Mini',
+    description: 'Fast reasoning (next-gen)'
+  },
+  'o4-mini': {
+    id: 'o4-mini',
+    name: 'O4 Mini',
+    description: 'Latest fast reasoning model'
   }
 };
 
@@ -156,9 +166,10 @@ class AIService {
   }
 
   // Check if an OpenAI model is a reasoning model that doesn't support temperature
+  // Covers o1, o3, o4-mini, and future o-series models
   isOpenAIReasoningModel(model) {
     const id = (model || '').toLowerCase();
-    return id.startsWith('o1') || id.startsWith('o3');
+    return /^o\d/.test(id);
   }
 
   // Build OpenAI request body with correct parameters for the model

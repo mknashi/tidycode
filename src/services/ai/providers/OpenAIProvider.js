@@ -124,6 +124,26 @@ const OPENAI_MODELS = [
     supportsVision: false,
     status: 'preview',
   }),
+
+  // O3 reasoning models
+  new ModelInfo({
+    id: 'o3-mini',
+    name: 'O3 Mini',
+    contextWindow: 200000,
+    description: 'Fast next-gen reasoning model',
+    supportsVision: false,
+    status: 'stable',
+  }),
+
+  // O4 reasoning models
+  new ModelInfo({
+    id: 'o4-mini',
+    name: 'O4 Mini',
+    contextWindow: 200000,
+    description: 'Latest fast reasoning model',
+    supportsVision: true,
+    status: 'stable',
+  }),
 ];
 
 /**
@@ -165,11 +185,11 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
-   * Check if a model is a reasoning model (o1, o3, etc.) that doesn't support temperature
+   * Check if a model is a reasoning model (o1, o3, o4-mini, etc.) that doesn't support temperature
    */
   isReasoningModel(modelId) {
     const id = (modelId || this.getCurrentModelId() || '').toLowerCase();
-    return id.startsWith('o1') || id.startsWith('o3');
+    return /^o\d/.test(id);
   }
 
   /**
