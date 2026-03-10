@@ -6999,8 +6999,8 @@ const TidyCode = () => {
     if (isCsvFileName) return true;
     const tabId = activeTab?.id;
     if (tabId && csvDetectionLocks[tabId]) return true;
-    return isCsvByContent;
-  }, [isCsvFileName, isCsvByContent, csvDetectionLocks, activeTab?.id]);
+    return false;
+  }, [isCsvFileName, csvDetectionLocks, activeTab?.id]);
   const isCSVTab = shouldAutoCsv;
 
   // Markdown detection
@@ -7170,14 +7170,10 @@ const TidyCode = () => {
     if (!isCsvByContent) return;
     const tabId = activeTab.id;
     if (csvDetectionLocks[tabId]) return;
-    setCsvDetectionLocks(prev => ({ ...prev, [tabId]: true }));
-    setCsvDetectionMessage('Detected CSV text, switching to CSV editor…');
+    setCsvDetectionMessage('CSV content detected. Would you like to open the CSV editor?');
     if (csvDetectionMessageTimeoutRef.current) {
       clearTimeout(csvDetectionMessageTimeoutRef.current);
     }
-    csvDetectionMessageTimeoutRef.current = setTimeout(() => {
-      setCsvDetectionMessage(null);
-    }, 5000);
   }, [activeTab?.id, isCsvFileName, isCsvByContent, csvDetectionLocks]);
 
   // Markdown detection message
@@ -8972,6 +8968,28 @@ const TidyCode = () => {
         <div className="bg-yellow-400 border-b-2 border-yellow-500 text-red-800 px-5 py-3 text-sm flex items-center gap-3 shadow-lg font-semibold">
           <Info className="w-4 h-4" />
           <span className="tracking-wide">{csvDetectionMessage}</span>
+          {activeTab && !csvDetectionLocks[activeTab.id] && isCsvByContent && (
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                className="px-3 py-1 rounded bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors cursor-pointer"
+                onClick={() => {
+                  const tabId = activeTab.id;
+                  setCsvDetectionLocks(prev => ({ ...prev, [tabId]: true }));
+                  setCsvDetectionMessage(null);
+                }}
+              >
+                Yes
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors cursor-pointer"
+                onClick={() => {
+                  setCsvDetectionMessage(null);
+                }}
+              >
+                No
+              </button>
+            </div>
+          )}
         </div>
       )}
 
