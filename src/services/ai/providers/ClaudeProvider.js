@@ -16,14 +16,41 @@ import {
  * Claude model definitions
  */
 const CLAUDE_MODELS = [
-  // Claude 4 models (next generation)
+  // Claude 4.5/4.6 models (latest generation)
+  new ModelInfo({
+    id: 'claude-opus-4-6',
+    name: 'Claude Opus 4.6',
+    contextWindow: 200000,
+    description: 'Most capable model for complex coding tasks',
+    supportsVision: true,
+    status: 'stable',
+  }),
+  new ModelInfo({
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    contextWindow: 200000,
+    description: 'Excellent balance of intelligence and speed for coding',
+    isDefault: true,
+    supportsVision: true,
+    status: 'stable',
+  }),
+  new ModelInfo({
+    id: 'claude-haiku-4-5-20251001',
+    name: 'Claude Haiku 4.5',
+    contextWindow: 200000,
+    description: 'Fast and efficient for quick coding tasks',
+    supportsVision: true,
+    status: 'stable',
+  }),
+
+  // Claude 4 models
   new ModelInfo({
     id: 'claude-4-opus',
     name: 'Claude 4 Opus',
     contextWindow: 200000,
-    description: 'Most capable Claude 4 model for complex tasks',
+    description: 'Highly capable Claude 4 model for complex tasks',
     supportsVision: true,
-    status: 'preview',
+    status: 'stable',
   }),
   new ModelInfo({
     id: 'claude-4-sonnet',
@@ -31,7 +58,7 @@ const CLAUDE_MODELS = [
     contextWindow: 200000,
     description: 'Balanced Claude 4 model',
     supportsVision: true,
-    status: 'preview',
+    status: 'stable',
   }),
 
   // Claude 3.5 models
@@ -39,8 +66,7 @@ const CLAUDE_MODELS = [
     id: 'claude-3-5-sonnet-20241022',
     name: 'Claude 3.5 Sonnet',
     contextWindow: 200000,
-    description: 'Best balance of intelligence and speed',
-    isDefault: true,
+    description: 'Previous generation balanced model',
     supportsVision: true,
     status: 'stable',
   }),
@@ -48,7 +74,7 @@ const CLAUDE_MODELS = [
     id: 'claude-3-5-haiku-20241022',
     name: 'Claude 3.5 Haiku',
     contextWindow: 200000,
-    description: 'Fast and efficient for simple tasks',
+    description: 'Previous generation fast model',
     supportsVision: true,
     status: 'stable',
   }),
@@ -304,7 +330,7 @@ export class ClaudeProvider extends AIProvider {
       .filter(m => m.role !== 'system')
       .map(m => ({
         role: m.role,
-        content: m.content,
+        content: this._convertContent(m.content),
       }));
 
     // Extract system message
@@ -334,6 +360,40 @@ export class ClaudeProvider extends AIProvider {
   }
 
   /**
+   * Convert multimodal content array to Anthropic format
+   * @private
+   */
+  _convertContent(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return content;
+
+    // Convert OpenAI-style content parts to Anthropic format
+    return content.map(part => {
+      if (part._anthropic) {
+        // Use the pre-built Anthropic format
+        return part._anthropic;
+      }
+      if (part.type === 'image_url' && part.image_url?.url) {
+        const url = part.image_url.url;
+        if (url.startsWith('data:')) {
+          const match = url.match(/^data:(image\/\w+);base64,(.+)$/);
+          if (match) {
+            return {
+              type: 'image',
+              source: { type: 'base64', media_type: match[1], data: match[2] },
+            };
+          }
+        }
+        return { type: 'image', source: { type: 'url', url } };
+      }
+      if (part.type === 'text') {
+        return { type: 'text', text: part.text };
+      }
+      return part;
+    });
+  }
+
+  /**
    * Stream chat with Claude
    */
   async streamChat(messages, onChunk, options = {}) {
@@ -346,7 +406,7 @@ export class ClaudeProvider extends AIProvider {
 
     const anthropicMessages = messages
       .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => ({ role: m.role, content: this._convertContent(m.content) }));
 
     const systemMessage = messages.find(m => m.role === 'system');
     const system = systemPrompt || systemMessage?.content || 'You are a helpful assistant.';

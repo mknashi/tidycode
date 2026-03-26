@@ -22,6 +22,10 @@ import {
   FileDown,
   Play,
   Shield,
+  Plus,
+  History,
+  ChevronDown,
+  Image,
 } from 'lucide-react';
 import AIProviderSelector from './AIProviderSelector.jsx';
 
@@ -175,6 +179,12 @@ export default function AIChatPanel({
   onModelChange,
   refreshKey = 0,
   providerName = '',
+  // Session management
+  sessions = [],
+  activeSessionId = null,
+  onNewSession,
+  onLoadSession,
+  onDeleteSession,
 }) {
   const isDark = theme === 'dark';
   const [input, setInput] = useState('');
@@ -183,6 +193,8 @@ export default function AIChatPanel({
   const [copiedAll, setCopiedAll] = useState(false);
   const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [showSessionHistory, setShowSessionHistory] = useState(false);
+  const [pastedImages, setPastedImages] = useState([]); // Array of { dataUrl, name }
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const dragRef = useRef(null);
@@ -191,6 +203,8 @@ export default function AIChatPanel({
   const dragCleanupRef = useRef(null);
   const copyTimerRef = useRef(null);
   const copyAllTimerRef = useRef(null);
+  const sessionHistoryRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Theme classes (matching AIResultsPanel)
   const bgColor = isDark ? 'bg-gray-900' : 'bg-white';
@@ -220,6 +234,17 @@ export default function AIChatPanel({
       inputRef.current?.focus();
     }
   }, [isStreaming]);
+
+  // Click outside to close session history
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sessionHistoryRef.current && !sessionHistoryRef.current.contains(e.target)) {
+        setShowSessionHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -266,10 +291,11 @@ export default function AIChatPanel({
 
   // Send message
   const handleSend = useCallback(() => {
-    if (!input.trim() || isStreaming) return;
-    onSend?.(input.trim(), includeFileContent);
+    if ((!input.trim() && pastedImages.length === 0) || isStreaming) return;
+    onSend?.(input.trim(), includeFileContent, pastedImages);
     setInput('');
-  }, [input, isStreaming, includeFileContent, onSend]);
+    setPastedImages([]);
+  }, [input, isStreaming, includeFileContent, onSend, pastedImages]);
 
   // Handle keyboard in textarea
   const handleKeyDown = useCallback(
@@ -281,6 +307,56 @@ export default function AIChatPanel({
     },
     [handleSend]
   );
+
+  // Handle paste event for images
+  const handlePaste = useCallback((e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setPastedImages(prev => [...prev, {
+            dataUrl: ev.target.result,
+            name: file.name || `image-${Date.now()}.png`,
+            type: file.type,
+          }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, []);
+
+  // Handle image file selection
+  const handleImageSelect = useCallback((e) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setPastedImages(prev => [...prev, {
+          dataUrl: ev.target.result,
+          name: file.name,
+          type: file.type,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  }, []);
+
+  // Remove a pasted image
+  const removeImage = useCallback((index) => {
+    setPastedImages(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   // Copy a single message
   const handleCopyMessage = useCallback(async (content, index) => {
@@ -353,6 +429,73 @@ export default function AIChatPanel({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* New Chat */}
+          <button
+            onClick={onNewSession}
+            disabled={isStreaming}
+            className={`p-1 rounded ${btnClasses}`}
+            title="New chat session"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Session History */}
+          <div className="relative" ref={sessionHistoryRef}>
+            <button
+              onClick={() => setShowSessionHistory(prev => !prev)}
+              disabled={isStreaming}
+              className={`p-1 rounded ${btnClasses}`}
+              title="Chat history"
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
+
+            {showSessionHistory && (
+              <div
+                className={`absolute top-full right-0 mt-1 w-64 max-h-60 overflow-y-auto rounded border z-50 py-1 ${
+                  isDark ? 'bg-gray-800 border-gray-700 shadow-lg' : 'bg-white border-gray-300 shadow-lg'
+                }`}
+              >
+                {sessions.length === 0 ? (
+                  <div className={`px-3 py-2 text-xs ${mutedColor}`}>No saved sessions</div>
+                ) : (
+                  sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`flex items-center justify-between px-3 py-1.5 text-xs gap-2 ${
+                        isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                      } ${session.id === activeSessionId ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                    >
+                      <button
+                        onClick={() => {
+                          onLoadSession?.(session.id);
+                          setShowSessionHistory(false);
+                        }}
+                        className={`flex-1 text-left truncate ${textColor}`}
+                        title={session.title}
+                      >
+                        {session.title}
+                      </button>
+                      <span className={`text-[10px] flex-shrink-0 ${mutedColor}`}>
+                        {new Date(session.updatedAt).toLocaleDateString()}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteSession?.(session.id);
+                        }}
+                        className={`flex-shrink-0 p-0.5 rounded ${btnClasses}`}
+                        title="Delete session"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Copy All */}
           <button
             onClick={handleCopyAll}
@@ -423,9 +566,26 @@ export default function AIChatPanel({
                   }`}
                 >
                   {isUser ? (
-                    <p className={`text-xs leading-5 whitespace-pre-wrap break-words ${textColor}`}>
-                      {msg.content}
-                    </p>
+                    <>
+                      {/* Render attached images */}
+                      {msg.images && msg.images.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {msg.images.map((img, imgIdx) => (
+                            <img
+                              key={imgIdx}
+                              src={img.dataUrl}
+                              alt={img.name || 'Attached image'}
+                              className="max-h-24 w-auto rounded"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {msg.content && (
+                        <p className={`text-xs leading-5 whitespace-pre-wrap break-words ${textColor}`}>
+                          {msg.content}
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <>
                       <MessageContent
@@ -534,7 +694,53 @@ export default function AIChatPanel({
                 : 'Include file'}
             </span>
           </button>
+
+          {/* Attach Image */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+              pastedImages.length > 0
+                ? 'bg-blue-400/10 text-blue-400'
+                : `${mutedColor} ${isDark ? 'hover:text-gray-300' : 'hover:text-gray-600'}`
+            }`}
+            title="Attach image (or paste from clipboard)"
+          >
+            <Image className="w-3 h-3" />
+            <span>{pastedImages.length > 0 ? `${pastedImages.length} image${pastedImages.length > 1 ? 's' : ''}` : 'Add image'}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageSelect}
+          />
         </div>
+
+        {/* Image Previews */}
+        {pastedImages.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1 overflow-x-auto">
+            {pastedImages.map((img, idx) => (
+              <div key={idx} className="relative flex-shrink-0 group">
+                <img
+                  src={img.dataUrl}
+                  alt={img.name}
+                  className="h-12 w-auto rounded border"
+                  style={{ borderColor: isDark ? '#4b5563' : '#d1d5db' }}
+                />
+                <button
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove image"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Input Row */}
         <div className="flex items-end gap-2 px-3 pb-2">
@@ -543,15 +749,16 @@ export default function AIChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             disabled={isStreaming}
-            placeholder={isStreaming ? 'Waiting for response...' : 'Ask something... (Enter to send, Shift+Enter for newline)'}
-            rows={1}
+            placeholder={isStreaming ? 'Waiting for response...' : 'Ask something... (Enter to send, Shift+Enter for newline, paste images)'}
+            rows={3}
             className={`flex-1 resize-none rounded px-3 py-1.5 text-xs ${textColor} ${inputBg} border ${inputBorder} focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDark ? 'placeholder:text-gray-400' : 'placeholder:text-gray-500'}`}
-            style={{ maxHeight: '96px', minHeight: '32px' }}
+            style={{ maxHeight: '180px', minHeight: '60px' }}
             onInput={(e) => {
               // Auto-resize textarea
               e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px';
+              e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px';
             }}
           />
 
@@ -567,9 +774,9 @@ export default function AIChatPanel({
           ) : (
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() && pastedImages.length === 0}
               className={`flex-shrink-0 p-1.5 rounded ${
-                input.trim()
+                input.trim() || pastedImages.length > 0
                   ? 'bg-blue-600 text-white hover:bg-blue-500'
                   : `${isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'}`
               }`}

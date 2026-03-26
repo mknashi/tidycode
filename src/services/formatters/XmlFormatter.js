@@ -14,6 +14,11 @@ export class XmlFormatter extends BaseFormatter {
   detect(content) {
     const trimmed = content.trim();
 
+    // Exclude PHP code — check for <?php or <?= anywhere in the content
+    if (trimmed.includes('<?php') || trimmed.includes('<?=')) {
+      return { match: false, confidence: 0 };
+    }
+
     // Check for XML declaration or root element
     if (trimmed.startsWith('<?xml') || trimmed.startsWith('<!DOCTYPE')) {
       return { match: true, confidence: 1 };

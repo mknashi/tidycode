@@ -215,10 +215,32 @@ export class GeminiProvider extends AIProvider {
   convertToGeminiFormat(messages) {
     return messages
       .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
+      .map(m => {
+        const role = m.role === 'assistant' ? 'model' : 'user';
+
+        // Handle multimodal content arrays
+        if (Array.isArray(m.content)) {
+          const parts = [];
+          for (const part of m.content) {
+            if (part.type === 'text') {
+              parts.push({ text: part.text });
+            } else if (part.type === 'image_url' && part.image_url?.url) {
+              const url = part.image_url.url;
+              if (url.startsWith('data:')) {
+                const match = url.match(/^data:(image\/\w+);base64,(.+)$/);
+                if (match) {
+                  parts.push({
+                    inlineData: { mimeType: match[1], data: match[2] },
+                  });
+                }
+              }
+            }
+          }
+          return { role, parts: parts.length > 0 ? parts : [{ text: '' }] };
+        }
+
+        return { role, parts: [{ text: m.content }] };
+      });
   }
 
   /**

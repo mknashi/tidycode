@@ -137,6 +137,16 @@ export class ProviderManager {
   _processMessages(messages) {
     return messages.map(msg => {
       if ((msg.role === 'system' || msg.role === 'user') && msg.content) {
+        // Handle multimodal content arrays (images + text)
+        if (Array.isArray(msg.content)) {
+          const processed = msg.content.map(part => {
+            if (part.type === 'text' && part.text) {
+              return { ...part, text: this._applyPrivacyGuard(part.text) };
+            }
+            return part;
+          });
+          return { ...msg, content: processed };
+        }
         return { ...msg, content: this._applyPrivacyGuard(msg.content) };
       }
       return msg;

@@ -16,6 +16,16 @@ import {
  * OpenAI model definitions
  */
 const OPENAI_MODELS = [
+  // Codex models (optimized for coding)
+  new ModelInfo({
+    id: 'codex-mini-latest',
+    name: 'Codex Mini',
+    contextWindow: 200000,
+    description: 'Fast, lightweight coding model optimized for code tasks',
+    supportsVision: false,
+    status: 'stable',
+  }),
+
   // GPT-5 models (next generation - placeholder for future)
   new ModelInfo({
     id: 'gpt-5',
@@ -189,7 +199,7 @@ export class OpenAIProvider extends AIProvider {
    */
   isReasoningModel(modelId) {
     const id = (modelId || this.getCurrentModelId() || '').toLowerCase();
-    return /^o\d/.test(id);
+    return /^o\d/.test(id) || id.startsWith('codex');
   }
 
   /**
@@ -396,6 +406,26 @@ export class OpenAIProvider extends AIProvider {
   /**
    * Chat with OpenAI
    */
+  /**
+   * Convert multimodal content to OpenAI format
+   * @private
+   */
+  _convertContent(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return content;
+
+    // Strip _anthropic metadata, keep OpenAI-compatible parts
+    return content.map(part => {
+      if (part.type === 'image_url') {
+        return { type: 'image_url', image_url: part.image_url };
+      }
+      if (part.type === 'text') {
+        return { type: 'text', text: part.text };
+      }
+      return part;
+    });
+  }
+
   async chat(messages, options = {}) {
     const {
       model,
@@ -406,7 +436,7 @@ export class OpenAIProvider extends AIProvider {
     // Convert to OpenAI format
     const openaiMessages = messages.map(m => ({
       role: m.role,
-      content: m.content,
+      content: this._convertContent(m.content),
     }));
 
     const response = await this.makeRequest('/chat/completions',
@@ -439,7 +469,7 @@ export class OpenAIProvider extends AIProvider {
 
     const openaiMessages = messages.map(m => ({
       role: m.role,
-      content: m.content,
+      content: this._convertContent(m.content),
     }));
 
     const requestBody = this.buildRequestBody(model, maxTokens, temperature, openaiMessages, { stream: true });

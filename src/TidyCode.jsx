@@ -213,17 +213,17 @@ const detectLanguageFromContent = (content = '') => {
     }
   }
 
+  // PHP - check before XML/HTML since PHP is often embedded in HTML and starts with <
+  if (trimmed.includes('<?php') || trimmed.includes('<?=')) {
+    return 'php';
+  }
+
   // XML/HTML - starts with < and has tags
   if (trimmed.startsWith('<') && (trimmed.includes('</') || trimmed.includes('/>'))) {
     if (trimmed.match(/<(!DOCTYPE html|html|head|body|div|span|p|a|img)/i)) {
       return 'markup'; // HTML
     }
     return 'markup'; // XML
-  }
-
-  // PHP - starts with <?php
-  if (trimmed.startsWith('<?php') || firstLine.includes('<?php')) {
-    return 'php';
   }
 
   // Python - common patterns
@@ -530,10 +530,17 @@ const looksLikeJSON = (text = '') => {
   }
 };
 
+const looksLikePHP = (text = '') => {
+  if (!text) return false;
+  return text.includes('<?php') || text.includes('<?=');
+};
+
 const looksLikeXML = (text = '') => {
   if (!text) return false;
   const trimmed = text.trim();
   if (!trimmed) return false;
+  // PHP files often start with < or contain tags — exclude them
+  if (looksLikePHP(trimmed)) return false;
   // Check for XML declaration or opening tag
   if (trimmed.startsWith('<?xml') || (trimmed.startsWith('<') && trimmed.includes('>'))) {
     // Basic check: should have opening and closing tags
@@ -3780,7 +3787,7 @@ const TidyCode = () => {
     if (fileType.shouldAutoFormat) {
       if (fileType.type === 'json' || looksLikeJSON(trimmed) || trimmed.startsWith('{') || trimmed.startsWith('[')) {
         formatJSON({ tabId, content, autoTriggered: true });
-      } else if (fileType.type === 'markup' || looksLikeXML(trimmed) || trimmed.startsWith('<')) {
+      } else if (!looksLikePHP(trimmed) && (fileType.type === 'markup' || looksLikeXML(trimmed) || trimmed.startsWith('<'))) {
         formatXML({ tabId, content, autoTriggered: true });
       }
     }
@@ -7311,7 +7318,7 @@ const TidyCode = () => {
       }
     }
 
-    if (detection.format === 'xml' || ((fileType.type === 'markup' || fileType.type === 'text') && trimmed.startsWith('<'))) {
+    if (!looksLikePHP(trimmed) && (detection.format === 'xml' || ((fileType.type === 'markup' || fileType.type === 'text') && trimmed.startsWith('<')))) {
       return { type: 'XML', nodes: buildXMLStructure(activeTab.content) };
     }
 
@@ -7414,7 +7421,7 @@ const TidyCode = () => {
       }
     }
     // Auto-validate XML files
-    else if (detection.format === 'xml' || trimmed.startsWith('<')) {
+    else if (!looksLikePHP(trimmed) && (detection.format === 'xml' || trimmed.startsWith('<'))) {
       try {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(trimmed, 'text/xml');
@@ -10896,6 +10903,11 @@ const TidyCode = () => {
             onModelChange={handleChatModelChange}
             refreshKey={providerRefreshKey}
             providerName={aiSettings.provider || ''}
+            sessions={aiChat.sessions}
+            activeSessionId={aiChat.activeSessionId}
+            onNewSession={aiChat.newSession}
+            onLoadSession={aiChat.loadSession}
+            onDeleteSession={aiChat.deleteSession}
           />
         )}
 
