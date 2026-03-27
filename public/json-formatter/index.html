@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <title>JSON Formatter Online - Free JSON Beautifier & Validator | Tidy Code</title>
+    <meta name="title" content="JSON Formatter Online - Free JSON Beautifier & Validator | Tidy Code">
+    <meta name="description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. Syntax highlighting, error detection, tree view, and minify support. No signup required.">
+    <meta name="keywords" content="json formatter, json beautifier, json formatter online, format json, json pretty print, json validator, json lint, json viewer, json beautify online, json format tool">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://tidycode.ai/json-formatter/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tidycode.ai/json-formatter/">
+    <meta property="og:title" content="JSON Formatter Online - Free JSON Beautifier & Validator">
+    <meta property="og:description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. No signup required.">
+    <meta property="og:image" content="https://tidycode.ai/tidycode-logo.svg">
+    <meta property="og:site_name" content="Tidy Code">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tidycode.ai/json-formatter/">
+    <meta property="twitter:title" content="JSON Formatter Online - Free JSON Beautifier & Validator">
+    <meta property="twitter:description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. No signup required.">
+    <meta property="twitter:image" content="https://tidycode.ai/tidycode-logo.svg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tidy Code JSON Formatter",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser with syntax highlighting and error detection.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": "https://tidycode.ai/json-formatter/",
+      "featureList": [
+        "JSON formatting and beautification",
+        "JSON syntax validation with error highlighting",
+        "JSON minification",
+        "Tree view for JSON structure",
+        "Convert JSON to YAML, XML, or TOML",
+        "Syntax highlighting",
+        "Large file support"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "Tidy Code"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I format JSON online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Paste your JSON into the Tidy Code editor and it will be automatically formatted with proper indentation and syntax highlighting. You can also click the Format button or press Ctrl+Shift+F to beautify your JSON."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the JSON formatter validate my JSON?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code automatically validates your JSON as you type, highlighting syntax errors with line numbers and helpful error messages so you can quickly find and fix issues."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I convert JSON to other formats?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code supports converting JSON to YAML, XML, and TOML formats with a single click. The conversion preserves your data structure and handles nested objects and arrays."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the JSON formatter free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Tidy Code's JSON formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6; color: #c9d1d9; background: #0d1117; overflow-x: hidden;
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d; z-index: 100; padding: 16px 0;
+        }
+        .nav-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 18px; font-weight: 700; color: #58a6ff; text-decoration: none;
+        }
+        .nav-brand img { width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5)); }
+        .nav-brand::before { content: '$'; color: #7ee787; margin-right: 4px; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link { color: #8b949e; text-decoration: none; font-size: 13px; transition: color 0.2s; font-weight: 500; }
+        .nav-link:hover { color: #58a6ff; }
+        .container { max-width: 900px; margin: 100px auto 40px; padding: 24px; }
+        h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5); }
+        h1::before { content: '// '; color: #7ee787; }
+        .lead { font-size: 1.25rem; color: #8b949e; margin-bottom: 48px; line-height: 1.8; }
+        .section {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        h2 { font-size: 1.75rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #30363d; }
+        h2::before { content: '> '; color: #7ee787; }
+        h3 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; margin-top: 24px; margin-bottom: 12px; }
+        p { color: #c9d1d9; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+        ul { list-style: none; padding: 0; }
+        ul li { padding: 8px 0; color: #c9d1d9; font-size: 14px; }
+        ul li::before { content: '$ '; color: #7ee787; font-weight: 700; }
+        .cta-button {
+            display: inline-block; padding: 14px 32px; background: #238636; color: #ffffff;
+            text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;
+            transition: background 0.2s; margin-top: 16px;
+        }
+        .cta-button:hover { background: #2ea043; }
+        .faq-item { margin-bottom: 24px; }
+        .faq-item h3 { color: #58a6ff; }
+        .faq-item p { color: #8b949e; }
+        .footer {
+            text-align: center; padding: 40px 24px; border-top: 1px solid #30363d;
+            color: #8b949e; font-size: 12px; margin-top: 40px;
+        }
+        .footer a { color: #58a6ff; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.75rem; }
+            .nav-links { gap: 16px; }
+            .container { padding: 16px; margin-top: 80px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code Logo" width="32" height="32">
+                Tidy Code
+            </a>
+            <div class="nav-links">
+                <a href="/docs/features.html" class="nav-link">Features</a>
+                <a href="/docs/" class="nav-link">Docs</a>
+                <a href="/" class="nav-link">Open Editor</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>JSON Formatter Online</h1>
+        <p class="lead">
+            Format, beautify, and validate JSON instantly in your browser. Paste your JSON and get perfectly indented, syntax-highlighted output with real-time error detection. Free, fast, and private — your data never leaves your browser.
+        </p>
+
+        <a href="/" class="cta-button" target="_blank" rel="noopener">Open JSON Formatter</a>
+
+        <div class="section" style="margin-top: 48px;">
+            <h2>Features</h2>
+
+            <h3>Instant JSON Formatting</h3>
+            <p>Paste unformatted or minified JSON and get beautifully indented output instantly. Supports custom indentation (2 or 4 spaces, tabs) and handles deeply nested structures with ease.</p>
+
+            <h3>Real-Time Validation</h3>
+            <p>Tidy Code validates your JSON as you type, showing exact line numbers and clear error messages for missing commas, brackets, quotes, and other common issues.</p>
+
+            <h3>JSON Tree View</h3>
+            <p>Explore your JSON visually with a collapsible tree view. Navigate complex objects and arrays, see data types at a glance, and quickly find the data you need.</p>
+
+            <h3>JSON Minification</h3>
+            <p>Compress your JSON by removing all whitespace with a single click. Perfect for reducing payload size for APIs and configuration files.</p>
+
+            <h3>Format Conversion</h3>
+            <p>Convert JSON to YAML, XML, or TOML with one click. Tidy Code preserves your data structure, handles nested objects and arrays, and produces clean, well-formatted output.</p>
+
+            <h3>Large File Support</h3>
+            <p>Handle JSON files up to 100MB+ thanks to WebAssembly-powered parsing. Format large API responses, database exports, and log files without your browser slowing down.</p>
+        </div>
+
+        <div class="section">
+            <h2>How to Format JSON</h2>
+            <ul>
+                <li>Open Tidy Code in your browser — no installation or signup needed</li>
+                <li>Paste your JSON into the editor or drag and drop a .json file</li>
+                <li>Your JSON is automatically formatted with syntax highlighting</li>
+                <li>Use the Structure panel to explore your JSON as a tree</li>
+                <li>Click Convert to transform JSON to YAML, XML, or TOML</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <h3>How do I format JSON online?</h3>
+                <p>Paste your JSON into the Tidy Code editor and it will be automatically formatted with proper indentation and syntax highlighting. You can also click the Format button or press Ctrl+Shift+F to beautify your JSON.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Does the JSON formatter validate my JSON?</h3>
+                <p>Yes. Tidy Code automatically validates your JSON as you type, highlighting syntax errors with line numbers and helpful error messages so you can quickly find and fix issues.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I convert JSON to other formats?</h3>
+                <p>Yes. Tidy Code supports converting JSON to YAML, XML, and TOML formats with a single click. The conversion preserves your data structure and handles nested objects and arrays.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is the JSON formatter free?</h3>
+                <p>Yes, Tidy Code's JSON formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 <a href="/">Tidy Code</a> &mdash; Free Online JSON Formatter, XML Editor, and Code Editor</p>
+            <p style="margin-top: 8px;">
+                <a href="/json-editor/">JSON Editor</a> &middot;
+                <a href="/xml-formatter/">XML Formatter</a> &middot;
+                <a href="/xml-editor/">XML Editor</a> &middot;
+                <a href="/docs/">Documentation</a> &middot;
+                <a href="/privacy.html">Privacy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

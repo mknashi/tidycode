@@ -19,9 +19,17 @@ const OPENAI_MODELS = [
   // Codex models (optimized for coding)
   new ModelInfo({
     id: 'codex-mini-latest',
-    name: 'Codex Mini',
+    name: 'Codex Mini (Latest)',
     contextWindow: 200000,
-    description: 'Fast, lightweight coding model optimized for code tasks',
+    description: 'Fast, lightweight coding model — always points to newest mini',
+    supportsVision: false,
+    status: 'stable',
+  }),
+  new ModelInfo({
+    id: 'codex-mini-2025-01-24',
+    name: 'Codex Mini (Jan 2025)',
+    contextWindow: 200000,
+    description: 'Codex Mini snapshot from January 2025',
     supportsVision: false,
     status: 'stable',
   }),

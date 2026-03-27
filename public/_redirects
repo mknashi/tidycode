@@ -13,5 +13,15 @@
 # Documentation pages
 /docs /docs/index.html       200
 
+# SEO landing pages (must come before catch-all)
+/json-formatter /json-formatter/index.html  200
+/json-formatter/ /json-formatter/index.html 200
+/xml-formatter /xml-formatter/index.html    200
+/xml-formatter/ /xml-formatter/index.html   200
+/json-editor /json-editor/index.html        200
+/json-editor/ /json-editor/index.html       200
+/xml-editor /xml-editor/index.html          200
+/xml-editor/ /xml-editor/index.html         200
+
 # All other routes should go to the SPA (index.html) for client-side routing
 /* /index.html            200

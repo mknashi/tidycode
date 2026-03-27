@@ -5,6 +5,10 @@ User-agent: *
 Allow: /
 Allow: /app
 Allow: /docs/
+Allow: /json-formatter/
+Allow: /xml-formatter/
+Allow: /json-editor/
+Allow: /xml-editor/
 Allow: /privacy.html
 
 # Disallowed pages (alpha/private)
