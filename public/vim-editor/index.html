@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <title>VIM Editor Online - Free Browser-Based VIM Mode | Tidy Code</title>
+    <meta name="title" content="VIM Editor Online - Free Browser-Based VIM Mode | Tidy Code">
+    <meta name="description" content="Free online editor with full VIM keybindings. Use VIM motions, visual mode, macros, and ex commands in your browser. Edit code and text with the VIM workflow you love. No signup required.">
+    <meta name="keywords" content="vim editor online, vim in browser, online vim, vim mode editor, vim keybindings online, free vim editor, browser vim, vim text editor online, vim code editor, web vim editor">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://tidycode.ai/vim-editor/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tidycode.ai/vim-editor/">
+    <meta property="og:title" content="VIM Editor Online - Free Browser-Based VIM Mode">
+    <meta property="og:description" content="Free online editor with full VIM keybindings. Use VIM motions, visual mode, macros, and ex commands in your browser. No signup required.">
+    <meta property="og:image" content="https://tidycode.ai/tidycode-logo.svg">
+    <meta property="og:site_name" content="Tidy Code">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tidycode.ai/vim-editor/">
+    <meta property="twitter:title" content="VIM Editor Online - Free Browser-Based VIM Mode">
+    <meta property="twitter:description" content="Free online editor with full VIM keybindings. Use VIM motions, visual mode, macros, and ex commands in your browser. No signup required.">
+    <meta property="twitter:image" content="https://tidycode.ai/tidycode-logo.svg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tidy Code VIM Editor",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Free online editor with full VIM keybindings. Use VIM motions, visual mode, macros, and ex commands in your browser.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": "https://tidycode.ai/vim-editor/",
+      "featureList": [
+        "Full VIM keybindings and motions",
+        "Normal, Insert, Visual, and Command-line modes",
+        "VIM macros and registers",
+        "Ex commands (:w, :q, :s, etc.)",
+        "Syntax highlighting for 30+ languages",
+        "Multi-tab editing",
+        "Large file support up to 100MB+",
+        "Toggle between VIM and standard mode"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "Tidy Code"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I use VIM in a web browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code includes a full VIM mode with keybindings, motions, visual mode, macros, and ex commands. Toggle VIM mode on or off at any time. It works with all supported languages and file formats."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What VIM features are supported?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tidy Code supports Normal, Insert, Visual, and Visual Line modes, common motions (hjkl, w, b, e, 0, $, gg, G), operators (d, c, y, p), macros, registers, search with / and ?, and ex commands like :w, :q, :s, and :noh."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I switch between VIM mode and normal editing?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code lets you toggle VIM mode on and off at any time. When VIM mode is off, the editor uses standard keybindings with Ctrl+C/V for copy-paste, click-to-position cursor, and other familiar shortcuts."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the online VIM editor free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Tidy Code's VIM editor is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6; color: #c9d1d9; background: #0d1117; overflow-x: hidden;
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d; z-index: 100; padding: 16px 0;
+        }
+        .nav-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 18px; font-weight: 700; color: #58a6ff; text-decoration: none;
+        }
+        .nav-brand img { width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5)); }
+        .nav-brand::before { content: '$'; color: #7ee787; margin-right: 4px; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link { color: #8b949e; text-decoration: none; font-size: 13px; transition: color 0.2s; font-weight: 500; }
+        .nav-link:hover { color: #58a6ff; }
+        .container { max-width: 900px; margin: 100px auto 40px; padding: 24px; }
+        h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5); }
+        h1::before { content: '// '; color: #7ee787; }
+        .lead { font-size: 1.25rem; color: #8b949e; margin-bottom: 48px; line-height: 1.8; }
+        .section {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        h2 { font-size: 1.75rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #30363d; }
+        h2::before { content: '> '; color: #7ee787; }
+        h3 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; margin-top: 24px; margin-bottom: 12px; }
+        p { color: #c9d1d9; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+        ul { list-style: none; padding: 0; }
+        ul li { padding: 8px 0; color: #c9d1d9; font-size: 14px; }
+        ul li::before { content: '$ '; color: #7ee787; font-weight: 700; }
+        .cta-button {
+            display: inline-block; padding: 14px 32px; background: #238636; color: #ffffff;
+            text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;
+            transition: background 0.2s; margin-top: 16px;
+        }
+        .cta-button:hover { background: #2ea043; }
+        .faq-item { margin-bottom: 24px; }
+        .faq-item h3 { color: #58a6ff; }
+        .faq-item p { color: #8b949e; }
+        .footer {
+            text-align: center; padding: 40px 24px; border-top: 1px solid #30363d;
+            color: #8b949e; font-size: 12px; margin-top: 40px;
+        }
+        .footer a { color: #58a6ff; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.75rem; }
+            .nav-links { gap: 16px; }
+            .container { padding: 16px; margin-top: 80px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code Logo" width="32" height="32">
+                Tidy Code
+            </a>
+            <div class="nav-links">
+                <a href="/docs/features.html" class="nav-link">Features</a>
+                <a href="/docs/" class="nav-link">Docs</a>
+                <a href="/" class="nav-link">Open Editor</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>VIM Editor Online</h1>
+        <p class="lead">
+            Use VIM keybindings in your browser with full modal editing support. Normal, Insert, Visual, and Command-line modes work just like you'd expect. Edit code in 30+ languages with the VIM workflow you love. Free, fast, and private — your data never leaves your browser.
+        </p>
+
+        <a href="/" class="cta-button" target="_blank" rel="noopener">Open VIM Editor</a>
+
+        <div class="section" style="margin-top: 48px;">
+            <h2>Features</h2>
+
+            <h3>Full VIM Keybindings</h3>
+            <p>Navigate with hjkl, use word motions (w, b, e), jump to line start/end (0, $), and move through the file with gg and G. All the VIM motions you rely on work in your browser.</p>
+
+            <h3>Modal Editing</h3>
+            <p>Switch between Normal, Insert, Visual, and Visual Line modes. Use operators like d (delete), c (change), y (yank), and p (paste) with motions and text objects for powerful text manipulation.</p>
+
+            <h3>Macros & Registers</h3>
+            <p>Record macros with q, replay with @, and use named registers for complex editing workflows. Automate repetitive edits just like in terminal VIM.</p>
+
+            <h3>Ex Commands</h3>
+            <p>Use the command line for :w (save), :q (quit), :s (substitute), :noh (clear search highlights), and other ex commands. The status bar shows your current mode and pending commands.</p>
+
+            <h3>30+ Language Support</h3>
+            <p>VIM mode works with all supported languages: JavaScript, Python, TypeScript, Go, Rust, Java, C++, Ruby, and more. Syntax highlighting, bracket matching, and auto-indentation complement VIM keybindings.</p>
+
+            <h3>Toggle VIM Mode</h3>
+            <p>Switch between VIM mode and standard editing at any time. Try VIM keybindings risk-free — if you prefer standard shortcuts, toggle back with one click.</p>
+        </div>
+
+        <div class="section">
+            <h2>How to Use VIM Online</h2>
+            <ul>
+                <li>Open Tidy Code in your browser — no installation or signup needed</li>
+                <li>Enable VIM mode from the editor settings</li>
+                <li>Use hjkl for navigation, i for Insert mode, Esc for Normal mode</li>
+                <li>Use :w to save, :q to close, and :s for search and replace</li>
+                <li>Toggle VIM mode off at any time to use standard keybindings</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <h3>Can I use VIM in a web browser?</h3>
+                <p>Yes. Tidy Code includes a full VIM mode with keybindings, motions, visual mode, macros, and ex commands. Toggle VIM mode on or off at any time. It works with all supported languages and file formats.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>What VIM features are supported?</h3>
+                <p>Tidy Code supports Normal, Insert, Visual, and Visual Line modes, common motions (hjkl, w, b, e, 0, $, gg, G), operators (d, c, y, p), macros, registers, search with / and ?, and ex commands like :w, :q, :s, and :noh.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I switch between VIM mode and normal editing?</h3>
+                <p>Yes. Tidy Code lets you toggle VIM mode on and off at any time. When VIM mode is off, the editor uses standard keybindings with Ctrl+C/V for copy-paste, click-to-position cursor, and other familiar shortcuts.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is the online VIM editor free?</h3>
+                <p>Yes, Tidy Code's VIM editor is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 <a href="/">Tidy Code</a> &mdash; Free Online VIM Editor, JSON Formatter, and Code Editor</p>
+            <p style="margin-top: 8px;">
+                <a href="/json-formatter/">JSON Formatter</a> &middot;
+                <a href="/json-editor/">JSON Editor</a> &middot;
+                <a href="/xml-formatter/">XML Formatter</a> &middot;
+                <a href="/yaml-editor/">YAML Editor</a> &middot;
+                <a href="/docs/">Documentation</a> &middot;
+                <a href="/privacy.html">Privacy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <title>Diff Viewer Online - Free Text & Code Diff Tool | Tidy Code</title>
+    <meta name="title" content="Diff Viewer Online - Free Text & Code Diff Tool | Tidy Code">
+    <meta name="description" content="Free online diff viewer to compare text and code side by side. Highlight differences between files, JSON, XML, YAML, and more. Syntax highlighting and line-by-line comparison. No signup required.">
+    <meta name="keywords" content="diff viewer, diff tool online, compare files online, text diff, code diff, side by side diff, online diff, file comparison tool, json diff, xml diff">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://tidycode.ai/diff-viewer/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tidycode.ai/diff-viewer/">
+    <meta property="og:title" content="Diff Viewer Online - Free Text & Code Diff Tool">
+    <meta property="og:description" content="Free online diff viewer to compare text and code side by side. Highlight differences between files with syntax highlighting. No signup required.">
+    <meta property="og:image" content="https://tidycode.ai/tidycode-logo.svg">
+    <meta property="og:site_name" content="Tidy Code">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tidycode.ai/diff-viewer/">
+    <meta property="twitter:title" content="Diff Viewer Online - Free Text & Code Diff Tool">
+    <meta property="twitter:description" content="Free online diff viewer to compare text and code side by side. Highlight differences between files with syntax highlighting. No signup required.">
+    <meta property="twitter:image" content="https://tidycode.ai/tidycode-logo.svg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tidy Code Diff Viewer",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Free online diff viewer to compare text and code side by side. Highlight differences between files with syntax highlighting for 30+ languages.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": "https://tidycode.ai/diff-viewer/",
+      "featureList": [
+        "Side-by-side diff comparison",
+        "Inline diff view",
+        "Syntax highlighting for 30+ languages",
+        "JSON, XML, YAML, and TOML diff support",
+        "Line-by-line change highlighting",
+        "Added, removed, and modified line detection",
+        "Large file support",
+        "Character-level diff highlighting"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "Tidy Code"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I compare two files online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Open Tidy Code, open both files in separate tabs, then use the Diff Viewer to compare them side by side. Differences are highlighted with color coding — green for additions, red for deletions, and yellow for modifications."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the diff viewer support syntax highlighting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code's diff viewer provides syntax highlighting for 30+ programming languages including JavaScript, Python, TypeScript, Go, Rust, and more. It also highlights JSON, XML, YAML, and TOML diffs with proper formatting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I compare JSON or XML files?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code is ideal for comparing JSON, XML, YAML, and TOML files. Format your files first for cleaner diffs, then use the Diff Viewer to see exactly what changed between versions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the online diff viewer free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Tidy Code's diff viewer is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6; color: #c9d1d9; background: #0d1117; overflow-x: hidden;
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d; z-index: 100; padding: 16px 0;
+        }
+        .nav-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 18px; font-weight: 700; color: #58a6ff; text-decoration: none;
+        }
+        .nav-brand img { width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5)); }
+        .nav-brand::before { content: '$'; color: #7ee787; margin-right: 4px; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link { color: #8b949e; text-decoration: none; font-size: 13px; transition: color 0.2s; font-weight: 500; }
+        .nav-link:hover { color: #58a6ff; }
+        .container { max-width: 900px; margin: 100px auto 40px; padding: 24px; }
+        h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5); }
+        h1::before { content: '// '; color: #7ee787; }
+        .lead { font-size: 1.25rem; color: #8b949e; margin-bottom: 48px; line-height: 1.8; }
+        .section {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        h2 { font-size: 1.75rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #30363d; }
+        h2::before { content: '> '; color: #7ee787; }
+        h3 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; margin-top: 24px; margin-bottom: 12px; }
+        p { color: #c9d1d9; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+        ul { list-style: none; padding: 0; }
+        ul li { padding: 8px 0; color: #c9d1d9; font-size: 14px; }
+        ul li::before { content: '$ '; color: #7ee787; font-weight: 700; }
+        .cta-button {
+            display: inline-block; padding: 14px 32px; background: #238636; color: #ffffff;
+            text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;
+            transition: background 0.2s; margin-top: 16px;
+        }
+        .cta-button:hover { background: #2ea043; }
+        .faq-item { margin-bottom: 24px; }
+        .faq-item h3 { color: #58a6ff; }
+        .faq-item p { color: #8b949e; }
+        .footer {
+            text-align: center; padding: 40px 24px; border-top: 1px solid #30363d;
+            color: #8b949e; font-size: 12px; margin-top: 40px;
+        }
+        .footer a { color: #58a6ff; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.75rem; }
+            .nav-links { gap: 16px; }
+            .container { padding: 16px; margin-top: 80px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code Logo" width="32" height="32">
+                Tidy Code
+            </a>
+            <div class="nav-links">
+                <a href="/docs/features.html" class="nav-link">Features</a>
+                <a href="/docs/" class="nav-link">Docs</a>
+                <a href="/" class="nav-link">Open Editor</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Diff Viewer Online</h1>
+        <p class="lead">
+            Compare text and code side by side with syntax highlighting and line-by-line change detection. See exactly what changed between two files or versions — additions, deletions, and modifications are clearly highlighted. Free, fast, and private — your data never leaves your browser.
+        </p>
+
+        <a href="/" class="cta-button" target="_blank" rel="noopener">Open Diff Viewer</a>
+
+        <div class="section" style="margin-top: 48px;">
+            <h2>Features</h2>
+
+            <h3>Side-by-Side Comparison</h3>
+            <p>Compare two files or text blocks side by side with synchronized scrolling. Additions are highlighted in green, deletions in red, and modifications in yellow for instant visual understanding of changes.</p>
+
+            <h3>Syntax Highlighting</h3>
+            <p>Diff with syntax highlighting for 30+ programming languages including JavaScript, Python, TypeScript, Go, Rust, Java, C++, and more. See code changes with full language awareness.</p>
+
+            <h3>JSON, XML & YAML Diff</h3>
+            <p>Compare JSON, XML, YAML, and TOML files with format-aware diffing. Format your structured data first for cleaner, more meaningful diffs that show semantic changes rather than whitespace differences.</p>
+
+            <h3>Character-Level Highlighting</h3>
+            <p>See exactly which characters changed within modified lines. Character-level diff highlighting makes it easy to spot small changes in long lines of code or data.</p>
+
+            <h3>Multi-Tab Workflow</h3>
+            <p>Open files in tabs, then select any two tabs to compare. Switch between editing and diffing seamlessly. Great for reviewing configuration changes, API responses, or code refactors.</p>
+
+            <h3>Large File Support</h3>
+            <p>Compare large files with WebAssembly-powered performance. Handle log files, database exports, and large codebases without your browser slowing down.</p>
+        </div>
+
+        <div class="section">
+            <h2>How to Compare Files Online</h2>
+            <ul>
+                <li>Open Tidy Code in your browser — no installation or signup needed</li>
+                <li>Open or paste the two files you want to compare in separate tabs</li>
+                <li>Click the Diff button to compare the active tab with another tab</li>
+                <li>View changes side by side with color-coded highlighting</li>
+                <li>Navigate between changes using keyboard shortcuts</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <h3>How do I compare two files online?</h3>
+                <p>Open Tidy Code, open both files in separate tabs, then use the Diff Viewer to compare them side by side. Differences are highlighted with color coding — green for additions, red for deletions, and yellow for modifications.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Does the diff viewer support syntax highlighting?</h3>
+                <p>Yes. Tidy Code's diff viewer provides syntax highlighting for 30+ programming languages including JavaScript, Python, TypeScript, Go, Rust, and more. It also highlights JSON, XML, YAML, and TOML diffs with proper formatting.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I compare JSON or XML files?</h3>
+                <p>Yes. Tidy Code is ideal for comparing JSON, XML, YAML, and TOML files. Format your files first for cleaner diffs, then use the Diff Viewer to see exactly what changed between versions.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is the online diff viewer free?</h3>
+                <p>Yes, Tidy Code's diff viewer is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 <a href="/">Tidy Code</a> &mdash; Free Online Diff Viewer, JSON Formatter, and Code Editor</p>
+            <p style="margin-top: 8px;">
+                <a href="/json-formatter/">JSON Formatter</a> &middot;
+                <a href="/json-editor/">JSON Editor</a> &middot;
+                <a href="/xml-formatter/">XML Formatter</a> &middot;
+                <a href="/yaml-editor/">YAML Editor</a> &middot;
+                <a href="/docs/">Documentation</a> &middot;
+                <a href="/privacy.html">Privacy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

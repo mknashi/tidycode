@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
+    <title>Markdown Editor Online - Free Markdown Preview & Editor | Tidy Code</title>
+    <meta name="title" content="Markdown Editor Online - Free Markdown Preview & Editor | Tidy Code">
+    <meta name="description" content="Free online Markdown editor with live preview, syntax highlighting, and multi-tab editing. Write and preview Markdown in your browser. Supports GFM tables, code blocks, and more. No signup required.">
+    <meta name="keywords" content="markdown editor, markdown editor online, markdown preview, markdown viewer, free markdown editor, edit markdown online, markdown live preview, github markdown editor, markdown writer, md editor">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://tidycode.ai/markdown-editor/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tidycode.ai/markdown-editor/">
+    <meta property="og:title" content="Markdown Editor Online - Free Markdown Preview & Editor">
+    <meta property="og:description" content="Free online Markdown editor with live preview, syntax highlighting, and multi-tab editing. No signup required.">
+    <meta property="og:image" content="https://tidycode.ai/tidycode-logo.svg">
+    <meta property="og:site_name" content="Tidy Code">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tidycode.ai/markdown-editor/">
+    <meta property="twitter:title" content="Markdown Editor Online - Free Markdown Preview & Editor">
+    <meta property="twitter:description" content="Free online Markdown editor with live preview, syntax highlighting, and multi-tab editing. No signup required.">
+    <meta property="twitter:image" content="https://tidycode.ai/tidycode-logo.svg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Tidy Code Markdown Editor",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Free online Markdown editor with live preview, syntax highlighting, and multi-tab editing. Write and preview Markdown in your browser.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "url": "https://tidycode.ai/markdown-editor/",
+      "featureList": [
+        "Markdown editing with syntax highlighting",
+        "Live Markdown preview",
+        "GitHub Flavored Markdown support",
+        "Code block syntax highlighting",
+        "Table support",
+        "Multi-tab editing",
+        "Find and replace with regex",
+        "Large file support"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "Tidy Code"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I write Markdown online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Open Tidy Code in your browser and start typing Markdown. The editor provides syntax highlighting for headings, bold, italic, links, code blocks, and more. Use the preview panel to see your rendered Markdown in real time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the Markdown editor support live preview?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code renders your Markdown in real time as you type. The preview supports GitHub Flavored Markdown including tables, task lists, strikethrough, code blocks with syntax highlighting, and more."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I edit multiple Markdown files at once?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tidy Code supports multi-tab editing so you can open, edit, and compare multiple Markdown files. Use the built-in Diff Viewer to compare versions side by side."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the online Markdown editor free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Tidy Code's Markdown editor is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6; color: #c9d1d9; background: #0d1117; overflow-x: hidden;
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #30363d; z-index: 100; padding: 16px 0;
+        }
+        .nav-content {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 18px; font-weight: 700; color: #58a6ff; text-decoration: none;
+        }
+        .nav-brand img { width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5)); }
+        .nav-brand::before { content: '$'; color: #7ee787; margin-right: 4px; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link { color: #8b949e; text-decoration: none; font-size: 13px; transition: color 0.2s; font-weight: 500; }
+        .nav-link:hover { color: #58a6ff; }
+        .container { max-width: 900px; margin: 100px auto 40px; padding: 24px; }
+        h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; text-shadow: 0 0 30px rgba(88, 166, 255, 0.5); }
+        h1::before { content: '// '; color: #7ee787; }
+        .lead { font-size: 1.25rem; color: #8b949e; margin-bottom: 48px; line-height: 1.8; }
+        .section {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 32px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        h2 { font-size: 1.75rem; font-weight: 700; color: #ffffff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #30363d; }
+        h2::before { content: '> '; color: #7ee787; }
+        h3 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; margin-top: 24px; margin-bottom: 12px; }
+        p { color: #c9d1d9; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+        ul { list-style: none; padding: 0; }
+        ul li { padding: 8px 0; color: #c9d1d9; font-size: 14px; }
+        ul li::before { content: '$ '; color: #7ee787; font-weight: 700; }
+        .cta-button {
+            display: inline-block; padding: 14px 32px; background: #238636; color: #ffffff;
+            text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;
+            transition: background 0.2s; margin-top: 16px;
+        }
+        .cta-button:hover { background: #2ea043; }
+        .faq-item { margin-bottom: 24px; }
+        .faq-item h3 { color: #58a6ff; }
+        .faq-item p { color: #8b949e; }
+        .footer {
+            text-align: center; padding: 40px 24px; border-top: 1px solid #30363d;
+            color: #8b949e; font-size: 12px; margin-top: 40px;
+        }
+        .footer a { color: #58a6ff; text-decoration: none; }
+        @media (max-width: 768px) {
+            h1 { font-size: 1.75rem; }
+            .nav-links { gap: 16px; }
+            .container { padding: 16px; margin-top: 80px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">
+                <img src="/tidycode-logo.svg" alt="Tidy Code Logo" width="32" height="32">
+                Tidy Code
+            </a>
+            <div class="nav-links">
+                <a href="/docs/features.html" class="nav-link">Features</a>
+                <a href="/docs/" class="nav-link">Docs</a>
+                <a href="/" class="nav-link">Open Editor</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Markdown Editor Online</h1>
+        <p class="lead">
+            Write and preview Markdown in your browser with live rendering, syntax highlighting, and GitHub Flavored Markdown support. Edit README files, documentation, and notes with multi-tab editing and search. Free, fast, and private — your data never leaves your browser.
+        </p>
+
+        <a href="/" class="cta-button" target="_blank" rel="noopener">Open Markdown Editor</a>
+
+        <div class="section" style="margin-top: 48px;">
+            <h2>Features</h2>
+
+            <h3>Markdown Syntax Highlighting</h3>
+            <p>Write Markdown with full syntax highlighting for headings, bold, italic, links, images, code blocks, blockquotes, lists, and more. The editor visually distinguishes Markdown syntax from content for easier editing.</p>
+
+            <h3>Live Preview</h3>
+            <p>See your rendered Markdown in real time as you type. The preview panel supports GitHub Flavored Markdown including tables, task lists, strikethrough, emoji, and fenced code blocks with language-specific syntax highlighting.</p>
+
+            <h3>Code Block Support</h3>
+            <p>Write fenced code blocks with syntax highlighting for 30+ programming languages. The preview renders code blocks with proper formatting and language-specific coloring.</p>
+
+            <h3>Multi-Tab Editing</h3>
+            <p>Open multiple Markdown files in tabs. Work on README files, documentation, and notes simultaneously. Compare versions with the built-in Diff Viewer.</p>
+
+            <h3>Search & Replace</h3>
+            <p>Find and replace text across your Markdown with regex support, case sensitivity, and whole word matching. Refactor documentation quickly with powerful search tools.</p>
+
+            <h3>Large File Support</h3>
+            <p>Edit large Markdown documents with WebAssembly-powered performance. Handle documentation files, knowledge bases, and long-form content without your browser slowing down.</p>
+        </div>
+
+        <div class="section">
+            <h2>How to Edit Markdown Online</h2>
+            <ul>
+                <li>Open Tidy Code in your browser — no installation or signup needed</li>
+                <li>Paste Markdown or drag and drop a .md file</li>
+                <li>Write with syntax highlighting and auto-indentation</li>
+                <li>Toggle the preview panel to see rendered Markdown in real time</li>
+                <li>Press Ctrl+S to save or copy your Markdown</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <h3>How do I write Markdown online?</h3>
+                <p>Open Tidy Code in your browser and start typing Markdown. The editor provides syntax highlighting for headings, bold, italic, links, code blocks, and more. Use the preview panel to see your rendered Markdown in real time.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Does the Markdown editor support live preview?</h3>
+                <p>Yes. Tidy Code renders your Markdown in real time as you type. The preview supports GitHub Flavored Markdown including tables, task lists, strikethrough, code blocks with syntax highlighting, and more.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I edit multiple Markdown files at once?</h3>
+                <p>Yes. Tidy Code supports multi-tab editing so you can open, edit, and compare multiple Markdown files. Use the built-in Diff Viewer to compare versions side by side.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is the online Markdown editor free?</h3>
+                <p>Yes, Tidy Code's Markdown editor is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 <a href="/">Tidy Code</a> &mdash; Free Online Markdown Editor, JSON Formatter, and Code Editor</p>
+            <p style="margin-top: 8px;">
+                <a href="/json-formatter/">JSON Formatter</a> &middot;
+                <a href="/json-editor/">JSON Editor</a> &middot;
+                <a href="/xml-formatter/">XML Formatter</a> &middot;
+                <a href="/yaml-editor/">YAML Editor</a> &middot;
+                <a href="/docs/">Documentation</a> &middot;
+                <a href="/privacy.html">Privacy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

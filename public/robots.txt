@@ -9,6 +9,13 @@ Allow: /json-formatter/
 Allow: /xml-formatter/
 Allow: /json-editor/
 Allow: /xml-editor/
+Allow: /yaml-editor/
+Allow: /toml-editor/
+Allow: /csv-editor/
+Allow: /markdown-editor/
+Allow: /diff-viewer/
+Allow: /vim-editor/
+Allow: /download.html
 Allow: /privacy.html
 
 # Disallowed pages (alpha/private)
