@@ -2429,6 +2429,47 @@ const TidyCode = () => {
     loadTabs();
   }, []);
 
+  // Handle ?new=<format> URL parameter from SEO landing pages
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const newFormat = params.get('new');
+    if (!newFormat) return;
+
+    // Map format names to file extensions for language detection
+    const formatExtensions = {
+      json: '.json',
+      xml: '.xml',
+      yaml: '.yaml',
+      yml: '.yaml',
+      toml: '.toml',
+      csv: '.csv',
+      markdown: '.md',
+      md: '.md',
+    };
+
+    const ext = formatExtensions[newFormat.toLowerCase()];
+    // Only create a format-specific tab if we have a known extension
+    // For generic formats (diff, vim), just create a plain new tab
+    const newTabId = nextIdRef.current;
+    nextIdRef.current += 1;
+
+    const newTab = {
+      id: newTabId,
+      title: ext ? `Untitled-${newTabId}${ext}` : `Untitled-${newTabId}`,
+      content: '',
+      isModified: false,
+      filePath: null
+    };
+
+    setTabs(currentTabs => [...currentTabs, newTab]);
+    setActiveTabId(newTab.id);
+    setNextId(nextIdRef.current);
+    setTimeout(() => scrollTabIntoView(newTabId), 0);
+
+    // Clean the URL parameter without triggering a page reload
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   // Reload PDF content for restored PDF tabs (desktop mode only)
   // In web mode, PDFs are restored via IndexedDB file handles in the TabRestore logic
   useEffect(() => {
