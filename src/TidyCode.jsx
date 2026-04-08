@@ -8854,10 +8854,12 @@ const TidyCode = () => {
               <div className={`w-px mx-1 lg:mx-2 self-stretch ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
               <button
                 onClick={() => {
-                  if (structureTree.isLarge && !structurePanelVisible) {
+                  if (structureTree.isLarge) {
                     setForceShowStructureTabs(prev => new Set(prev).add(activeTab?.id));
+                    setStructurePanelVisible(true);
+                  } else {
+                    setStructurePanelVisible(!structurePanelVisible);
                   }
-                  setStructurePanelVisible(!structurePanelVisible);
                 }}
                 className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
                 title={structurePanelVisible && !structureTree.isLarge ? 'Hide Structure Panel' : 'Show Structure Panel'}
