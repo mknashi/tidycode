@@ -664,7 +664,25 @@ Fixed ${errorDetails.type}:`;
     }
 
     try {
-      // TinyLLM mode (browser-based, JSON/XML only, no API key)
+      // Always try TinyLLM first for JSON/XML — it's fast, browser-based, and requires no API key.
+      // Fall back to the configured provider only if TinyLLM fails.
+      if (errorDetails.type === 'JSON' || errorDetails.type === 'XML') {
+        try {
+          return await this.fixWithTinyLLM(content, errorDetails);
+        } catch (tinyErr) {
+          console.warn('[AI Fix] TinyLLM failed, falling back to configured provider:', tinyErr.message);
+          // If the user explicitly chose TinyLLM and it failed, there is no fallback — rethrow.
+          if (provider === AI_PROVIDERS.TINYLLM) {
+            throw tinyErr;
+          }
+          if (onProgress) {
+            onProgress({ progress: 65, text: `TinyLLM failed, trying ${provider}...`, timeElapsed: 0 });
+          }
+          // Otherwise fall through to the configured provider below.
+        }
+      }
+
+      // TinyLLM selected but type is not JSON/XML — let fixWithTinyLLM throw the descriptive error.
       if (provider === AI_PROVIDERS.TINYLLM) {
         return await this.fixWithTinyLLM(content, errorDetails);
       }

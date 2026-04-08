@@ -383,7 +383,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   className="mt-1"
                 />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Sparkles className="w-5 h-5" />
                     <span className={`font-semibold ${
                       theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
@@ -396,11 +396,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
                       No API Key
                     </span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">
+                      Always first for JSON/XML Fix
+                    </span>
                   </div>
                   <p className={`text-sm mt-1 ${
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    Browser-based AI • JSON & XML only • 2-5MB model • 50-100ms processing
+                    Browser-based AI • JSON & XML fixing • 50-100ms processing
                   </p>
                   <p className={`text-xs mt-1 ${
                     theme === 'dark' ? 'text-green-500' : 'text-green-600'
@@ -408,9 +411,9 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     Data: Stays in your browser. No external requests.
                   </p>
                   <p className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
                   }`}>
-                    ⚠️ XML/JSON files only. Notes AI features not available with this provider.
+                    Always attempted first when fixing JSON/XML errors, regardless of selected provider. Falls back to your configured provider if it fails.
                   </p>
                 </div>
               </label>
