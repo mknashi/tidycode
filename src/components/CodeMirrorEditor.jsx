@@ -54,12 +54,12 @@ const getFontSizePixels = (size) => {
 
 const getLineHeightValue = (size) => {
   const lineHeightMap = {
-    '2xs': '1.375',  // tight
-    'xs': '1.5',     // snug
-    'sm': '1.625',   // normal
-    'base': '1.75'   // relaxed
+    '2xs': '1.3',    // tight
+    'xs': '1.4',     // snug
+    'sm': '1.5',     // normal
+    'base': '1.625'  // relaxed
   };
-  return lineHeightMap[size] || '1.5';
+  return lineHeightMap[size] || '1.4';
 };
 
 // Custom syntax highlighting for dark mode

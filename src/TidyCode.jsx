@@ -1372,6 +1372,7 @@ const TidyCode = () => {
     }
   };
   const [structurePanelVisible, setStructurePanelVisible] = useState(true);
+  const [forceShowStructure, setForceShowStructure] = useState(false);
   const [showConvertDropdown, setShowConvertDropdown] = useState(false);
   const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -1618,17 +1619,15 @@ const TidyCode = () => {
     }
   }, [aiActions.providerInitialized]);
 
-  // Floating AI toolbar state (persistent, draggable)
-  const [aiToolbarVisible, setAiToolbarVisible] = useState(true); // shown on load
+  // Floating AI toolbar — only shown when user selects text (≥10 chars)
+  const [aiToolbarVisible, setAiToolbarVisible] = useState(false);
   const [aiToolbarSelection, setAiToolbarSelection] = useState(null); // { text, from, to }
   const selectionTimerRef = useRef(null);
-
-  // Re-show toolbar when switching tabs or opening a file
   const prevActiveTabIdRef = useRef(activeTabId);
   useEffect(() => {
     if (activeTabId !== prevActiveTabIdRef.current) {
       prevActiveTabIdRef.current = activeTabId;
-      setAiToolbarVisible(true);
+      setAiToolbarVisible(false);
       setAiToolbarSelection(null);
     }
   }, [activeTabId]);
@@ -7336,10 +7335,6 @@ const TidyCode = () => {
     const trimmed = String(activeTab.content).trim();
     if (!trimmed) return { type: null, nodes: [] };
 
-    // Skip structure tree for large files to avoid blocking UI
-    const MAX_STRUCTURE_TREE_SIZE = 100000; // 100KB
-    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE) return { type: null, nodes: [] };
-
     // Check file type - only show structure for JSON, XML, YAML, and TOML files
     const fileName = activeTab?.filePath || activeTab?.title || '';
     const fileType = getFileType(fileName);
@@ -7351,6 +7346,24 @@ const TidyCode = () => {
 
     // Use format service for detection
     const detection = formatService.detect(trimmed, fileName);
+
+    // For large files, detect format but don't build the structure unless the user explicitly requested it
+    const MAX_STRUCTURE_TREE_SIZE = 100000; // 100KB
+    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE && !forceShowStructure) {
+      if (detection.format === 'json' || ((fileType.type === 'json' || fileType.type === 'text') && looksLikeJSON(trimmed))) {
+        return { type: 'JSON', nodes: [], isLarge: true };
+      }
+      if (!looksLikePHP(trimmed) && (detection.format === 'xml' || ((fileType.type === 'markup' || fileType.type === 'text') && trimmed.startsWith('<')))) {
+        return { type: 'XML', nodes: [], isLarge: true };
+      }
+      if (detection.format === 'yaml' || (fileType.type === 'config' && (fileName.endsWith('.yaml') || fileName.endsWith('.yml')))) {
+        return { type: 'YAML', nodes: [], isLarge: true };
+      }
+      if (detection.format === 'toml' || (fileType.type === 'config' && fileName.endsWith('.toml'))) {
+        return { type: 'TOML', nodes: [], isLarge: true };
+      }
+      return { type: null, nodes: [] };
+    }
 
     // Only show structure tree for supported formats
     if (detection.format === 'json' || ((fileType.type === 'json' || fileType.type === 'text') && (trimmed.startsWith('{') || trimmed.startsWith('[')))) {
@@ -7382,7 +7395,11 @@ const TidyCode = () => {
     }
 
     return { type: null, nodes: [] };
-  }, [activeTab?.content, activeTab?.filePath, activeTab?.title]);
+  }, [activeTab?.content, activeTab?.filePath, activeTab?.title, forceShowStructure]);
+
+  useEffect(() => {
+    setForceShowStructure(false);
+  }, [activeTab?.id]);
 
   const structureNodeList = useMemo(() => {
     const list = [];
@@ -8598,24 +8615,21 @@ const TidyCode = () => {
   const renderDevPanel = () => {
     const structurePaneStyle = { width: `${Math.round(structureWidth)}px` };
     // Only show structure panel for JSON and XML files when user has it enabled
-    const showStructurePane = !isCSVTab && !isMarkdownTab && structureTree.type !== null && structurePanelVisible;
+    const showStructurePane = !isCSVTab && !isMarkdownTab && structureTree.type !== null && !structureTree.isLarge && structurePanelVisible;
     return (
     <div className="flex flex-col h-full">
       {/* Menu Bar */}
-      <div className={`border-b px-4 py-2 flex items-center gap-2 lg:gap-4 min-w-0 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
-        <div className="flex flex-col flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-indigo-400">TIDY CODE</span>
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-600'}`}>BETA</span>
-          </div>
-          <div className={`text-[11px] font-medium hidden lg:block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Code & Text Editor • JSON • XML • CSV • Markdown • TXT</div>
+      <div className={`border-b px-3 py-1 flex items-center gap-1.5 lg:gap-3 min-w-0 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className="text-xs font-bold text-indigo-400">TIDY CODE</span>
+          <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-600'}`}>BETA</span>
         </div>
 
-        <div className="flex gap-1.5 ml-2 lg:ml-4 flex-shrink-0 items-center">
+        <div className="flex gap-1 ml-1.5 lg:ml-3 flex-shrink-0 items-center">
           {/* File Operations Group */}
           <button
             onClick={createNewTab}
-            className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
             title="New File"
           >
             <Plus className="w-4 h-4" />
@@ -8624,7 +8638,7 @@ const TidyCode = () => {
 
           <button
             onClick={openFileWithDialog}
-            className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs cursor-pointer transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
             title="Open files: JSON, XML, CSV, HTML, JS, TXT, and more"
           >
             <Upload className="w-4 h-4" />
@@ -8643,7 +8657,7 @@ const TidyCode = () => {
           <div className="relative" ref={fileDropdownRef}>
             <button
               onClick={() => setShowFileDropdown(!showFileDropdown)}
-              className={`flex items-center gap-1 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+              className={`flex items-center gap-1 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
               title="Save options"
             >
               <Save className="w-4 h-4" />
@@ -8687,7 +8701,7 @@ const TidyCode = () => {
           {/* Diff Button */}
           <button
             onClick={() => setShowDiffViewer(true)}
-            className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs font-medium transition-colors ${
               theme === 'dark'
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                 : 'bg-emerald-500 hover:bg-emerald-400 text-white'
@@ -8748,7 +8762,7 @@ const TidyCode = () => {
             <button
               onClick={() => setShowFormatConvertDropdown(!showFormatConvertDropdown)}
               disabled={!activeTab}
-              className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${!activeTab ? 'bg-gray-600 cursor-not-allowed opacity-50' : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+              className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${!activeTab ? 'bg-gray-600 cursor-not-allowed opacity-50' : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
               title="Format & Convert"
             >
               <Code2 className="w-4 h-4" />
@@ -8830,12 +8844,17 @@ const TidyCode = () => {
             <>
               <div className={`w-px mx-1 lg:mx-2 self-stretch ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
               <button
-                onClick={() => setStructurePanelVisible(!structurePanelVisible)}
-                className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                title={structurePanelVisible ? 'Hide Structure Panel' : 'Show Structure Panel'}
+                onClick={() => {
+                  if (structureTree.isLarge && !structurePanelVisible) {
+                    setForceShowStructure(true);
+                  }
+                  setStructurePanelVisible(!structurePanelVisible);
+                }}
+                className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                title={structurePanelVisible && !structureTree.isLarge ? 'Hide Structure Panel' : 'Show Structure Panel'}
               >
-                {structurePanelVisible ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
-                <span className="hidden lg:inline">{structurePanelVisible ? 'Hide' : 'Show'} Structure</span>
+                {structurePanelVisible && !structureTree.isLarge ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+                <span className="hidden lg:inline">{structurePanelVisible && !structureTree.isLarge ? 'Hide' : 'Show'} Structure</span>
               </button>
             </>
           )}
@@ -8845,7 +8864,7 @@ const TidyCode = () => {
         <div className="flex gap-1.5 ml-auto items-center flex-shrink-0">
           <button
             onClick={() => aiChat.setShowChatPanel(prev => !prev)}
-            className={`flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${
               aiChat.showChatPanel
                 ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
                 : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
@@ -8860,7 +8879,7 @@ const TidyCode = () => {
           <div className="relative" ref={aiDropdownRef}>
             <button
               onClick={() => setShowAIDropdown(!showAIDropdown)}
-              className={`flex items-center gap-1 px-2 lg:px-3 py-1.5 rounded text-sm transition-colors ${
+              className={`flex items-center gap-1 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${
                 theme === 'dark'
                   ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
                   : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
@@ -9108,13 +9127,13 @@ const TidyCode = () => {
                 });
               }}
               title={tab.title}
-              className={`flex items-center gap-2 px-4 py-2 border-r border-gray-700 cursor-move min-w-[150px] max-w-[200px] group
+              className={`flex items-center gap-1.5 px-3 py-1.5 border-r border-gray-700 cursor-move min-w-[120px] max-w-[180px] group
                 ${tab.id === activeTabId ? 'bg-gray-900 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-750'}
                 ${draggedTabId === tab.id ? 'opacity-50' : ''}
                 ${dragOverTabId === tab.id && draggedTabId !== tab.id ? 'border-l-2 border-l-indigo-400' : ''}`}
               onClick={() => setActiveTabId(tab.id)}
             >
-              <span className="truncate flex-1 text-sm flex items-center gap-1.5">
+              <span className="truncate flex-1 text-xs flex items-center gap-1">
                 {tab.isModified ? '● ' : ''}
                 {tab.title}
                 {tab.isLargeFile && (
