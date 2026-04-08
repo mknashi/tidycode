@@ -6614,11 +6614,9 @@ const TidyCode = () => {
   const goToPreviousTab = () => {
     if (tabs.length === 0 || activeTabId === null) return;
     const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
-    if (currentIndex === -1) return;
-    const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    const prevTabId = tabs[prevIndex].id;
+    if (currentIndex <= 0) return;
+    const prevTabId = tabs[currentIndex - 1].id;
     setActiveTabId(prevTabId);
-    // Use setTimeout to ensure the tab is set as active before scrolling
     setTimeout(() => {
       scrollTabIntoView(prevTabId);
       requestEditorFocusOnNextActive();
@@ -6628,13 +6626,31 @@ const TidyCode = () => {
   const goToNextTab = () => {
     if (tabs.length === 0 || activeTabId === null) return;
     const currentIndex = tabs.findIndex(tab => tab.id === activeTabId);
-    if (currentIndex === -1) return;
-    const nextIndex = (currentIndex + 1) % tabs.length;
-    const nextTabId = tabs[nextIndex].id;
+    if (currentIndex === -1 || currentIndex >= tabs.length - 1) return;
+    const nextTabId = tabs[currentIndex + 1].id;
     setActiveTabId(nextTabId);
-    // Use setTimeout to ensure the tab is set as active before scrolling
     setTimeout(() => {
       scrollTabIntoView(nextTabId);
+      requestEditorFocusOnNextActive();
+    }, 0);
+  };
+
+  const goToFirstTab = () => {
+    if (tabs.length === 0) return;
+    const firstTabId = tabs[0].id;
+    setActiveTabId(firstTabId);
+    setTimeout(() => {
+      scrollTabIntoView(firstTabId);
+      requestEditorFocusOnNextActive();
+    }, 0);
+  };
+
+  const goToLastTab = () => {
+    if (tabs.length === 0) return;
+    const lastTabId = tabs[tabs.length - 1].id;
+    setActiveTabId(lastTabId);
+    setTimeout(() => {
+      scrollTabIntoView(lastTabId);
       requestEditorFocusOnNextActive();
     }, 0);
   };
@@ -9069,11 +9085,20 @@ const TidyCode = () => {
               </button>
             </Tooltip>
           )}
+          <Tooltip content="First Tab" placement="bottom">
+            <button
+              onClick={goToFirstTab}
+              disabled={tabs.length === 0 || activeTabId === tabs[0]?.id}
+              className={`px-2 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:opacity-30 disabled:hover:bg-transparent`}
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+          </Tooltip>
           <Tooltip content="Previous Tab" placement="bottom">
             <button
               onClick={goToPreviousTab}
-              disabled={tabs.length === 0}
-              className={`px-3 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:text-gray-600 disabled:hover:bg-transparent`}
+              disabled={tabs.length === 0 || activeTabId === tabs[0]?.id}
+              className={`px-2 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:opacity-30 disabled:hover:bg-transparent`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -9081,10 +9106,19 @@ const TidyCode = () => {
           <Tooltip content="Next Tab" placement="bottom">
             <button
               onClick={goToNextTab}
-              disabled={tabs.length === 0}
-              className={`px-3 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:text-gray-600 disabled:hover:bg-transparent`}
+              disabled={tabs.length === 0 || activeTabId === tabs[tabs.length - 1]?.id}
+              className={`px-2 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:opacity-30 disabled:hover:bg-transparent`}
             >
               <ChevronRight className="w-4 h-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="Last Tab" placement="bottom">
+            <button
+              onClick={goToLastTab}
+              disabled={tabs.length === 0 || activeTabId === tabs[tabs.length - 1]?.id}
+              className={`px-2 py-2 ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'} disabled:opacity-30 disabled:hover:bg-transparent`}
+            >
+              <ChevronsRight className="w-4 h-4" />
             </button>
           </Tooltip>
         </div>
