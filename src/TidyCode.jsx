@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns } from 'lucide-react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -1373,6 +1373,11 @@ const TidyCode = () => {
   };
   const [structurePanelVisible, setStructurePanelVisible] = useState(true);
   const [forceShowStructureTabs, setForceShowStructureTabs] = useState(new Set());
+  // Split pane state: [{id, tabId}]. Primary pane uses activeTabId as always.
+  const [splitPanes, setSplitPanes] = useState([]);
+  const [activePaneId, setActivePaneId] = useState('primary');
+  const splitPaneRefs = useRef({});
+  const splitDragStates = useRef({});
   const [showConvertDropdown, setShowConvertDropdown] = useState(false);
   const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -6667,6 +6672,24 @@ const TidyCode = () => {
     }, 0);
   };
 
+  // Split pane helpers
+  const addSplitPane = () => {
+    const id = `split-${Date.now()}`;
+    setSplitPanes(prev => [...prev, { id, tabId: activeTabId }]);
+    setActivePaneId(id);
+  };
+
+  const closeSplitPane = (id) => {
+    setSplitPanes(prev => prev.filter(p => p.id !== id));
+    setActivePaneId(prev => prev === id ? 'primary' : prev);
+    delete splitPaneRefs.current[id];
+    delete splitDragStates.current[id];
+  };
+
+  const setSplitPaneTab = (paneId, tabId) => {
+    setSplitPanes(prev => prev.map(p => p.id === paneId ? { ...p, tabId } : p));
+  };
+
   const handleTabBarDoubleClick = (event) => {
     if (typeof event.target.closest !== 'function') {
       createNewTab();
@@ -8919,6 +8942,17 @@ const TidyCode = () => {
               </button>
             </>
           )}
+
+          {/* Split Editor Button */}
+          <div className={`w-px mx-1 lg:mx-2 self-stretch ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+          <button
+            onClick={addSplitPane}
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+            title="Split Editor"
+          >
+            <Columns className="w-4 h-4" />
+            <span className="hidden lg:inline">Split</span>
+          </button>
         </div>
 
         {/* Right side controls — AI Group */}
@@ -9515,7 +9549,12 @@ const TidyCode = () => {
               )}
 
               <div className="flex flex-1 overflow-hidden min-w-0" style={{ maxWidth: '100%' }}>
-                <div className="flex flex-1 flex-col overflow-hidden min-w-0" style={{ maxWidth: '100%' }}>
+                {/* Primary pane */}
+                <div
+                  className={`flex flex-1 flex-col overflow-hidden min-w-0 relative${splitPanes.length > 0 && activePaneId === 'primary' ? ' ring-1 ring-inset ring-indigo-500/60' : ''}`}
+                  style={{ maxWidth: '100%' }}
+                  onMouseDown={() => setActivePaneId('primary')}
+                >
                   {isMarkdownTab && (
                     <>
                       <div
@@ -9873,6 +9912,96 @@ const TidyCode = () => {
                   )}
 
                 </div>
+
+                {/* Split panes */}
+                {splitPanes.map((pane) => {
+                  const paneTab = tabs.find(t => t.id === pane.tabId);
+                  const paneLanguage = paneTab ? (() => {
+                    const ext = (paneTab.filePath || paneTab.title || '').split('.').pop()?.toLowerCase();
+                    const langMap = { js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript', py: 'python', json: 'json', xml: 'xml', html: 'html', css: 'css', md: 'markdown', yaml: 'yaml', yml: 'yaml', toml: 'toml', sql: 'sql', rs: 'rust', go: 'go', java: 'java', cpp: 'cpp', c: 'c', cs: 'csharp', rb: 'ruby', php: 'php', sh: 'shell' };
+                    return langMap[ext] || 'javascript';
+                  })() : 'javascript';
+                  const isActive = activePaneId === pane.id;
+                  return (
+                    <React.Fragment key={pane.id}>
+                      {/* Resize divider */}
+                      <div
+                        className={`w-1 flex-shrink-0 cursor-col-resize transition-colors ${theme === 'dark' ? 'bg-gray-800 hover:bg-indigo-500' : 'bg-gray-300 hover:bg-indigo-400'}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const startX = e.clientX;
+                          const container = e.currentTarget.parentElement;
+                          const panes = container.children;
+                          const divider = e.currentTarget;
+                          const prevPane = divider.previousElementSibling;
+                          const nextPane = divider.nextElementSibling;
+                          const startPrevW = prevPane?.offsetWidth || 0;
+                          const startNextW = nextPane?.offsetWidth || 0;
+                          const onMove = (me) => {
+                            const delta = me.clientX - startX;
+                            const newPrev = Math.max(150, startPrevW + delta);
+                            const newNext = Math.max(150, startNextW - delta);
+                            if (prevPane) prevPane.style.flex = 'none', prevPane.style.width = `${newPrev}px`;
+                            if (nextPane) nextPane.style.flex = 'none', nextPane.style.width = `${newNext}px`;
+                          };
+                          const onUp = () => {
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onUp);
+                          };
+                          document.addEventListener('mousemove', onMove);
+                          document.addEventListener('mouseup', onUp);
+                        }}
+                      />
+                      {/* Split pane */}
+                      <div
+                        className={`flex flex-col overflow-hidden flex-1 min-w-[200px]${isActive ? (theme === 'dark' ? ' ring-1 ring-inset ring-indigo-500/60' : ' ring-1 ring-inset ring-indigo-400/60') : ''}`}
+                        onMouseDown={() => setActivePaneId(pane.id)}
+                      >
+                        {/* Pane header */}
+                        <div className={`flex items-center gap-1 px-2 py-1 border-b flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
+                          <select
+                            value={pane.tabId ?? ''}
+                            onChange={(e) => setSplitPaneTab(pane.id, Number(e.target.value))}
+                            className={`flex-1 text-xs rounded px-1 py-0.5 min-w-0 truncate ${theme === 'dark' ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border`}
+                          >
+                            {tabs.map(t => (
+                              <option key={t.id} value={t.id}>{t.isModified ? '● ' : ''}{t.title}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); closeSplitPane(pane.id); }}
+                            className={`flex-shrink-0 p-0.5 rounded transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-300'}`}
+                            title="Close split"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        {/* Pane editor */}
+                        <div className="flex flex-1 overflow-hidden min-w-0">
+                          {paneTab ? (
+                            <CodeMirrorEditor
+                              ref={(el) => { splitPaneRefs.current[pane.id] = el; }}
+                              value={paneTab.content || ''}
+                              onChange={(val) => updateTabContent(paneTab.id, val)}
+                              language={paneLanguage}
+                              theme={theme}
+                              fontSize={fontSize}
+                              vimEnabled={vimEnabled}
+                              searchTerm={findValue}
+                              caseSensitive={caseSensitive}
+                              className="w-full h-full"
+                              style={{ fontSize: '14px' }}
+                            />
+                          ) : (
+                            <div className={`flex items-center justify-center w-full text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                              No tab selected
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
               </div>
             </div>
 
