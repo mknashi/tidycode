@@ -6098,6 +6098,12 @@ const TidyCode = () => {
     }));
   };
 
+  const structureFontSizeMap = { '2xs': '10px', 'xs': '12px', 'sm': '14px', 'base': '16px' };
+  const structureLineHeightMap = { '2xs': '1.2', 'xs': '1.3', 'sm': '1.4', 'base': '1.5' };
+  const structureFontSize = structureFontSizeMap[fontSize] || '12px';
+  const structureLineHeight = structureLineHeightMap[fontSize] || '1.3';
+  const structureFont = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+
   const renderStructureNodes = (nodes, depth = 0) => {
     return nodes.map(node => {
       const hasChildren = node.children && node.children.length > 0;
@@ -6116,8 +6122,8 @@ const TidyCode = () => {
         <div
           key={node.id}
           data-node-id={node.id}
-          className={`text-xs mb-1 ${nodeTextClass} transition-colors duration-150`}
-          style={{ marginLeft: depth * 12 }}
+          className={`${nodeTextClass} transition-colors duration-150`}
+          style={{ marginLeft: depth * 12, fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureLineHeight }}
           ref={isActive ? activeStructureNodeRef : null}
         >
           <div className={`flex items-center gap-1 ${isActive ? 'bg-indigo-600 bg-opacity-40 rounded px-1 py-0.5 border border-indigo-400/70 shadow-sm' : ''}`}>
