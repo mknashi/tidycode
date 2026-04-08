@@ -9843,7 +9843,7 @@ const TidyCode = () => {
                           {result.line}:{result.column}
                         </span>
                         <div className="flex-1 min-w-0 truncate">
-                          <code className={`text-xs font-mono leading-tight ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <code className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`} style={{ lineHeight: '1.2' }}>
                             {result.text.substring(0, result.matchStart)}
                             <span className={`${theme === 'dark' ? 'bg-yellow-500/30 text-yellow-200' : 'bg-yellow-200 text-yellow-900'}`}>
                               {result.text.substring(result.matchStart, result.matchEnd)}

@@ -54,12 +54,12 @@ const getFontSizePixels = (size) => {
 
 const getLineHeightValue = (size) => {
   const lineHeightMap = {
-    '2xs': '1.3',    // tight
-    'xs': '1.4',     // snug
-    'sm': '1.5',     // normal
-    'base': '1.625'  // relaxed
+    '2xs': '1.2',
+    'xs': '1.3',
+    'sm': '1.4',
+    'base': '1.5'
   };
-  return lineHeightMap[size] || '1.4';
+  return lineHeightMap[size] || '1.3';
 };
 
 // Custom syntax highlighting for dark mode
@@ -239,6 +239,7 @@ const CodeMirrorEditor = forwardRef(({
       '.cm-content': {
         fontSize: fontSizeValue,
         lineHeight: lineHeightValue,
+        padding: '2px 0',
       },
       '.cm-gutters': {
         fontSize: fontSizeValue,
@@ -246,6 +247,7 @@ const CodeMirrorEditor = forwardRef(({
       },
       '.cm-line': {
         lineHeight: lineHeightValue,
+        padding: '0 2px',
       }
     }));
 
