@@ -7445,6 +7445,33 @@ const TidyCode = () => {
     setStructureCollapsed({});
   }, [structureTree.type, activeTabId]);
 
+  // Auto-expand collapsed ancestors when the active structure node changes
+  useEffect(() => {
+    if (!activeStructureId || !structureTree.nodes?.length) return;
+    // Walk tree to find path from root to the active node
+    const findPath = (nodes, targetId, path = []) => {
+      for (const node of nodes) {
+        if (node.id === targetId) return [...path, node.id];
+        if (node.children?.length) {
+          const found = findPath(node.children, targetId, [...path, node.id]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const path = findPath(structureTree.nodes, activeStructureId);
+    if (!path) return;
+    // Ancestors are all nodes in path except the active node itself
+    const ancestorIds = path.slice(0, -1);
+    if (ancestorIds.some(id => structureCollapsed[id])) {
+      setStructureCollapsed(prev => {
+        const next = { ...prev };
+        ancestorIds.forEach(id => delete next[id]);
+        return next;
+      });
+    }
+  }, [activeStructureId]);
+
   // Auto-validate JSON/XML files on open/paste (only for small files < 100KB)
   const prevTabIdRef = useRef(null);
   const prevContentHashRef = useRef(null);
@@ -7588,18 +7615,12 @@ const TidyCode = () => {
     if (!structureRef.current || !activeStructureNodeRef.current) return;
     const container = structureRef.current;
     const target = activeStructureNodeRef.current;
-    const getOffset = (el, parent) => {
-      let offset = 0;
-      let node = el;
-      while (node && node !== parent) {
-        offset += node.offsetTop;
-        node = node.offsetParent;
-      }
-      return offset;
-    };
-    const offsetTop = getOffset(target, container);
-    const desiredTop = Math.max(0, offsetTop - container.clientHeight / 2 + target.offsetHeight / 2);
-    container.scrollTo({ top: desiredTop, behavior: 'auto' });
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    // relativeTop = position of the target within the scrollable container
+    const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+    const desiredTop = Math.max(0, relativeTop - container.clientHeight / 2 + target.offsetHeight / 2);
+    container.scrollTo({ top: desiredTop, behavior: 'smooth' });
   }, [activeStructureId, structureTree, editorLines.length]);
 
   const errorsByLine = useMemo(() => {
@@ -9374,10 +9395,10 @@ const TidyCode = () => {
               {showStructurePane && (
                 <>
                   <div
-                    className="bg-gray-900 border-r border-gray-800 overflow-hidden transition-[width]"
+                    className="bg-gray-900 border-r border-gray-800 overflow-hidden transition-[width] flex flex-col"
                     style={structurePaneStyle}
                   >
-                    <div className="px-3 py-2 border-b border-gray-800 text-xs uppercase tracking-wide text-gray-300 flex items-center justify-between gap-2 bg-gray-900">
+                    <div className="px-3 py-2 border-b border-gray-800 text-xs uppercase tracking-wide text-gray-300 flex items-center justify-between gap-2 bg-gray-900 flex-shrink-0">
                       <span>Structure</span>
                       <div className="flex items-center gap-2">
                         <button
@@ -9413,7 +9434,7 @@ const TidyCode = () => {
                         <span className="text-gray-400">{structureTree.type || 'Plain'}</span>
                       </div>
                     </div>
-                    <div className="p-3 max-h-full overflow-y-auto text-gray-200" ref={structureRef}>
+                    <div className="p-3 flex-1 min-h-0 overflow-y-auto text-gray-200" ref={structureRef}>
                       {structureTree.nodes.length > 0 ? (
                         renderStructureNodes(structureTree.nodes)
                       ) : (
