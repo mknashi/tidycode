@@ -255,8 +255,8 @@ const CodeMirrorEditor = forwardRef(({
       }
     }));
 
-    // Add cursor position and selection tracking
-    // Uses refs for onSelectionChange to avoid rebuilding extensions on callback changes
+    // Add cursor position, selection, and viewport tracking
+    // Uses refs for callbacks to avoid rebuilding extensions on every render
     exts.push(EditorView.updateListener.of((update) => {
       if (update.selectionSet) {
         const sel = update.state.selection.main;
@@ -277,6 +277,20 @@ const CodeMirrorEditor = forwardRef(({
           }
         }
       }
+      // Viewport change — use this instead of DOM scroll events (scroll doesn't bubble)
+      if (update.viewportChanged) {
+        const cb = onScrollChangeRef.current;
+        if (cb && !scrollThrottleRef.current) {
+          scrollThrottleRef.current = setTimeout(() => {
+            scrollThrottleRef.current = null;
+            try {
+              // view.viewport.from is the char offset of the first visible character
+              const firstLine = update.view.state.doc.lineAt(update.view.viewport.from).number;
+              cb(firstLine);
+            } catch (_) { /* ignore */ }
+          }, 80);
+        }
+      }
     }));
 
     // Add DOM-level event handlers with highest precedence
@@ -292,21 +306,6 @@ const CodeMirrorEditor = forwardRef(({
             return true;
           }
         }
-        return false;
-      },
-      scroll: (_event, view) => {
-        const cb = onScrollChangeRef.current;
-        if (!cb) return false;
-        if (scrollThrottleRef.current) return false;
-        scrollThrottleRef.current = setTimeout(() => {
-          scrollThrottleRef.current = null;
-          try {
-            const scrollTop = view.scrollDOM.scrollTop;
-            const block = view.lineBlockAtHeight(scrollTop + 1);
-            const line = view.state.doc.lineAt(block.from);
-            cb(line.number);
-          } catch (_) { /* ignore */ }
-        }, 40);
         return false;
       },
       contextmenu: (event, view) => {

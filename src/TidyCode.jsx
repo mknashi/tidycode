@@ -1667,6 +1667,9 @@ const TidyCode = () => {
   const [structureSyncLine, setStructureSyncLine] = useState(1);
   // Prevents scroll feedback loops: 'editor' when editor→structure in progress, 'structure' vice versa
   const syncInProgressRef = useRef(null);
+  // Tracks whether the editor is actively being scrolled (for smooth vs instant structure scroll)
+  const isEditorScrollingRef = useRef(false);
+  const editorScrollEndTimerRef = useRef(null);
   const structureDragState = useRef({ active: false, startX: 0, startWidth: 288 });
   const leftPanelDragState = useRef({ active: false, startX: 0, startWidth: 280 }); // For file explorer/file system panel
   const notesSidebarDragState = useRef({ active: false, startX: 0, startWidth: 288 });
@@ -7628,9 +7631,11 @@ const TidyCode = () => {
     const targetRect = target.getBoundingClientRect();
     const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
     const desiredTop = Math.max(0, relativeTop - container.clientHeight / 2 + target.offsetHeight / 2);
-    // Mark as editor-driven so the structure onScroll handler doesn't fire back
+    // Use instant scroll while editor is actively scrolling to avoid animation overlap;
+    // smooth only when driven by a cursor jump or click.
+    const behavior = isEditorScrollingRef.current ? 'instant' : 'smooth';
     syncInProgressRef.current = 'editor';
-    container.scrollTo({ top: desiredTop, behavior: 'smooth' });
+    container.scrollTo({ top: desiredTop, behavior });
     const timer = setTimeout(() => { syncInProgressRef.current = null; }, 400);
     return () => clearTimeout(timer);
   }, [activeStructureId, structureTree, editorLines.length]);
@@ -8536,6 +8541,11 @@ const TidyCode = () => {
           caseSensitive={caseSensitive}
           onScrollChange={(line) => {
             if (syncInProgressRef.current === 'structure') return;
+            isEditorScrollingRef.current = true;
+            clearTimeout(editorScrollEndTimerRef.current);
+            editorScrollEndTimerRef.current = setTimeout(() => {
+              isEditorScrollingRef.current = false;
+            }, 300);
             setStructureSyncLine(line);
           }}
           onCursorChange={(pos) => {
