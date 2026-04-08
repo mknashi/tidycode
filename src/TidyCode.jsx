@@ -1372,7 +1372,7 @@ const TidyCode = () => {
     }
   };
   const [structurePanelVisible, setStructurePanelVisible] = useState(true);
-  const [forceShowStructure, setForceShowStructure] = useState(false);
+  const [forceShowStructureTabs, setForceShowStructureTabs] = useState(new Set());
   const [showConvertDropdown, setShowConvertDropdown] = useState(false);
   const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
@@ -7349,7 +7349,7 @@ const TidyCode = () => {
 
     // For large files, detect format but don't build the structure unless the user explicitly requested it
     const MAX_STRUCTURE_TREE_SIZE = 100000; // 100KB
-    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE && !forceShowStructure) {
+    if (trimmed.length > MAX_STRUCTURE_TREE_SIZE && !forceShowStructureTabs.has(activeTab?.id)) {
       if (detection.format === 'json' || ((fileType.type === 'json' || fileType.type === 'text') && looksLikeJSON(trimmed))) {
         return { type: 'JSON', nodes: [], isLarge: true };
       }
@@ -7395,11 +7395,7 @@ const TidyCode = () => {
     }
 
     return { type: null, nodes: [] };
-  }, [activeTab?.content, activeTab?.filePath, activeTab?.title, forceShowStructure]);
-
-  useEffect(() => {
-    setForceShowStructure(false);
-  }, [activeTab?.id]);
+  }, [activeTab?.id, activeTab?.content, activeTab?.filePath, activeTab?.title, forceShowStructureTabs]);
 
   const structureNodeList = useMemo(() => {
     const list = [];
@@ -8846,7 +8842,7 @@ const TidyCode = () => {
               <button
                 onClick={() => {
                   if (structureTree.isLarge && !structurePanelVisible) {
-                    setForceShowStructure(true);
+                    setForceShowStructureTabs(prev => new Set(prev).add(activeTab?.id));
                   }
                   setStructurePanelVisible(!structurePanelVisible);
                 }}
