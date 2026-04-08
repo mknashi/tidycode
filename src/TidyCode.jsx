@@ -6611,8 +6611,12 @@ const TidyCode = () => {
     if (!tabElement || !container) return;
 
     const padding = 24;
-    const tabLeft = tabElement.offsetLeft;
-    const tabRight = tabLeft + tabElement.offsetWidth;
+    // Use getBoundingClientRect to avoid offsetParent issues when container
+    // ancestors have overflow-hidden (which changes the offsetParent chain)
+    const containerRect = container.getBoundingClientRect();
+    const tabRect = tabElement.getBoundingClientRect();
+    const tabLeft = tabRect.left - containerRect.left + container.scrollLeft;
+    const tabRight = tabLeft + tabRect.width;
     const viewLeft = container.scrollLeft;
     const viewRight = viewLeft + container.clientWidth;
 
@@ -8778,6 +8782,22 @@ const TidyCode = () => {
             )}
           </div>
 
+          {/* Find & Replace Button */}
+          {!activeTab?.isPDF && (
+            <button
+              onClick={() => setShowFindReplace(prev => !prev)}
+              className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${
+                showFindReplace
+                  ? theme === 'dark' ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'
+                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+              }`}
+              title="Find & Replace (⌘F)"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden lg:inline">Find</span>
+            </button>
+          )}
+
           <div className={`w-px mx-1 lg:mx-2 self-stretch ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
 
           {/* Diff Button */}
@@ -9131,7 +9151,14 @@ const TidyCode = () => {
 
       {/* Tab Bar */}
       <div className="bg-gray-800 border-b border-gray-700 flex items-center">
-        <div className="flex border-r border-gray-700">
+        {/* Spacer matching sidebar width so split selectors align with split editor panes */}
+        {splitPanes.length > 0 && (showTabsExplorer || (isDesktop() && showFileSystemBrowser)) && (
+          <div className="flex-shrink-0" style={{ width: `${leftPanelWidth}px` }} />
+        )}
+        {/* Primary tabs section — flex-1; nav buttons live inside so split sections align with editor panes */}
+        <div className="flex flex-1 min-w-0 overflow-hidden items-center">
+        {/* Nav buttons inside primary section */}
+        <div className="flex border-r border-gray-700 flex-shrink-0">
           <Tooltip content="Tabs Explorer" placement="bottom">
             <button
               onClick={() => setShowTabsExplorer(!showTabsExplorer)}
@@ -9285,15 +9312,16 @@ const TidyCode = () => {
             <Plus className="w-4 h-4" />
           </button>
         </Tooltip>
-        {/* Split pane tab selectors — lives in the tab bar so editors align */}
+        </div>{/* end primary tabs section */}
+        {/* Split pane tab selectors — each flex-1 to align with their editor pane */}
         {splitPanes.map((pane) => (
-          <div key={pane.id} className={`flex items-center border-l flex-shrink-0 ${theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-gray-200'}`}>
-            <div className={`w-px self-stretch mx-0 ${theme === 'dark' ? 'bg-indigo-500/40' : 'bg-indigo-400/40'}`} />
+          <div key={pane.id} className={`flex flex-1 items-center border-l min-w-0 ${theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-gray-200'}`}>
+            <div className={`w-px self-stretch mx-0 flex-shrink-0 ${theme === 'dark' ? 'bg-indigo-500/40' : 'bg-indigo-400/40'}`} />
             <select
               value={pane.tabId ?? ''}
               onChange={(e) => setSplitPaneTab(pane.id, Number(e.target.value))}
               onClick={() => setActivePaneId(pane.id)}
-              className={`text-xs px-1.5 py-1 max-w-[160px] min-w-[80px] truncate border-0 outline-none cursor-pointer ${theme === 'dark' ? 'bg-gray-800 text-gray-200' : 'bg-gray-200 text-gray-800'}`}
+              className={`text-xs px-1.5 py-1 flex-1 min-w-0 truncate border-0 outline-none cursor-pointer ${theme === 'dark' ? 'bg-gray-800 text-gray-200' : 'bg-gray-200 text-gray-800'}`}
             >
               {tabs.map(t => (
                 <option key={t.id} value={t.id}>{t.isModified ? '● ' : ''}{t.title}</option>
@@ -10581,15 +10609,6 @@ const TidyCode = () => {
             {autosaveStatus === 'saved' && <span className="text-green-400">Autosaved</span>}
             {!autosaveStatus && activeTab?.isModified && <span className="text-yellow-400">● Modified</span>}
             <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>v{appVersion}</span>
-            {!activeTab?.isPDF && (
-              <button
-                onClick={() => setShowFindReplace(prev => !prev)}
-                className={`p-0.5 rounded transition-colors ${showFindReplace ? 'text-indigo-400' : theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-700'}`}
-                title="Find & Replace (⌘F)"
-              >
-                <Search className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         </div>
       )}

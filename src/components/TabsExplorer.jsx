@@ -184,7 +184,7 @@ const TabsExplorer = forwardRef(({ theme, tabs, activeTabId, onTabSelect, onClos
           }
         }}
         onMouseDown={canDrag ? handleMouseDown : undefined}
-        className={`flex items-center gap-2 px-3 py-1.5 group transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-0.5 group transition-colors ${
           canDrag ? 'cursor-grab' : 'cursor-pointer'
         } ${
           isActive
@@ -198,8 +198,8 @@ const TabsExplorer = forwardRef(({ theme, tabs, activeTabId, onTabSelect, onClos
         onClick={() => handleFileClick(file.id)}
         title={canDrag ? `Drag to desktop or click to view: ${file.fullPath}` : file.fullPath}
       >
-        <FileText className="w-4 h-4 flex-shrink-0" />
-        <span className="flex-1 truncate text-sm">
+        <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="flex-1 truncate text-xs font-mono">
           {file.name}
           {file.isModified && <span className="ml-1 text-orange-400">●</span>}
         </span>
@@ -230,7 +230,7 @@ const TabsExplorer = forwardRef(({ theme, tabs, activeTabId, onTabSelect, onClos
       <div key={folder.name}>
         <div
           onClick={() => toggleFolder(folder.name)}
-          className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-0.5 cursor-pointer transition-colors ${
             theme === 'dark'
               ? 'hover:bg-gray-700 text-gray-300'
               : 'hover:bg-gray-100 text-gray-700'
@@ -238,16 +238,16 @@ const TabsExplorer = forwardRef(({ theme, tabs, activeTabId, onTabSelect, onClos
           style={{ paddingLeft: `${level * 12 + 12}px` }}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 flex-shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
           ) : (
-            <ChevronRight className="w-4 h-4 flex-shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
           )}
           {isExpanded ? (
-            <FolderOpen className="w-4 h-4 flex-shrink-0" />
+            <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
           ) : (
-            <Folder className="w-4 h-4 flex-shrink-0" />
+            <Folder className="w-3.5 h-3.5 flex-shrink-0" />
           )}
-          <span className="flex-1 truncate text-sm font-medium">{folder.name}</span>
+          <span className="flex-1 truncate text-xs font-mono">{folder.name}</span>
         </div>
 
         {isExpanded && folder.children && (

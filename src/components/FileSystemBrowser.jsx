@@ -398,7 +398,7 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
         <div
           ref={itemRef}
           onMouseDown={!item.is_dir && isDesktop() ? handleMouseDown : undefined}
-          className={`flex items-center gap-1 px-2 py-1 transition-colors ${
+          className={`flex items-center gap-1 px-2 py-0.5 transition-colors ${
             item.is_dir ? 'cursor-pointer' : (isDesktop() ? 'cursor-grab' : 'cursor-pointer')
           } ${
             isSelected
@@ -413,23 +413,23 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
           {item.is_dir && (
             <span className="flex-shrink-0">
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-3.5 h-3.5" />
               ) : (
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               )}
             </span>
           )}
-          {!item.is_dir && <span className="w-4" />}
+          {!item.is_dir && <span className="w-3.5" />}
 
           <span className="flex-shrink-0">
             {item.is_dir ? (
               isExpanded ? (
-                <FolderOpen className="w-4 h-4 text-yellow-500" />
+                <FolderOpen className="w-3.5 h-3.5 text-yellow-500" />
               ) : (
-                <Folder className="w-4 h-4 text-yellow-500" />
+                <Folder className="w-3.5 h-3.5 text-yellow-500" />
               )
             ) : (
-              <File className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+              <File className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
             )}
           </span>
 
@@ -447,14 +447,14 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
                 }
               }}
               autoFocus
-              className={`flex-1 px-1 text-sm ${
+              className={`flex-1 px-1 text-xs font-mono ${
                 theme === 'dark'
                   ? 'bg-gray-700 text-gray-200'
                   : 'bg-white text-gray-800'
               } border rounded`}
             />
           ) : (
-            <span className={`flex-1 text-sm truncate ${
+            <span className={`flex-1 text-xs font-mono truncate ${
               item.is_dir
                 ? ''
                 : theme === 'dark'
@@ -470,7 +470,7 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
           <div>
             {isLoading ? (
               <div
-                className="text-sm italic px-2 py-1"
+                className="text-xs font-mono italic px-2 py-0.5"
                 style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
               >
                 Loading...
@@ -660,7 +660,7 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
                     }
                   }
                 } : undefined}
-                className={`px-2 py-1 text-sm ${
+                className={`px-2 py-0.5 text-xs font-mono ${
                   isDesktop() ? 'cursor-grab' : 'cursor-pointer'
                 } ${
                   theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
@@ -682,8 +682,8 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
                 }}
                 title={isDesktop() ? `Drag to desktop or click to open: ${path.split('/').pop()}` : `Open: ${path.split('/').pop()}`}
               >
-                <div className="flex items-center gap-2">
-                  <File className="w-4 h-4 flex-shrink-0" />
+                <div className="flex items-center gap-1.5">
+                  <File className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="truncate">{path}</span>
                 </div>
               </div>
@@ -693,12 +693,12 @@ const FileSystemBrowser = ({ theme, onFileOpen, onClose, onRootPathChange, selec
           <div>
             {/* Root folder element */}
             <div
-              className={`flex items-center gap-2 px-2 py-2 mb-1 font-medium border-b ${
+              className={`flex items-center gap-1.5 px-2 py-1 mb-1 font-medium border-b ${
                 theme === 'dark' ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'
               }`}
             >
-              <FolderOpen className="w-5 h-5 text-blue-500 flex-shrink-0" />
-              <span className="truncate text-sm">
+              <FolderOpen className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              <span className="truncate text-xs font-mono">
                 {rootPath.split('/').pop() || rootPath}
               </span>
             </div>
