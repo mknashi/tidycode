@@ -7799,7 +7799,6 @@ const TidyCode = () => {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-indigo-400">TIDY CODE</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">BETA</span>
                 </div>
                 <div className="text-sm font-medium text-gray-300">Notes</div>
               </div>
@@ -8173,7 +8172,6 @@ const TidyCode = () => {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-indigo-400">TIDY NOTE PAD</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">BETA</span>
               </div>
               <div className="text-sm font-medium text-gray-300">Todo Lists</div>
             </div>
@@ -8634,7 +8632,6 @@ const TidyCode = () => {
       <div className={`border-b px-3 py-1 flex items-center gap-1.5 lg:gap-3 min-w-0 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs font-bold text-indigo-400">TIDY CODE</span>
-          <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${theme === 'dark' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-600'}`}>BETA</span>
         </div>
 
         <div className="flex gap-1 ml-1.5 lg:ml-3 flex-shrink-0 items-center">
