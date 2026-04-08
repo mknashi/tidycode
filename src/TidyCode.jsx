@@ -1664,6 +1664,9 @@ const TidyCode = () => {
   const braceMatchThrottleRef = useRef(null);
   const structureRef = useRef(null);
   const activeStructureNodeRef = useRef(null);
+  const [structureSyncLine, setStructureSyncLine] = useState(1);
+  // Prevents scroll feedback loops: 'editor' when editor→structure in progress, 'structure' vice versa
+  const syncInProgressRef = useRef(null);
   const structureDragState = useRef({ active: false, startX: 0, startWidth: 288 });
   const leftPanelDragState = useRef({ active: false, startX: 0, startWidth: 280 }); // For file explorer/file system panel
   const notesSidebarDragState = useRef({ active: false, startX: 0, startWidth: 288 });
@@ -7428,18 +7431,18 @@ const TidyCode = () => {
   }, [structureTree]);
 
   const activeStructureId = useMemo(() => {
-    if (!cursorPosition || structureNodeList.length === 0) return null;
+    if (!structureSyncLine || structureNodeList.length === 0) return null;
     let candidate = null;
     let bestDiff = Infinity;
     structureNodeList.forEach(node => {
-      const diff = cursorPosition.line - node.line;
+      const diff = structureSyncLine - node.line;
       if (diff >= 0 && diff < bestDiff) {
         candidate = node;
         bestDiff = diff;
       }
     });
     return candidate?.id ?? structureNodeList[0]?.id ?? null;
-  }, [cursorPosition, structureNodeList]);
+  }, [structureSyncLine, structureNodeList]);
 
   useEffect(() => {
     setStructureCollapsed({});
@@ -7617,10 +7620,13 @@ const TidyCode = () => {
     const target = activeStructureNodeRef.current;
     const containerRect = container.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
-    // relativeTop = position of the target within the scrollable container
     const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
     const desiredTop = Math.max(0, relativeTop - container.clientHeight / 2 + target.offsetHeight / 2);
+    // Mark as editor-driven so the structure onScroll handler doesn't fire back
+    syncInProgressRef.current = 'editor';
     container.scrollTo({ top: desiredTop, behavior: 'smooth' });
+    const timer = setTimeout(() => { syncInProgressRef.current = null; }, 400);
+    return () => clearTimeout(timer);
   }, [activeStructureId, structureTree, editorLines.length]);
 
   const errorsByLine = useMemo(() => {
@@ -8522,6 +8528,10 @@ const TidyCode = () => {
           lspSettings={aiSettings}
           searchTerm={findValue}
           caseSensitive={caseSensitive}
+          onScrollChange={(line) => {
+            if (syncInProgressRef.current === 'structure') return;
+            setStructureSyncLine(line);
+          }}
           onCursorChange={(pos) => {
             // Update cursor position for display
             if (activeTab) {
@@ -8554,6 +8564,9 @@ const TidyCode = () => {
               }
               cursorUpdateThrottleRef.current = setTimeout(() => {
                 setCursorPosition(cursorInfo);
+                if (syncInProgressRef.current !== 'structure') {
+                  setStructureSyncLine(line);
+                }
                 cursorUpdateThrottleRef.current = null;
               }, 50);
 
@@ -9434,7 +9447,37 @@ const TidyCode = () => {
                         <span className="text-gray-400">{structureTree.type || 'Plain'}</span>
                       </div>
                     </div>
-                    <div className="p-3 flex-1 min-h-0 overflow-y-auto text-gray-200" ref={structureRef}>
+                    <div
+                      className="p-3 flex-1 min-h-0 overflow-y-auto text-gray-200"
+                      ref={structureRef}
+                      onScroll={() => {
+                        if (syncInProgressRef.current === 'editor') return;
+                        if (!structureRef.current || !codeMirrorRef.current) return;
+                        const container = structureRef.current;
+                        const containerTop = container.getBoundingClientRect().top;
+                        // Find the topmost visible node in the structure panel
+                        const nodeEls = container.querySelectorAll('[data-node-id]');
+                        let topNode = null;
+                        for (const el of nodeEls) {
+                          const rect = el.getBoundingClientRect();
+                          if (rect.bottom > containerTop) { topNode = el; break; }
+                        }
+                        if (!topNode) return;
+                        const nodeId = topNode.getAttribute('data-node-id');
+                        const node = structureNodeList.find(n => n.id === nodeId);
+                        if (!node) return;
+                        const content = codeMirrorRef.current.getValue();
+                        if (!content) return;
+                        const index = getIndexFromLineColumn(content, node.line, 1);
+                        const view = codeMirrorRef.current.getView();
+                        if (!view) return;
+                        syncInProgressRef.current = 'structure';
+                        view.dispatch({
+                          effects: EditorView.scrollIntoView(index, { y: 'start', yMargin: 10 })
+                        });
+                        setTimeout(() => { syncInProgressRef.current = null; }, 400);
+                      }}
+                    >
                       {structureTree.nodes.length > 0 ? (
                         renderStructureNodes(structureTree.nodes)
                       ) : (

@@ -121,6 +121,7 @@ const CodeMirrorEditor = forwardRef(({
   caseSensitive = false, // Case sensitivity for search
   onContextMenu = null, // Right-click handler for AI actions
   onSelectionChange = null, // Selection change handler for floating toolbar
+  onScrollChange = null, // Fires with first-visible line number when editor scrolls
 }, ref) => {
   const editorRef = useRef(null);
   const vimModeRef = useRef('normal');
@@ -132,6 +133,9 @@ const CodeMirrorEditor = forwardRef(({
   onSelectionChangeRef.current = onSelectionChange;
   const onContextMenuRef = useRef(onContextMenu);
   onContextMenuRef.current = onContextMenu;
+  const onScrollChangeRef = useRef(onScrollChange);
+  onScrollChangeRef.current = onScrollChange;
+  const scrollThrottleRef = useRef(null);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -288,6 +292,21 @@ const CodeMirrorEditor = forwardRef(({
             return true;
           }
         }
+        return false;
+      },
+      scroll: (_event, view) => {
+        const cb = onScrollChangeRef.current;
+        if (!cb) return false;
+        if (scrollThrottleRef.current) return false;
+        scrollThrottleRef.current = setTimeout(() => {
+          scrollThrottleRef.current = null;
+          try {
+            const scrollTop = view.scrollDOM.scrollTop;
+            const block = view.lineBlockAtHeight(scrollTop + 1);
+            const line = view.state.doc.lineAt(block.from);
+            cb(line.number);
+          } catch (_) { /* ignore */ }
+        }, 40);
         return false;
       },
       contextmenu: (event, view) => {
