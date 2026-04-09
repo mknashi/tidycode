@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon } from 'lucide-react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -8138,6 +8138,22 @@ const TidyCode = () => {
                               onClick={(event) => event.stopPropagation()}
                             >
                               <GripVertical className="w-4 h-4 text-indigo-300" />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-800 text-gray-500 hover:text-yellow-400"
+                              title="Archive note"
+                              onClick={(event) => { event.stopPropagation(); archiveNote(note.id); }}
+                            >
+                              <ArchiveIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-800 text-gray-500 hover:text-red-400"
+                              title="Delete note"
+                              onClick={(event) => { event.stopPropagation(); removeNote(note.id); }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               className="text-indigo-400 hover:text-indigo-200"
