@@ -8091,8 +8091,10 @@ const TidyCode = () => {
                 No notes in this folder yet. Create one to start writing.
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {visibleNotes.map(note => {
+              (() => {
+                const pinnedNotes = visibleNotes.filter(n => n.pinned);
+                const unpinnedNotes = visibleNotes.filter(n => !n.pinned);
+                const renderCard = (note) => {
                   const previewText = stripHtml(note.content || note.title || '').slice(0, 180) || 'Untitled';
                   const firstImage = note.images?.[0];
                   return (
@@ -8101,27 +8103,23 @@ const TidyCode = () => {
                       className={`relative border rounded-lg overflow-hidden h-56 flex flex-col cursor-pointer transition-colors ${note.pinned ? 'bg-indigo-950 border-indigo-500 shadow-lg shadow-indigo-900/40' : 'bg-gray-900 border-gray-800 hover:border-indigo-500'}`}
                       onClick={() => { setActiveNoteId(note.id); setOpenNoteModalId(note.id); }}
                     >
-                      {note.pinned && (
-                        <div className="absolute top-2 right-2 z-10 bg-indigo-500 rounded-full p-0.5">
-                          <Pin className="w-3 h-3 text-white fill-white" />
-                        </div>
-                      )}
-                      <div className="relative h-24 bg-gray-800">
+                      <div className="relative h-20 bg-gray-800 shrink-0">
                         {firstImage ? (
                           <img src={firstImage.url} alt="note" className="w-full h-full object-cover" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-xs text-gray-500">No image</div>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 flex items-center justify-between">
-                          <span className="text-white text-sm font-semibold truncate">{String(note.title || '').trim() || 'Untitled note'}</span>
-                          <span className="text-[10px] text-gray-200">{note.images?.length || 0} img</span>
-                        </div>
                       </div>
-                      <div className="flex-1 flex flex-col p-3 gap-2">
-                        <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">{previewText}</p>
+                      <div className="flex-1 flex flex-col px-3 pt-2 pb-2 gap-1 min-h-0">
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="text-white text-sm font-semibold leading-snug line-clamp-1">{String(note.title || '').trim() || 'Untitled note'}</span>
+                          {note.pinned && <Pin className="w-3 h-3 text-indigo-400 fill-indigo-400 shrink-0 mt-0.5" />}
+                        </div>
+                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{previewText}</p>
                         <div className="flex items-center justify-between text-[10px] text-gray-500 mt-auto pt-1">
                           <span>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-600">{note.images?.length || 0} img</span>
                             <button
                               type="button"
                               className={`p-1 rounded hover:bg-gray-800 ${note.pinned ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400'}`}
@@ -8152,8 +8150,35 @@ const TidyCode = () => {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                };
+                return (
+                  <div className="space-y-4">
+                    {pinnedNotes.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Pin className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
+                          <span className="text-xs font-medium text-indigo-400 uppercase tracking-wider">Pinned</span>
+                        </div>
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                          {pinnedNotes.map(renderCard)}
+                        </div>
+                      </div>
+                    )}
+                    {pinnedNotes.length > 0 && unpinnedNotes.length > 0 && (
+                      <div className="flex items-center gap-3 py-1">
+                        <div className="flex-1 border-t border-gray-700" />
+                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Other notes</span>
+                        <div className="flex-1 border-t border-gray-700" />
+                      </div>
+                    )}
+                    {unpinnedNotes.length > 0 && (
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        {unpinnedNotes.map(renderCard)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>
@@ -8193,6 +8218,14 @@ const TidyCode = () => {
                 <div className="text-xs text-gray-500">{modalNote.images?.length || 0} attachment(s)</div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className={`p-1.5 rounded border ${modalNote.pinned ? 'border-indigo-500 text-indigo-400' : 'border-gray-700 text-gray-500 hover:text-indigo-400 hover:border-indigo-500'} transition-colors`}
+                  title={modalNote.pinned ? 'Unpin note' : 'Pin to top'}
+                  onClick={() => togglePinNote(modalNote.id)}
+                >
+                  <Pin className={`w-3.5 h-3.5 ${modalNote.pinned ? 'fill-indigo-400' : ''}`} />
+                </button>
                 <button
                   className="text-xs text-yellow-300 hover:text-yellow-200 border border-yellow-500/60 px-2 py-1 rounded"
                   onClick={() => { archiveNote(modalNote.id); setOpenNoteModalId(null); }}
