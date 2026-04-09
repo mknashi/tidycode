@@ -96,14 +96,6 @@ export function useAuth() {
     }
   }, []);
 
-  const signInWithGitHub = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
-    await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: { redirectTo: window.location.origin }
-    });
-  }, []);
-
   const signOut = useCallback(async () => {
     if (!isSupabaseConfigured) return;
     // Cancel any pending One Tap prompt
@@ -118,7 +110,6 @@ export function useAuth() {
     user: session?.user ?? null,
     loading,
     initGoogleButton,
-    signInWithGitHub,
     signOut,
     isConfigured: isSupabaseConfigured,
   };

@@ -334,6 +334,21 @@ create table note_images (
 alter table notes enable row level security;
 create policy "owner access" on notes
   using (auth.uid() = user_id);
+
+create table todo_tabs (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users not null,
+  local_id    integer not null,
+  title       text not null default 'List',
+  items       jsonb not null default '[]',
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (user_id, local_id)
+);
+
+alter table todo_tabs enable row level security;
+create policy "owner access" on todo_tabs
+  using (auth.uid() = user_id);
 ```
 
 ### Auth flow (Supabase + Google)

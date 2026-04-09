@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useNotesSync } from './hooks/useNotesSync';
+import { useTasksSync } from './hooks/useTasksSync';
 import { AuthModal } from './components/AuthModal';
 import { marked } from 'marked';
 import Prism from 'prismjs';
@@ -1408,8 +1409,9 @@ const TidyCode = () => {
   const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = useState(false);
 
   // ── Auth & sync ────────────────────────────────────────────────────────────
-  const { user, loading: authLoading, initGoogleButton, signInWithGitHub, signOut, isConfigured: supabaseConfigured } = useAuth();
+  const { user, loading: authLoading, initGoogleButton, signOut, isConfigured: supabaseConfigured } = useAuth();
   const { upsertNote } = useNotesSync({ user, notes, setNotes });
+  const { upsertTab, deleteTab: deleteTabRemote } = useTasksSync({ user, todoTabs, setTodoTabs });
 
   const [isQuickNoteExpanded, setIsQuickNoteExpanded] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
@@ -6978,23 +6980,31 @@ const TidyCode = () => {
   }, [activeFolderId, notes, activeNoteId]);
 
   const createTodoTab = () => {
-    const newTab = { id: nextTodoId, title: `List ${nextTodoId}`, items: [] };
+    const now = Date.now();
+    const newTab = { id: nextTodoId, title: `List ${nextTodoId}`, items: [], createdAt: now, updatedAt: now };
     setTodoTabs([...todoTabs, newTab]);
     setActiveTodoTabId(newTab.id);
     setNextTodoId(nextTodoId + 1);
+    if (user) upsertTab(newTab, user.id);
   };
 
   const closeTodoTab = (id) => {
     if (todoTabs.length === 1) return;
     const filtered = todoTabs.filter(tab => tab.id !== id);
     setTodoTabs(filtered);
-    if (activeTodoTabId === id) {
-      setActiveTodoTabId(filtered[0].id);
-    }
+    if (activeTodoTabId === id) setActiveTodoTabId(filtered[0].id);
+    if (user) deleteTabRemote(id, user.id);
   };
 
   const updateTodoTab = (id, updater) => {
-    setTodoTabs(tabs => tabs.map(tab => tab.id === id ? updater(tab) : tab));
+    setTodoTabs(tabs => {
+      const next = tabs.map(tab => tab.id === id ? { ...updater(tab), updatedAt: Date.now() } : tab);
+      if (user) {
+        const updated = next.find(t => t.id === id);
+        if (updated) upsertTab(updated, user.id);
+      }
+      return next;
+    });
   };
 
   const finishQuickNote = useCallback((event = null) => {
@@ -11224,8 +11234,8 @@ const TidyCode = () => {
                   className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-emerald-400 hover:text-white hover:bg-gray-800 transition-colors"
                   aria-label="Sign out"
                 >
-                  {user.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.avatar_url} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                  {user.user_metadata?.picture || user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.picture || user.user_metadata.avatar_url} referrerPolicy="no-referrer" alt="avatar" className="w-6 h-6 rounded-full object-cover" />
                   ) : (
                     <Cloud className="w-4 h-4" />
                   )}
@@ -11233,7 +11243,7 @@ const TidyCode = () => {
                 </button>
               </Tooltip>
             ) : (
-              <Tooltip content="Sign in to sync notes across browsers" placement="right">
+              <Tooltip content="Sign in to sync notes and tasks across browsers" placement="right">
                 <button
                   onClick={() => setShowAuthModal(true)}
                   className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-gray-500 hover:text-indigo-400 hover:bg-gray-800 transition-colors"
@@ -11455,8 +11465,8 @@ const TidyCode = () => {
               aria-label="Sign out"
               className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-emerald-400 hover:text-white transition-colors"
             >
-              {user.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="avatar" className="w-5 h-5 rounded-full object-cover" />
+              {user.user_metadata?.picture || user.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.picture || user.user_metadata.avatar_url} referrerPolicy="no-referrer" alt="avatar" className="w-5 h-5 rounded-full object-cover" />
               ) : (
                 <Cloud className="w-5 h-5" />
               )}
@@ -11962,7 +11972,6 @@ const TidyCode = () => {
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           initGoogleButton={initGoogleButton}
-          onSignInGitHub={() => { signInWithGitHub(); setShowAuthModal(false); }}
         />
       )}
 
