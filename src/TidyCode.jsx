@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud } from 'lucide-react';
+import { useAuth } from './hooks/useAuth';
+import { useNotesSync } from './hooks/useNotesSync';
+import { AuthModal } from './components/AuthModal';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -1400,6 +1403,12 @@ const TidyCode = () => {
   const [nextFolderId, setNextFolderId] = useState(initialNotesStateRef.current.nextFolderId);
   const [notesViewMode, setNotesViewMode] = useState(initialNotesStateRef.current.viewMode || 'tiles');
   const [openNoteModalId, setOpenNoteModalId] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // ── Auth & sync ────────────────────────────────────────────────────────────
+  const { user, loading: authLoading, signInWithGoogle, signInWithGitHub, signOut, isConfigured: supabaseConfigured } = useAuth();
+  const { upsertNote } = useNotesSync({ user, notes, setNotes });
+
   const [isQuickNoteExpanded, setIsQuickNoteExpanded] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
   const [quickNoteTitle, setQuickNoteTitle] = useState('');
@@ -6801,23 +6810,48 @@ const TidyCode = () => {
   };
 
   const updateNote = (id, updates) => {
-    setNotes(prev => prev.map(note => note.id === id ? { ...note, ...updates, updatedAt: Date.now() } : note));
+    setNotes(prev => {
+      const next = prev.map(note => note.id === id ? { ...note, ...updates, updatedAt: Date.now() } : note);
+      if (user) {
+        const updated = next.find(n => n.id === id);
+        if (updated) upsertNote(updated, user.id);
+      }
+      return next;
+    });
   };
 
   const removeNote = (id) => {
+    // Hard delete: remove locally; Supabase row is left archived (not hard-deleted)
+    // to avoid conflicts. A future migration can add a proper delete.
+    if (user) {
+      const toDelete = notes.find(n => n.id === id);
+      if (toDelete) upsertNote({ ...toDelete, archived: true }, user.id);
+    }
     setNotes(prev => prev.filter(note => note.id !== id));
     setActiveNoteId(current => current === id ? null : current);
   };
 
   const archiveNote = (id) => {
-    setNotes(prev => prev.map(note => note.id === id ? { ...note, archived: true, updatedAt: Date.now() } : note));
-    if (activeNoteId === id) {
-      setActiveNoteId(null);
-    }
+    setNotes(prev => {
+      const next = prev.map(note => note.id === id ? { ...note, archived: true, updatedAt: Date.now() } : note);
+      if (user) {
+        const updated = next.find(n => n.id === id);
+        if (updated) upsertNote(updated, user.id);
+      }
+      return next;
+    });
+    if (activeNoteId === id) setActiveNoteId(null);
   };
 
   const togglePinNote = (id) => {
-    setNotes(prev => prev.map(note => note.id === id ? { ...note, pinned: !note.pinned } : note));
+    setNotes(prev => {
+      const next = prev.map(note => note.id === id ? { ...note, pinned: !note.pinned } : note);
+      if (user) {
+        const updated = next.find(n => n.id === id);
+        if (updated) upsertNote(updated, user.id);
+      }
+      return next;
+    });
   };
 
   const deleteFolder = (id) => {
@@ -7752,6 +7786,7 @@ const TidyCode = () => {
   const renderNotesPanel = () => {
     const sidebarStyle = { width: `${Math.round(notesSidebarWidth)}px` };
     const modalNote = openNoteModalId ? notes.find(note => note.id === openNoteModalId) : null;
+    const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
 
     const renderFolderNode = (folder, depth = 0) => {
       const isExpanded = folder.expanded !== false;
@@ -7864,7 +7899,14 @@ const TidyCode = () => {
     return (
       <>
       <div className="flex h-full group/notes">
-        <div className="border-r border-gray-800 flex flex-col" style={sidebarStyle}>
+        {/* Mobile folder drawer overlay */}
+        {mobileSidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setMobileSidebarOpen(false)} />
+        )}
+        <div
+          className={`border-r border-gray-800 flex flex-col z-40 ${mobileSidebarOpen ? 'fixed inset-y-0 left-0 w-72' : 'hidden md:flex'} md:relative`}
+          style={mobileSidebarOpen ? {} : sidebarStyle}
+        >
           <div className="px-4 py-3 border-b border-gray-800">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -7935,10 +7977,19 @@ const TidyCode = () => {
           <span className="h-8 w-0.5 bg-gray-500 rounded-full" />
         </button>
         <div className="flex-1 flex flex-col">
-          <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-white">{activeFolderName}</div>
-              <div className="text-xs text-gray-500">{visibleNotes.length} note{visibleNotes.length === 1 ? '' : 's'}</div>
+          <div className="px-4 md:px-6 py-4 border-b border-gray-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                className="md:hidden p-1 rounded text-gray-400 hover:text-white hover:bg-gray-800"
+                onClick={() => setMobileSidebarOpen(true)}
+                aria-label="Open folders"
+              >
+                <Folder className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white truncate">{activeFolderName}</div>
+                <div className="text-xs text-gray-500">{visibleNotes.length} note{visibleNotes.length === 1 ? '' : 's'}</div>
+              </div>
             </div>
             {renderAIButtons()}
           </div>
@@ -8297,9 +8348,16 @@ const TidyCode = () => {
   const renderTodoPanel = () => {
     if (!activeTodoTab) return null;
     const sidebarStyle = { width: `${Math.round(todoSidebarWidth)}px` };
+    const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = React.useState(false);
     return (
     <div className="flex h-full group/todo">
-      <div className="border-r border-gray-800 flex flex-col" style={sidebarStyle}>
+      {mobileTodoSidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setMobileTodoSidebarOpen(false)} />
+      )}
+      <div
+        className={`border-r border-gray-800 flex flex-col z-40 ${mobileTodoSidebarOpen ? 'fixed inset-y-0 left-0 w-64' : 'hidden md:flex'} md:relative`}
+        style={mobileTodoSidebarOpen ? {} : sidebarStyle}
+      >
         <div className="px-4 py-3 border-b border-gray-800">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
@@ -8368,8 +8426,17 @@ const TidyCode = () => {
         <span className="h-8 w-0.5 bg-gray-500 rounded-full" />
       </button>
       <div className="flex-1 flex flex-col">
-      <div className="px-6 py-3 border-b border-gray-800 flex items-center justify-between">
-        <div className="text-sm font-semibold text-white">{activeTodoTab?.title || 'Tasks'}</div>
+      <div className="px-4 md:px-6 py-3 border-b border-gray-800 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            className="md:hidden p-1 rounded text-gray-400 hover:text-white hover:bg-gray-800"
+            onClick={() => setMobileTodoSidebarOpen(true)}
+            aria-label="Open lists"
+          >
+            <CheckSquare className="w-4 h-4" />
+          </button>
+          <div className="text-sm font-semibold text-white truncate">{activeTodoTab?.title || 'Tasks'}</div>
+        </div>
         {renderAIButtons()}
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
@@ -11031,10 +11098,10 @@ const TidyCode = () => {
     : 'border-transparent text-gray-500 hover:bg-indigo-50 hover:text-indigo-700';
 
   return (
-    <div className="flex h-screen w-screen max-w-full bg-gray-950 text-gray-100 overflow-hidden" data-theme={theme}>
+    <div className="flex flex-col h-screen w-screen max-w-full bg-gray-950 text-gray-100 overflow-hidden" data-theme={theme}>
       {appMessage && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md shadow-lg border transition-opacity ${
+          className={`fixed top-4 right-2 sm:right-4 max-w-[calc(100vw-1rem)] z-50 px-4 py-3 rounded-md shadow-lg border transition-opacity ${
             theme === 'dark' ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
           } ${
             appMessage.tone === 'error'
@@ -11110,7 +11177,10 @@ const TidyCode = () => {
         </div>
       )}
 
-      <div className="w-16 bg-gray-950 border-r border-gray-800 flex flex-col relative">
+      {/* Main body: sidebar + content — takes all remaining height */}
+      <div className="flex flex-1 overflow-hidden">
+
+      <div className="hidden md:flex w-16 bg-gray-950 border-r border-gray-800 flex-col relative">
         <div className="flex items-center justify-center px-3 py-3 text-sm text-gray-400 uppercase tracking-wide">
           <LogoMark size={26} />
         </div>
@@ -11145,8 +11215,40 @@ const TidyCode = () => {
             );
           })}
         </div>
-        {/* Privacy indicator (web only) */}
-        {!isDesktop() && (
+        {/* Auth / sync indicator */}
+        {supabaseConfigured && (
+          <div className="px-2 py-2">
+            {user ? (
+              <Tooltip content={`Signed in as ${user.email}\nClick to sign out`} placement="right">
+                <button
+                  onClick={signOut}
+                  className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-emerald-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  aria-label="Sign out"
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <Cloud className="w-4 h-4" />
+                  )}
+                  <span className="text-[9px] font-medium">Synced</span>
+                </button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Sign in to sync notes across browsers" placement="right">
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-gray-500 hover:text-indigo-400 hover:bg-gray-800 transition-colors"
+                  aria-label="Sign in"
+                >
+                  <CloudOff className="w-4 h-4" />
+                  <span className="text-[9px] font-medium">Sign in</span>
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+        {/* Privacy indicator (web only, when Supabase not configured) */}
+        {!isDesktop() && !supabaseConfigured && (
           <div className="px-2 py-2">
             <Tooltip content="All data stored locally on your device" placement="right">
               <div className="flex items-center justify-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 rounded-md px-2 py-1.5 cursor-default">
@@ -11319,6 +11421,60 @@ const TidyCode = () => {
           </div>
         )}
       </div>
+
+      </div>{/* end main body row */}
+
+      {/* Mobile bottom nav — visible only on small screens */}
+      <nav className="md:hidden flex items-center justify-around bg-gray-950 border-t border-gray-800 h-14 shrink-0 px-2 z-30">
+        {navItems.filter(item => item.id !== 'terminal').map(item => {
+          const Icon = item.icon;
+          const active = currentPanel === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'help') {
+                  window.open('/docs/index.html', '_blank');
+                } else {
+                  setCurrentPanel(item.id);
+                }
+              }}
+              aria-label={item.label}
+              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
+                active ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-200'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          );
+        })}
+        {supabaseConfigured && (
+          user ? (
+            <button
+              onClick={signOut}
+              aria-label="Sign out"
+              className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-emerald-400 hover:text-white transition-colors"
+            >
+              {user.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="avatar" className="w-5 h-5 rounded-full object-cover" />
+              ) : (
+                <Cloud className="w-5 h-5" />
+              )}
+              <span className="text-[10px] font-medium">Synced</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              aria-label="Sign in"
+              className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-gray-500 hover:text-indigo-400 transition-colors"
+            >
+              <CloudOff className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Sign in</span>
+            </button>
+          )
+        )}
+      </nav>
 
       {/* Tab Context Menu */}
       {tabContextMenu && (
@@ -11589,7 +11745,7 @@ const TidyCode = () => {
 
       {/* AI Code Suggestion Panel (for refactor/convert) */}
       {aiActions.suggestion && (
-        <div className="fixed bottom-24 right-8 z-50">
+        <div className="fixed bottom-[calc(3.5rem+1.5rem)] md:bottom-24 right-4 md:right-8 z-50">
           <CodeSuggestionPanel
             theme={theme}
             suggestion={aiActions.suggestion}
@@ -11801,6 +11957,15 @@ const TidyCode = () => {
 
       {/* Cookie Consent Banner - Only shown in web mode */}
       <CookieConsent theme={theme} />
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSignInGoogle={() => { signInWithGoogle(); setShowAuthModal(false); }}
+          onSignInGitHub={() => { signInWithGitHub(); setShowAuthModal(false); }}
+        />
+      )}
 
     </div>
   );
