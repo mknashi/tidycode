@@ -5,6 +5,40 @@ All notable changes to TidyCode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-08
+
+### Added
+
+#### Split Editor Panes
+- **Side-by-side editing** — split the editor into two independent panes, each with its own open file
+- **Split tab selectors** — tab picker dropdowns embedded directly in the tab bar to switch the active file for each pane
+- **Synchronized scrolling** — both panes scroll together when the same file is open in both
+
+#### Bidirectional Editor ↔ Structure Panel Sync
+- **Structure panel → editor sync** — clicking a node in the structure panel scrolls the editor to the corresponding line
+- **Editor → structure panel sync** — scrolling or moving the cursor in the editor highlights and scrolls the active node in the structure panel
+- Sync uses the `viewportChanged` event for reliable tracking (replaces fragile DOM scroll listener)
+
+#### Pinned Notes
+- **Pin any note to the top** — click the pin icon on a note card to keep it prominently at the top of the notes grid
+- Pinned notes are visually distinct: indigo background, always-visible indigo border, and a filled pin badge in the corner
+- Pin state persists across sessions via localStorage
+
+### Changed
+
+#### UI & Layout Polish
+- **Find/Replace relocated to status bar** — frees up editor space; Find/Replace bar no longer overlaps content
+- **Tab bar alignment** — split-pane tab selectors are embedded in the tab bar for a cleaner look
+- **Open tab font** — active and open tab labels use a refined font style matching the overall UI
+- **File explorer font** — file and folder names in the explorer panel match the editor font family and size
+- **Denser editor layout** — reduced line spacing in the editor and search results for a more compact view
+
+### Fixed
+- Structure panel not showing on first click for large files
+- Structure panel ↔ editor scroll sync flickering and desync issues
+
+---
+
 ## [0.2.5] - 2026-02-15
 
 ### Added

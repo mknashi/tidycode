@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin } from 'lucide-react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -870,7 +870,7 @@ const createDefaultNotesState = () => {
   const firstNoteId = 1;
   const firstFolderId = 1;
   return {
-    notes: [{ id: firstNoteId, folderId: null, title: '', content: '', images: [], createdAt: Date.now(), updatedAt: Date.now(), archived: false }],
+    notes: [{ id: firstNoteId, folderId: null, title: '', content: '', images: [], createdAt: Date.now(), updatedAt: Date.now(), archived: false, pinned: false }],
     folders: [],
     nextNoteId: firstNoteId + 1,
     nextFolderId: firstFolderId + 1,
@@ -902,7 +902,8 @@ const loadNotesState = () => {
     images: Array.isArray(note.images) ? note.images : [],
     createdAt: typeof note.createdAt === 'number' ? note.createdAt : Date.now(),
     updatedAt: typeof note.updatedAt === 'number' ? note.updatedAt : Date.now(),
-    archived: Boolean(note.archived)
+    archived: Boolean(note.archived),
+    pinned: Boolean(note.pinned)
   });
 
   const sanitizeFolder = (folder) => ({
@@ -6750,8 +6751,8 @@ const TidyCode = () => {
 
   const visibleNotes = useMemo(() => {
     const filtered = notes.filter(note => !note.archived);
-    if (activeFolderId === null) return filtered;
-    return filtered.filter(note => note.folderId === activeFolderId);
+    const inFolder = activeFolderId === null ? filtered : filtered.filter(note => note.folderId === activeFolderId);
+    return [...inFolder].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   }, [notes, activeFolderId]);
 
   const createFolder = (parentId = null) => {
@@ -6786,6 +6787,7 @@ const TidyCode = () => {
         content: overrides.content ?? '',
         images: overrides.images ?? [],
         archived: overrides.archived ?? false,
+        pinned: overrides.pinned ?? false,
         createdAt: now,
         updatedAt: now
       };
@@ -6812,6 +6814,10 @@ const TidyCode = () => {
     if (activeNoteId === id) {
       setActiveNoteId(null);
     }
+  };
+
+  const togglePinNote = (id) => {
+    setNotes(prev => prev.map(note => note.id === id ? { ...note, pinned: !note.pinned } : note));
   };
 
   const deleteFolder = (id) => {
@@ -8092,9 +8098,14 @@ const TidyCode = () => {
                   return (
                     <div
                       key={note.id}
-                      className="bg-gray-900 border border-gray-800 hover:border-indigo-500 rounded-lg overflow-hidden h-56 flex flex-col cursor-pointer transition-colors"
+                      className={`relative border rounded-lg overflow-hidden h-56 flex flex-col cursor-pointer transition-colors ${note.pinned ? 'bg-indigo-950 border-indigo-500 shadow-lg shadow-indigo-900/40' : 'bg-gray-900 border-gray-800 hover:border-indigo-500'}`}
                       onClick={() => { setActiveNoteId(note.id); setOpenNoteModalId(note.id); }}
                     >
+                      {note.pinned && (
+                        <div className="absolute top-2 right-2 z-10 bg-indigo-500 rounded-full p-0.5">
+                          <Pin className="w-3 h-3 text-white fill-white" />
+                        </div>
+                      )}
                       <div className="relative h-24 bg-gray-800">
                         {firstImage ? (
                           <img src={firstImage.url} alt="note" className="w-full h-full object-cover" />
@@ -8111,6 +8122,14 @@ const TidyCode = () => {
                         <div className="flex items-center justify-between text-[10px] text-gray-500 mt-auto pt-1">
                           <span>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</span>
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className={`p-1 rounded hover:bg-gray-800 ${note.pinned ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400'}`}
+                              title={note.pinned ? 'Unpin note' : 'Pin to top'}
+                              onClick={(event) => { event.stopPropagation(); togglePinNote(note.id); }}
+                            >
+                              <Pin className={`w-3.5 h-3.5 ${note.pinned ? 'fill-indigo-400' : ''}`} />
+                            </button>
                             <button
                               type="button"
                               className="p-1 rounded hover:bg-gray-800"
