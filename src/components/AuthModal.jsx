@@ -1,17 +1,5 @@
-import React from 'react';
-import { X } from 'lucide-react';
-
-/** Google wordmark as inline SVG (no external asset needed) */
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-    </svg>
-  );
-}
+import React, { useEffect, useRef } from 'react';
+import { X, FileCode, StickyNote, HardDrive, Cloud } from 'lucide-react';
 
 /** GitHub mark as inline SVG */
 function GitHubIcon() {
@@ -22,13 +10,24 @@ function GitHubIcon() {
   );
 }
 
-export function AuthModal({ onClose, onSignInGoogle, onSignInGitHub }) {
+export function AuthModal({ onClose, initGoogleButton, onSignInGitHub }) {
+  const googleBtnRef = useRef(null);
+
+  useEffect(() => {
+    if (!googleBtnRef.current || !initGoogleButton) return;
+    initGoogleButton(
+      googleBtnRef.current,
+      onClose,      // onSuccess — close modal once signed in
+      console.error // onError
+    );
+  }, [initGoogleButton, onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-8 relative">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-6 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-white"
@@ -37,33 +36,62 @@ export function AuthModal({ onClose, onSignInGoogle, onSignInGitHub }) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Logo / title */}
-        <div className="text-center mb-8">
-          <div className="text-2xl font-bold text-white tracking-tight mb-1">TidyCode</div>
-          <p className="text-sm text-gray-400">Sign in to sync your notes across browsers and devices</p>
+        {/* Title */}
+        <div className="text-center mb-5">
+          <div className="text-xl font-bold text-white tracking-tight mb-1">Sync your notes</div>
+          <p className="text-sm text-gray-400">Sign in to access your notes from any browser or device</p>
         </div>
 
-        {/* Auth buttons */}
-        <div className="space-y-3">
-          <button
-            onClick={onSignInGoogle}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          <button
-            onClick={onSignInGitHub}
-            className="w-full flex items-center justify-center gap-3 bg-gray-800 hover:bg-gray-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg border border-gray-700 transition-colors"
-          >
-            <GitHubIcon />
-            Continue with GitHub
-          </button>
+        {/* What syncs vs what stays local */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="bg-indigo-950/60 border border-indigo-800/50 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Cloud className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wide">Synced</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-300">
+              <StickyNote className="w-3 h-3 text-indigo-400 shrink-0" />
+              Notes &amp; folders
+            </div>
+          </div>
+          <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wide">Always local</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-300 mb-1">
+              <FileCode className="w-3 h-3 text-emerald-400 shrink-0" />
+              Files &amp; code
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-300">
+              <FileCode className="w-3 h-3 text-emerald-400 shrink-0" />
+              Editor settings
+            </div>
+          </div>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6">
-          Notes are end-to-end encrypted per user account. No data is shared.
+        <p className="text-xs text-gray-500 mb-5 text-center">
+          Sync is <span className="text-white font-medium">opt-in</span> — TidyCode works fully without an account. Nothing is uploaded unless you sign in.
+        </p>
+
+        {/* Google button — rendered by GSI into this div */}
+        <div
+          ref={googleBtnRef}
+          className="w-full flex justify-center mb-3"
+          style={{ minHeight: '44px' }}
+        />
+
+        {/* GitHub fallback */}
+        <button
+          onClick={onSignInGitHub}
+          className="w-full flex items-center justify-center gap-3 bg-gray-800 hover:bg-gray-700 text-white font-medium text-sm py-2.5 px-4 rounded-lg border border-gray-700 transition-colors"
+        >
+          <GitHubIcon />
+          Continue with GitHub
+        </button>
+
+        <p className="text-center text-xs text-gray-600 mt-4">
+          Your notes are stored per account. No data is shared with third parties.
         </p>
       </div>
     </div>

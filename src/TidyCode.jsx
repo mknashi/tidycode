@@ -1408,7 +1408,7 @@ const TidyCode = () => {
   const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = useState(false);
 
   // ── Auth & sync ────────────────────────────────────────────────────────────
-  const { user, loading: authLoading, signInWithGoogle, signInWithGitHub, signOut, isConfigured: supabaseConfigured } = useAuth();
+  const { user, loading: authLoading, initGoogleButton, signInWithGitHub, signOut, isConfigured: supabaseConfigured } = useAuth();
   const { upsertNote } = useNotesSync({ user, notes, setNotes });
 
   const [isQuickNoteExpanded, setIsQuickNoteExpanded] = useState(false);
@@ -11961,7 +11961,7 @@ const TidyCode = () => {
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          onSignInGoogle={() => { signInWithGoogle(); setShowAuthModal(false); }}
+          initGoogleButton={initGoogleButton}
           onSignInGitHub={() => { signInWithGitHub(); setShowAuthModal(false); }}
         />
       )}
