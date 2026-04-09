@@ -1404,6 +1404,8 @@ const TidyCode = () => {
   const [notesViewMode, setNotesViewMode] = useState(initialNotesStateRef.current.viewMode || 'tiles');
   const [openNoteModalId, setOpenNoteModalId] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = useState(false);
 
   // ── Auth & sync ────────────────────────────────────────────────────────────
   const { user, loading: authLoading, signInWithGoogle, signInWithGitHub, signOut, isConfigured: supabaseConfigured } = useAuth();
@@ -7786,8 +7788,6 @@ const TidyCode = () => {
   const renderNotesPanel = () => {
     const sidebarStyle = { width: `${Math.round(notesSidebarWidth)}px` };
     const modalNote = openNoteModalId ? notes.find(note => note.id === openNoteModalId) : null;
-    const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
-
     const renderFolderNode = (folder, depth = 0) => {
       const isExpanded = folder.expanded !== false;
       const hasChildren = Array.isArray(folder.children) && folder.children.length > 0;
@@ -8348,7 +8348,6 @@ const TidyCode = () => {
   const renderTodoPanel = () => {
     if (!activeTodoTab) return null;
     const sidebarStyle = { width: `${Math.round(todoSidebarWidth)}px` };
-    const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = React.useState(false);
     return (
     <div className="flex h-full group/todo">
       {mobileTodoSidebarOpen && (
