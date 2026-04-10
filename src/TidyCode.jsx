@@ -1408,10 +1408,8 @@ const TidyCode = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = useState(false);
 
-  // ── Auth & sync ────────────────────────────────────────────────────────────
+  // ── Auth ───────────────────────────────────────────────────────────────────
   const { user, loading: authLoading, initGoogleButton, signOut, isConfigured: supabaseConfigured } = useAuth();
-  const { upsertNote } = useNotesSync({ user, notes, setNotes });
-  const { upsertTab, deleteTab: deleteTabRemote } = useTasksSync({ user, todoTabs, setTodoTabs });
 
   const [isQuickNoteExpanded, setIsQuickNoteExpanded] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
@@ -1424,6 +1422,10 @@ const TidyCode = () => {
   const [todoTabs, setTodoTabs] = useState(initialTodosStateRef.current.tabs);
   const [activeTodoTabId, setActiveTodoTabId] = useState(initialTodosStateRef.current.activeId);
   const [nextTodoId, setNextTodoId] = useState(initialTodosStateRef.current.nextId);
+
+  // ── Sync hooks (must come after notes/todoTabs state is declared) ──────────
+  const { upsertNote } = useNotesSync({ user, notes, setNotes });
+  const { upsertTab, deleteTab: deleteTabRemote } = useTasksSync({ user, todoTabs, setTodoTabs });
   const [notesSidebarWidth, setNotesSidebarWidth] = useState(288);
   const [todoSidebarWidth, setTodoSidebarWidth] = useState(256);
   const [csvPreviewHeight, setCsvPreviewHeight] = useState(DEFAULT_CSV_PREVIEW_HEIGHT);
