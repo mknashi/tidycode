@@ -1376,7 +1376,9 @@ const TidyCode = () => {
       setTabErrorMessages(prev => ({ ...prev, [activeTabId]: error }));
     }
   };
-  const [structurePanelVisible, setStructurePanelVisible] = useState(true);
+  const [structurePanelVisible, setStructurePanelVisible] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
   const [forceShowStructureTabs, setForceShowStructureTabs] = useState(new Set());
   // Split pane state: [{id, tabId}]. Primary pane uses activeTabId as always.
   const [splitPanes, setSplitPanes] = useState([]);
@@ -1514,9 +1516,10 @@ const TidyCode = () => {
   const [svgViewerData, setSVGViewerData] = useState(null);
 
   const [showTabsExplorer, setShowTabsExplorer] = useState(() => {
-    // Always show Tabs Explorer by default (both web and desktop)
-    console.log('[Panel Init] Tabs Explorer should show: true');
-    return true;
+    // Hide on mobile so it doesn't block the editor
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    console.log('[Panel Init] Tabs Explorer should show:', !isMobile);
+    return !isMobile;
   });
   const [showFileSystemBrowser, setShowFileSystemBrowser] = useState(() => {
     const value = isDesktop();
@@ -11109,7 +11112,7 @@ const TidyCode = () => {
     : 'border-transparent text-gray-500 hover:bg-indigo-50 hover:text-indigo-700';
 
   return (
-    <div className="flex flex-col h-screen w-screen max-w-full bg-gray-950 text-gray-100 overflow-hidden" data-theme={theme}>
+    <div className="flex flex-col h-[100dvh] w-screen max-w-full bg-gray-950 text-gray-100 overflow-hidden" data-theme={theme}>
       {appMessage && (
         <div
           className={`fixed top-4 right-2 sm:right-4 max-w-[calc(100vw-1rem)] z-50 px-4 py-3 rounded-md shadow-lg border transition-opacity ${
@@ -11436,7 +11439,7 @@ const TidyCode = () => {
       </div>{/* end main body row */}
 
       {/* Mobile bottom nav — visible only on small screens */}
-      <nav className="md:hidden flex items-center justify-around bg-gray-950 border-t border-gray-800 h-14 shrink-0 px-2 z-30">
+      <nav className="md:hidden flex items-center justify-around bg-gray-950 border-t border-gray-800 shrink-0 px-2 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom)', minHeight: '3.5rem' }}>
         {navItems.filter(item => item.id !== 'terminal').map(item => {
           const Icon = item.icon;
           const active = currentPanel === item.id;
