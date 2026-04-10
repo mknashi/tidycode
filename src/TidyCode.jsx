@@ -9461,6 +9461,37 @@ const TidyCode = () => {
             <Plus className="w-4 h-4" />
           </button>
         </Tooltip>
+        {/* Auth button — top-right of tab bar (desktop) */}
+        {supabaseConfigured && (
+          <div className={`flex-shrink-0 border-l ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}>
+            {user ? (
+              <Tooltip content={`Signed in as ${user.email}\nClick to sign out`} placement="bottom">
+                <button
+                  onClick={signOut}
+                  className={`flex items-center justify-center px-3 py-2 transition-colors ${theme === 'dark' ? 'text-emerald-400 hover:bg-gray-700 hover:text-white' : 'text-emerald-600 hover:bg-gray-200'}`}
+                  aria-label="Sign out"
+                >
+                  {user.user_metadata?.picture || user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.picture || user.user_metadata.avatar_url} referrerPolicy="no-referrer" alt="avatar" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <Cloud className="w-4 h-4" />
+                  )}
+                </button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Sign in to sync notes and tasks" placement="bottom">
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}
+                  aria-label="Sign in"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
         </div>{/* end primary tabs section */}
         {/* Split pane tab selectors — each flex-1 to align with their editor pane */}
         {splitPanes.map((pane) => (
@@ -11247,17 +11278,13 @@ const TidyCode = () => {
                 </button>
               </Tooltip>
             ) : (
-              <Tooltip content="All data stored locally. Sign in to sync notes and tasks." placement="right">
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-emerald-400 hover:text-indigo-400 hover:bg-gray-800 transition-colors"
-                  aria-label="Sign in"
-                >
+              <Tooltip content="All data stored locally on your device" placement="right">
+                <div className="w-full flex flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-emerald-400 cursor-default">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                   <span className="text-[9px] font-medium">Local</span>
-                </button>
+                </div>
               </Tooltip>
             )}
           </div>
@@ -11483,10 +11510,8 @@ const TidyCode = () => {
               aria-label="Sign in"
               className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-emerald-400 hover:text-indigo-400 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <span className="text-[10px] font-medium">Local</span>
+              <LogIn className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Sign In</span>
             </button>
           )
         )}
