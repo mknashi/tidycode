@@ -8166,16 +8166,14 @@ const TidyCode = () => {
                   return (
                     <div
                       key={note.id}
-                      className={`relative border rounded-lg overflow-hidden h-56 flex flex-col cursor-pointer transition-colors ${note.pinned ? 'bg-indigo-950 border-indigo-500 shadow-lg shadow-indigo-900/40' : 'bg-gray-900 border-gray-800 hover:border-indigo-500'}`}
+                      className={`relative border rounded-lg overflow-hidden flex flex-col cursor-pointer transition-colors ${note.pinned ? 'bg-indigo-950 border-indigo-500 shadow-lg shadow-indigo-900/40' : 'bg-gray-900 border-gray-800 hover:border-indigo-500'}`}
                       onClick={() => { setActiveNoteId(note.id); setOpenNoteModalId(note.id); }}
                     >
-                      <div className="relative h-20 bg-gray-800 shrink-0">
-                        {firstImage ? (
+                      {firstImage && (
+                        <div className="relative h-20 bg-gray-800 shrink-0">
                           <img src={firstImage.url} alt="note" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-xs text-gray-500">No image</div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div className="flex-1 flex flex-col px-3 pt-2 pb-2 gap-1 min-h-0">
                         <div className="flex items-start justify-between gap-1">
                           <span className="text-white text-sm font-semibold leading-snug line-clamp-1">{String(note.title || '').trim() || 'Untitled note'}</span>
@@ -8241,7 +8239,7 @@ const TidyCode = () => {
                           <Pin className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
                           <span className="text-xs font-medium text-indigo-400 uppercase tracking-wider">Pinned</span>
                         </div>
-                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                           {pinnedNotes.map(renderCard)}
                         </div>
                       </div>
@@ -8254,7 +8252,7 @@ const TidyCode = () => {
                       </div>
                     )}
                     {unpinnedNotes.length > 0 && (
-                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                      <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                         {unpinnedNotes.map(renderCard)}
                       </div>
                     )}
