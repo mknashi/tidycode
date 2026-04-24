@@ -1,10 +1,9 @@
 /**
  * Completion source for CodeMirror
- * Handles keyword, snippet, symbol, and AI-powered completion
+ * Handles keyword, snippet, and symbol completion
  */
 
 import { getLanguageCompletions } from './languageCompletions';
-import { aiCompletionService } from './aiCompletionService';
 
 /**
  * Extract symbols (variables, functions, classes) from document
@@ -205,15 +204,9 @@ export function createCompletionSource(language) {
 
 /**
  * Create a smart completion source that adapts to context
- * Includes AI-powered suggestions when enabled
  */
-export function createSmartCompletionSource(language, aiSettings = null) {
+export function createSmartCompletionSource(language) {
   const baseSource = createCompletionSource(language);
-
-  // Initialize AI service if settings provided
-  if (aiSettings) {
-    aiCompletionService.updateSettings(aiSettings);
-  }
 
   return async function smartCompletionSource(context) {
     // Check if we're in a string (for path completion)
@@ -261,34 +254,11 @@ export function createSmartCompletionSource(language, aiSettings = null) {
       }
     }
 
-    // Get base completions
     const baseResult = baseSource(context);
     if (!baseResult) return null;
 
-    // Try to get AI suggestions in parallel (don't block base completions)
-    let aiSuggestions = [];
-    if (aiCompletionService.isEnabled() && context.explicit) {
-      // Only fetch AI suggestions for explicit completion requests (Ctrl+Space)
-      // to avoid too many API calls
-      try {
-        aiSuggestions = await aiCompletionService.getSuggestions(
-          context.state.doc,
-          context.pos,
-          language
-        );
-      } catch (error) {
-        console.warn('AI completion failed:', error);
-      }
-    }
-
-    // Merge AI suggestions with base completions
-    const allOptions = [
-      ...aiSuggestions,
-      ...baseResult.options
-    ];
-
-    // Sort by boost/priority
-    allOptions.sort((a, b) => {
+    const options = [...baseResult.options];
+    options.sort((a, b) => {
       const aBoost = a.boost || 0;
       const bBoost = b.boost || 0;
       if (aBoost !== bBoost) return bBoost - aBoost;
@@ -297,7 +267,7 @@ export function createSmartCompletionSource(language, aiSettings = null) {
 
     return {
       from: baseResult.from,
-      options: allOptions,
+      options,
       validFor: baseResult.validFor
     };
   };

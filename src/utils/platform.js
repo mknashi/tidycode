@@ -52,20 +52,12 @@ export const isWeb = () => {
 };
 
 /**
- * Get the appropriate AI service based on platform
- * Uses dynamic imports to avoid bundling unnecessary code
- * @returns {Promise<AIService>} Platform-specific AI service instance
+ * Get the AI service instance (browser-based, tinyllm only)
+ * @returns {Promise<import('../services/FormatterService').formatterService>}
  */
 export const getAIService = async () => {
-  if (isDesktop()) {
-    // Desktop: Use Ollama through Tauri backend
-    const { DesktopAIService } = await import(/* @vite-ignore */ '../services/AIService.desktop.js');
-    return new DesktopAIService();
-  } else {
-    // Web: Use WebLLM and Groq
-    const { aiService } = await import('../services/AIService.js');
-    return aiService;
-  }
+  const { formatterService } = await import('../services/FormatterService.js');
+  return formatterService;
 };
 
 /**

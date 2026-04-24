@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud } from 'lucide-react';
-import { useAuth } from './hooks/useAuth';
-import { useNotesSync } from './hooks/useNotesSync';
-import { useTasksSync } from './hooks/useTasksSync';
-import { AuthModal } from './components/AuthModal';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, Columns, Pin, Archive as ArchiveIcon } from 'lucide-react';
 import { marked } from 'marked';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -42,17 +38,6 @@ import 'prismjs/components/prism-ini';
 import 'prismjs/components/prism-markdown';
 import DiffViewerModal from './components/DiffViewerModal';
 import DiffViewer from './components/DiffViewer';
-import AISettingsModal from './components/AISettingsModal';
-import AIActionsMenu, { getFileCategory } from './components/AIActionsMenu.jsx';
-import AIResultsPanel from './components/AIResultsPanel.jsx';
-import AIChatPanel from './components/AIChatPanel.jsx';
-import AISelectionToolbar from './components/AISelectionToolbar.jsx';
-import CodeSuggestionPanel from './components/CodeSuggestionPanel.jsx';
-import { useAIActions } from './hooks/useAIActions.js';
-import { useAIChat } from './hooks/useAIChat.js';
-import { ACTION_IDS } from './services/ai/actions/ActionManager.js';
-import { shouldSuggestMoreProviders } from './services/ai/autoSelect.js';
-import OllamaSetupWizard from './components/OllamaSetupWizard';
 import CodeMirrorEditor from './components/CodeMirrorEditor';
 import TabsExplorer from './components/TabsExplorer';
 import FileSystemBrowser from './components/FileSystemBrowser';
@@ -63,9 +48,7 @@ import SVGViewer from './components/SVGViewer';
 import { HelpModal } from './components/help/HelpModal';
 import { HELP_URLS } from './components/help/HelpContent';
 import { formatService } from './services/formatters';
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS } from './services/AIService';
 import { isDesktop, getAIService } from './utils/platform';
-import { loadSecureSettings, saveSecureSettings } from './utils/secureStorage';
 import Tooltip from './components/Tooltip';
 import CookieConsent from './components/CookieConsent';
 import { openUrl } from './utils/openUrl';
@@ -1066,13 +1049,8 @@ const getLineHeight = (size) => {
   return lineHeightMap[size] || 'leading-snug';
 };
 
-const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
+const RichTextEditor = ({ value, onChange }) => {
   const editorRef = useRef(null);
-  const [isAIProcessing, setIsAIProcessing] = useState(false);
-  const [showAIMenu, setShowAIMenu] = useState(false);
-  const [aiSuggestion, setAISuggestion] = useState(null);
-  const [originalContent, setOriginalContent] = useState('');
-  const notifyUser = notify || ((msg) => msg && alert(msg));
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -1109,214 +1087,17 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
     onChange(linkified);
   };
 
-  const formatAIResponse = (text) => {
-    // Check if the text contains markdown formatting
-    const hasMarkdown = /[#*_`\[\]]/g.test(text) || /^[-*+]\s/m.test(text) || /^\d+\.\s/m.test(text);
-
-    if (hasMarkdown) {
-      // Text appears to be markdown, parse it
-      try {
-        const html = marked.parse(text, { breaks: true });
-        return html;
-      } catch (e) {
-        console.error('Error parsing markdown:', e);
-        // Fall through to plain text formatting
-      }
-    }
-
-    // Format as plain text for better readability
-    let formatted = text.replace(/([.!?])\s*/g, '$1 ');
-
-    // Handle line breaks and paragraphs
-    formatted = formatted.split('\n').map(line => line.trim()).filter(line => line).join('\n\n');
-
-    // Remove excessive spacing
-    formatted = formatted.replace(/\s{3,}/g, '  ');
-
-    return formatted;
-  };
-
-  const handleAITransform = async (action) => {
-    if (!editorRef.current) return;
-    if (!aiService) {
-      notifyUser('AI service not initialized. Please configure an AI provider in AI Settings.', 'error');
-      return;
-    }
-    if (!aiSettings?.provider || aiSettings.provider === 'tinyllm') {
-      notifyUser('Text transformation requires a cloud AI provider. Please select one in AI Settings.', 'error');
-      return;
-    }
-
-    setIsAIProcessing(true);
-    setShowAIMenu(false);
-
-    try {
-      // Get text content without HTML tags
-      const textContent = editorRef.current.innerText || editorRef.current.textContent || '';
-      if (!textContent.trim()) {
-        notifyUser('Please enter some text first');
-        setIsAIProcessing(false);
-        return;
-      }
-
-      // Store original content
-      setOriginalContent(textContent);
-
-      const transformed = await aiService.transformText(textContent, action, aiSettings);
-
-      // Format the AI response
-      const formatted = formatAIResponse(transformed);
-
-      // Show suggestion for accept/reject
-      setAISuggestion(formatted);
-    } catch (error) {
-      console.error('AI transformation error:', error);
-      notifyUser(`AI transformation failed: ${error.message}`, 'error');
-    } finally {
-      setIsAIProcessing(false);
-    }
-  };
-
-  const handleAcceptSuggestion = () => {
-    if (!editorRef.current || !aiSuggestion) return;
-
-    // Update editor with the AI suggestion
-    // Check if it's HTML (markdown rendered) or plain text
-    if (aiSuggestion.startsWith('<')) {
-      editorRef.current.innerHTML = aiSuggestion;
-      onChange(aiSuggestion);
-    } else {
-      editorRef.current.innerText = aiSuggestion;
-      onChange(aiSuggestion);
-    }
-
-    // Clear suggestion
-    setAISuggestion(null);
-    setOriginalContent('');
-  };
-
-  const handleRejectSuggestion = () => {
-    // Restore original content
-    if (editorRef.current && originalContent) {
-      editorRef.current.innerText = originalContent;
-      onChange(originalContent);
-    }
-
-    // Clear suggestion
-    setAISuggestion(null);
-    setOriginalContent('');
-  };
-
   return (
     <div className="bg-gray-900 border border-gray-700 rounded">
-      <div className="flex items-center justify-between gap-2 border-b border-gray-800 px-2 py-1 text-gray-400">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => exec('bold')} className="p-1 hover:text-white" title="Bold"><Bold className="w-4 h-4" /></button>
-          <button type="button" onClick={() => exec('italic')} className="p-1 hover:text-white" title="Italic"><Italic className="w-4 h-4" /></button>
-          <button type="button" onClick={() => exec('underline')} className="p-1 hover:text-white" title="Underline"><Underline className="w-4 h-4" /></button>
-        </div>
-        {aiService && aiSettings?.provider !== 'tinyllm' && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowAIMenu(!showAIMenu)}
-              disabled={isAIProcessing || aiSuggestion}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${(isAIProcessing || aiSuggestion) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800 hover:text-white'}`}
-              title="AI Tools"
-            >
-              {isAIProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              <span>AI</span>
-            </button>
-            {showAIMenu && !aiSuggestion && (
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-10 min-w-[160px]">
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('improve')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Improve Writing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('rewrite')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Rewrite
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('rephrase')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Rephrase
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('fix-grammar')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Fix Grammar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('summarize')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Summarize
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAITransform('expand')}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                >
-                  Expand
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="flex items-center gap-2 border-b border-gray-800 px-2 py-1 text-gray-400">
+        <button type="button" onClick={() => exec('bold')} className="p-1 hover:text-white" title="Bold"><Bold className="w-4 h-4" /></button>
+        <button type="button" onClick={() => exec('italic')} className="p-1 hover:text-white" title="Italic"><Italic className="w-4 h-4" /></button>
+        <button type="button" onClick={() => exec('underline')} className="p-1 hover:text-white" title="Underline"><Underline className="w-4 h-4" /></button>
       </div>
-
-      {/* AI Suggestion Preview */}
-      {aiSuggestion && (
-        <div className="border-b border-gray-700 bg-gray-800 p-3">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-gray-200">AI Suggestion</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAcceptSuggestion}
-                className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition-colors"
-                title="Accept Suggestion"
-              >
-                <Check className="w-3 h-3" />
-                Accept
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectSuggestion}
-                className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition-colors"
-                title="Reject Suggestion"
-              >
-                <XCircle className="w-3 h-3" />
-                Reject
-              </button>
-            </div>
-          </div>
-          <div
-            className="bg-gray-900 rounded p-3 text-gray-200 text-sm max-h-[200px] overflow-y-auto prose prose-invert prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: aiSuggestion.startsWith('<') ? aiSuggestion : `<pre style="white-space: pre-wrap; margin: 0;">${aiSuggestion}</pre>` }}
-          />
-        </div>
-      )}
-
       <div
         ref={editorRef}
         className="min-h-[160px] px-3 py-2 focus:outline-none"
-        contentEditable={!aiSuggestion}
+        contentEditable
         onInput={handleInput}
       />
     </div>
@@ -1391,8 +1172,6 @@ const TidyCode = () => {
   const fileDropdownRef = useRef(null);
   const [showFormatConvertDropdown, setShowFormatConvertDropdown] = useState(false);
   const formatConvertDropdownRef = useRef(null);
-  const [showAIDropdown, setShowAIDropdown] = useState(false);
-  const aiDropdownRef = useRef(null);
   const [infoPanelHeight, setInfoPanelHeight] = useState(150);
   const infoPanelResizing = useRef(false);
   const [currentPanel, setCurrentPanel] = useState('dev');
@@ -1406,28 +1185,16 @@ const TidyCode = () => {
   const [nextFolderId, setNextFolderId] = useState(initialNotesStateRef.current.nextFolderId);
   const [notesViewMode, setNotesViewMode] = useState(initialNotesStateRef.current.viewMode || 'tiles');
   const [openNoteModalId, setOpenNoteModalId] = useState(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileTodoSidebarOpen, setMobileTodoSidebarOpen] = useState(false);
-
-  // ── Auth ───────────────────────────────────────────────────────────────────
-  const { user, loading: authLoading, initGoogleButton, signOut, isConfigured: supabaseConfigured } = useAuth();
 
   const [isQuickNoteExpanded, setIsQuickNoteExpanded] = useState(false);
   const [quickNoteText, setQuickNoteText] = useState('');
   const [quickNoteTitle, setQuickNoteTitle] = useState('');
   const [quickNoteImages, setQuickNoteImages] = useState([]);
-  const [isQuickNoteAIProcessing, setIsQuickNoteAIProcessing] = useState(false);
-  const [showQuickNoteAIMenu, setShowQuickNoteAIMenu] = useState(false);
-  const [quickNoteAISuggestion, setQuickNoteAISuggestion] = useState(null);
-  const [quickNoteOriginalText, setQuickNoteOriginalText] = useState('');
   const [todoTabs, setTodoTabs] = useState(initialTodosStateRef.current.tabs);
   const [activeTodoTabId, setActiveTodoTabId] = useState(initialTodosStateRef.current.activeId);
   const [nextTodoId, setNextTodoId] = useState(initialTodosStateRef.current.nextId);
-
-  // ── Sync hooks (must come after notes/todoTabs state is declared) ──────────
-  const { upsertNote } = useNotesSync({ user, notes, setNotes });
-  const { upsertTab, deleteTab: deleteTabRemote } = useTasksSync({ user, todoTabs, setTodoTabs });
   const [notesSidebarWidth, setNotesSidebarWidth] = useState(288);
   const [todoSidebarWidth, setTodoSidebarWidth] = useState(256);
   const [csvPreviewHeight, setCsvPreviewHeight] = useState(DEFAULT_CSV_PREVIEW_HEIGHT);
@@ -1504,8 +1271,6 @@ const TidyCode = () => {
     error: null,
     progress: null
   });
-  const [showAISettings, setShowAISettings] = useState(false);
-  const [showOllamaSetup, setShowOllamaSetup] = useState(false);
   const [showDiffViewer, setShowDiffViewer] = useState(false);
   const [diffTabsData, setDiffTabsData] = useState({ left: null, right: null });
 
@@ -1539,122 +1304,8 @@ const TidyCode = () => {
   const [quickOpenSelectedIndex, setQuickOpenSelectedIndex] = useState(0);
   const [vimWasEnabledBeforeQuickOpen, setVimWasEnabledBeforeQuickOpen] = useState(false);
 
-  const [aiSettings, setAISettings] = useState(() => {
-    // Default settings - use TinyLLM (free, browser-based, no API key needed)
-    return {
-      provider: AI_PROVIDERS.TINYLLM,
-      groqApiKey: '',
-      groqModel: GROQ_MODELS['llama-3.3-70b'].id,
-      openaiApiKey: '',
-      openaiModel: 'gpt-4o-mini',
-      claudeApiKey: '',
-      claudeModel: 'claude-3-5-haiku-20241022',
-      geminiApiKey: '',
-      geminiModel: 'gemini-2.0-flash',
-      mistralApiKey: '',
-      mistralModel: 'mistral-large-latest',
-      cerebrasApiKey: '',
-      cerebrasModel: 'llama-3.3-70b',
-      sambanovaApiKey: '',
-      sambanovaModel: 'Meta-Llama-3.3-70B-Instruct',
-      ollamaModel: 'llama3.1:8b', // Desktop only - best for large files
-      maxContextChars: 0, // 0 = unlimited; limits content sent to AI providers
-      enableLSP: false,
-      lspConfig: {
-        javascript: { mode: 'bundled', customCommand: '' },
-        typescript: { mode: 'bundled', customCommand: '' },
-        python: { mode: 'bundled', customCommand: '' },
-        rust: { mode: 'bundled', customCommand: '' },
-        java: { mode: 'bundled', customCommand: '' },
-        cpp: { mode: 'bundled', customCommand: '' },
-        php: { mode: 'bundled', customCommand: '' }
-      }
-    };
-  });
-  // AI Service instance (platform-aware)
+  // AI Service instance (tinyllm-based, for JSON/XML fix)
   const [aiService, setAIService] = useState(null);
-
-  // AI Actions hook - Phase 3 UI integration
-  const aiActions = useAIActions({
-    aiSettings,
-    tabs,
-    activeTabId,
-    setTabs,
-    setActiveTabId,
-    nextIdRef,
-    showTransientMessage,
-  });
-
-  const aiChat = useAIChat({
-    aiSettings,
-    activeTab: tabs?.find(t => t.id === activeTabId) || null,
-    selectedText: aiActions.selectedText,
-    providerInitialized: aiActions.providerInitialized,
-    showTransientMessage,
-    setTabs,
-    setActiveTabId,
-    nextIdRef,
-  });
-
-  // Model selector helpers for AI Chat
-  const MODEL_MAP = {
-    groq: { models: GROQ_MODELS, key: 'groqModel' },
-    openai: { models: OPENAI_MODELS, key: 'openaiModel' },
-    claude: { models: CLAUDE_MODELS, key: 'claudeModel' },
-    gemini: { models: GEMINI_MODELS, key: 'geminiModel' },
-    mistral: { models: MISTRAL_MODELS, key: 'mistralModel' },
-    cerebras: { models: CEREBRAS_MODELS, key: 'cerebrasModel' },
-    sambanova: { models: SAMBANOVA_MODELS, key: 'sambanovaModel' },
-  };
-  const providerModelInfo = MODEL_MAP[aiSettings.provider] || null;
-  const chatCurrentModel = providerModelInfo
-    ? aiSettings[providerModelInfo.key]
-    : aiSettings.provider === 'ollama'
-      ? aiSettings.ollamaModel || ''
-      : '';
-  const chatAvailableModels = providerModelInfo
-    ? Object.values(providerModelInfo.models).map((m) => ({ id: m.id, name: m.name }))
-    : [];
-  const handleChatModelChange = useCallback((modelId) => {
-    if (aiSettings.provider === 'ollama') {
-      setAISettings((prev) => ({ ...prev, ollamaModel: modelId }));
-      return;
-    }
-    if (!providerModelInfo) return;
-    setAISettings((prev) => ({ ...prev, [providerModelInfo.key]: modelId }));
-  }, [aiSettings.provider]);
-
-  // Provider change handler for inline provider selectors
-  const handleProviderChange = useCallback((providerId) => {
-    setAISettings((prev) => ({ ...prev, provider: providerId }));
-  }, []);
-
-  // Refresh key for AIProviderSelector — increments when provider manager initializes
-  const [providerRefreshKey, setProviderRefreshKey] = useState(0);
-  const suggestMoreShownRef = useRef(false);
-  useEffect(() => {
-    if (aiActions.providerInitialized) {
-      setProviderRefreshKey((k) => k + 1);
-      // One-time suggestion to configure more providers
-      if (!suggestMoreShownRef.current && shouldSuggestMoreProviders(aiSettings)) {
-        suggestMoreShownRef.current = true;
-        showTransientMessage('Tip: Configure additional AI providers in Settings for automatic provider selection.', 'info');
-      }
-    }
-  }, [aiActions.providerInitialized]);
-
-  // Floating AI toolbar — only shown when user selects text (≥10 chars)
-  const [aiToolbarVisible, setAiToolbarVisible] = useState(false);
-  const [aiToolbarSelection, setAiToolbarSelection] = useState(null); // { text, from, to }
-  const selectionTimerRef = useRef(null);
-  const prevActiveTabIdRef = useRef(activeTabId);
-  useEffect(() => {
-    if (activeTabId !== prevActiveTabIdRef.current) {
-      prevActiveTabIdRef.current = activeTabId;
-      setAiToolbarVisible(false);
-      setAiToolbarSelection(null);
-    }
-  }, [activeTabId]);
 
   const [dragFolderId, setDragFolderId] = useState(null);
   const [dragOverFolderId, setDragOverFolderId] = useState(null);
@@ -2237,19 +1888,16 @@ const TidyCode = () => {
       if (formatConvertDropdownRef.current && !formatConvertDropdownRef.current.contains(e.target)) {
         setShowFormatConvertDropdown(false);
       }
-      if (aiDropdownRef.current && !aiDropdownRef.current.contains(e.target)) {
-        setShowAIDropdown(false);
-      }
     };
 
-    if (showConvertDropdown || showFileDropdown || showFormatConvertDropdown || showAIDropdown) {
+    if (showConvertDropdown || showFileDropdown || showFormatConvertDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showConvertDropdown, showFileDropdown, showFormatConvertDropdown, showAIDropdown]);
+  }, [showConvertDropdown, showFileDropdown, showFormatConvertDropdown]);
 
   // Keyboard shortcuts for Save and Save As
   useEffect(() => {
@@ -2279,105 +1927,12 @@ const TidyCode = () => {
         setQuickOpenQuery('');
         setQuickOpenSelectedIndex(0);
       }
-      // Ctrl/Cmd + Shift + A for AI Actions Menu
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'a' || e.key === 'A')) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Get selected text and range from CodeMirror
-        let selection = '';
-        let range = null;
-        try {
-          const view = codeMirrorRef.current?.getView?.();
-          if (view) {
-            const sel = view.state.selection.main;
-            if (sel && !sel.empty) {
-              selection = view.state.sliceDoc(sel.from, sel.to);
-              range = { from: sel.from, to: sel.to };
-            }
-          }
-        } catch (_) { /* ignore */ }
-        // Open menu centered in viewport
-        aiActions.openActionsMenu(
-          { x: window.innerWidth / 2 - 140, y: window.innerHeight / 3 },
-          selection,
-          range
-        );
-      }
-      // Ctrl/Cmd + Shift + E for Explain
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'e' || e.key === 'E')) {
-        e.preventDefault();
-        e.stopPropagation();
-        let selection = '';
-        let range = null;
-        try {
-          const view = codeMirrorRef.current?.getView?.();
-          if (view) {
-            const sel = view.state.selection.main;
-            if (sel && !sel.empty) {
-              selection = view.state.sliceDoc(sel.from, sel.to);
-              range = { from: sel.from, to: sel.to };
-            }
-          }
-        } catch (_) { /* ignore */ }
-        if (selection) {
-          aiActions.openActionsMenu(null, selection, range);
-          aiActions.executeAction(ACTION_IDS.EXPLAIN, {}, selection);
-        }
-      }
-      // Ctrl/Cmd + Shift + R for Refactor (general)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
-        e.preventDefault();
-        e.stopPropagation();
-        let selection = '';
-        let range = null;
-        try {
-          const view = codeMirrorRef.current?.getView?.();
-          if (view) {
-            const sel = view.state.selection.main;
-            if (sel && !sel.empty) {
-              selection = view.state.sliceDoc(sel.from, sel.to);
-              range = { from: sel.from, to: sel.to };
-            }
-          }
-        } catch (_) { /* ignore */ }
-        if (selection) {
-          aiActions.openActionsMenu(null, selection, range);
-          aiActions.executeAction(ACTION_IDS.REFACTOR, { type: 'general' }, selection);
-        }
-      }
-      // Ctrl/Cmd + Shift + T for Generate Tests
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 't' || e.key === 'T')) {
-        e.preventDefault();
-        e.stopPropagation();
-        let selection = '';
-        let range = null;
-        try {
-          const view = codeMirrorRef.current?.getView?.();
-          if (view) {
-            const sel = view.state.selection.main;
-            if (sel && !sel.empty) {
-              selection = view.state.sliceDoc(sel.from, sel.to);
-              range = { from: sel.from, to: sel.to };
-            }
-          }
-        } catch (_) { /* ignore */ }
-        if (selection) {
-          aiActions.openActionsMenu(null, selection, range);
-          aiActions.executeAction(ACTION_IDS.GENERATE_TESTS, {}, selection);
-        }
-      }
-      // Ctrl/Cmd + Shift + L for AI Chat toggle
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
-        e.preventDefault();
-        e.stopPropagation();
-        aiChat.setShowChatPanel(prev => !prev);
-      }
     };
 
     // Use capture phase to intercept before CodeMirror's Vim extension
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeTabId, tabs, vimEnabled, aiActions.openActionsMenu, aiActions.executeAction, aiChat.setShowChatPanel]); // Dependencies to ensure we have latest data
+  }, [activeTabId, tabs, vimEnabled]);
 
   // Load tabs from localStorage on mount
   useEffect(() => {
@@ -2618,54 +2173,10 @@ const TidyCode = () => {
     return () => clearTimeout(timeoutId);
   }, [todoTabs, activeTodoTabId, nextTodoId]);
 
-  // Load AI settings on mount (async decryption)
+  // Initialize AI service (tinyllm for JSON/XML fix)
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await loadSecureSettings();
-        if (settings) {
-          setAISettings(prev => ({ ...prev, ...settings }));
-        }
-      } catch (error) {
-        console.warn('Failed to load AI settings', error);
-      }
-    };
-    loadSettings();
+    getAIService().then(setAIService).catch(err => console.error('Failed to initialize AI service:', err));
   }, []);
-
-  // Save AI settings to localStorage (async encryption)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window?.localStorage) return;
-
-    const saveSettings = async () => {
-      try {
-        await saveSecureSettings(aiSettings);
-      } catch (error) {
-        console.warn('Failed to save AI settings', error);
-      }
-    };
-
-    // Only save if settings have values (not initial empty state)
-    if (aiSettings.provider) {
-      saveSettings();
-    }
-  }, [aiSettings]);
-
-  // Initialize AI service based on platform
-  useEffect(() => {
-    const initAIService = async () => {
-      try {
-        const service = await getAIService();
-        setAIService(service);
-
-        // Note: Ollama is optional - users can configure AI providers in settings
-        // We don't automatically prompt for Ollama setup on first launch
-      } catch (error) {
-        console.error('Failed to initialize AI service:', error);
-      }
-    };
-    initAIService();
-  }, []); // Run once on mount
 
   // Helper to select the first plausible file arg (skip flags/empties)
   const pickFileArg = useCallback((args) => {
@@ -5145,7 +4656,6 @@ const TidyCode = () => {
       const fixedContent = await aiService.fix(
         activeTab.content,
         errorMessage,
-        aiSettings,
         (progress) => {
           setAIFixState(prev => ({
             ...prev,
@@ -5181,10 +4691,9 @@ const TidyCode = () => {
     // Capture the error type before clearing it
     const originalErrorType = errorMessage?.type;
 
-    // Create a new tab with the AI-fixed content
     const aiFixedTab = {
       id: nextId,
-      title: `${activeTab.title} (AI Fixed)`,
+      title: `${activeTab.title} (Fixed)`,
       content: String(contentToUse),
       isModified: true,
       filePath: null
@@ -5237,20 +4746,6 @@ const TidyCode = () => {
       error: null,
       progress: null
     });
-  };
-
-  const handleSaveAISettings = async (newSettings) => {
-    setAISettings(newSettings);
-  };
-
-  // Handler for triggering setup wizard when unavailable model is selected
-  const handleTriggerSetupWizard = (modelId) => {
-    console.log('[Tidy Code] Setup wizard triggered for model:', modelId);
-    // Update the selected model in settings
-    setAISettings(prev => ({ ...prev, ollamaModel: modelId }));
-    // Open the setup wizard
-    setShowOllamaSetup(true);
-    console.log('[Tidy Code] showOllamaSetup set to true');
   };
 
   const saveFileAs = async () => {
@@ -6819,48 +6314,21 @@ const TidyCode = () => {
   };
 
   const updateNote = (id, updates) => {
-    setNotes(prev => {
-      const next = prev.map(note => note.id === id ? { ...note, ...updates, updatedAt: Date.now() } : note);
-      if (user) {
-        const updated = next.find(n => n.id === id);
-        if (updated) upsertNote(updated, user.id);
-      }
-      return next;
-    });
+    setNotes(prev => prev.map(note => note.id === id ? { ...note, ...updates, updatedAt: Date.now() } : note));
   };
 
   const removeNote = (id) => {
-    // Hard delete: remove locally; Supabase row is left archived (not hard-deleted)
-    // to avoid conflicts. A future migration can add a proper delete.
-    if (user) {
-      const toDelete = notes.find(n => n.id === id);
-      if (toDelete) upsertNote({ ...toDelete, archived: true }, user.id);
-    }
     setNotes(prev => prev.filter(note => note.id !== id));
     setActiveNoteId(current => current === id ? null : current);
   };
 
   const archiveNote = (id) => {
-    setNotes(prev => {
-      const next = prev.map(note => note.id === id ? { ...note, archived: true, updatedAt: Date.now() } : note);
-      if (user) {
-        const updated = next.find(n => n.id === id);
-        if (updated) upsertNote(updated, user.id);
-      }
-      return next;
-    });
+    setNotes(prev => prev.map(note => note.id === id ? { ...note, archived: true, updatedAt: Date.now() } : note));
     if (activeNoteId === id) setActiveNoteId(null);
   };
 
   const togglePinNote = (id) => {
-    setNotes(prev => {
-      const next = prev.map(note => note.id === id ? { ...note, pinned: !note.pinned } : note);
-      if (user) {
-        const updated = next.find(n => n.id === id);
-        if (updated) upsertNote(updated, user.id);
-      }
-      return next;
-    });
+    setNotes(prev => prev.map(note => note.id === id ? { ...note, pinned: !note.pinned } : note));
   };
 
   const deleteFolder = (id) => {
@@ -6990,7 +6458,6 @@ const TidyCode = () => {
     setTodoTabs([...todoTabs, newTab]);
     setActiveTodoTabId(newTab.id);
     setNextTodoId(nextTodoId + 1);
-    if (user) upsertTab(newTab, user.id);
   };
 
   const closeTodoTab = (id) => {
@@ -6998,18 +6465,10 @@ const TidyCode = () => {
     const filtered = todoTabs.filter(tab => tab.id !== id);
     setTodoTabs(filtered);
     if (activeTodoTabId === id) setActiveTodoTabId(filtered[0].id);
-    if (user) deleteTabRemote(id, user.id);
   };
 
   const updateTodoTab = (id, updater) => {
-    setTodoTabs(tabs => {
-      const next = tabs.map(tab => tab.id === id ? { ...updater(tab), updatedAt: Date.now() } : tab);
-      if (user) {
-        const updated = next.find(t => t.id === id);
-        if (updated) upsertTab(updated, user.id);
-      }
-      return next;
-    });
+    setTodoTabs(tabs => tabs.map(tab => tab.id === id ? { ...updater(tab), updatedAt: Date.now() } : tab));
   };
 
   const finishQuickNote = useCallback((event = null) => {
@@ -7037,93 +6496,6 @@ const TidyCode = () => {
     setQuickNoteImages([]);
     setIsQuickNoteExpanded(false);
   }, [quickNoteTitle, quickNoteText, quickNoteImages, activeFolderId, createNote]);
-
-  const formatQuickNoteAIResponse = (text) => {
-    // Check if the text contains markdown formatting
-    const hasMarkdown = /[#*_`\[\]]/g.test(text) || /^[-*+]\s/m.test(text) || /^\d+\.\s/m.test(text);
-
-    if (hasMarkdown) {
-      // Text appears to be markdown, parse it
-      try {
-        const html = marked.parse(text, { breaks: true });
-        return html;
-      } catch (e) {
-        console.error('Error parsing markdown:', e);
-        // Fall through to plain text formatting
-      }
-    }
-
-    // Format as plain text for better readability
-    let formatted = text.replace(/([.!?])\s*/g, '$1 ');
-
-    // Handle line breaks and paragraphs
-    formatted = formatted.split('\n').map(line => line.trim()).filter(line => line).join('\n\n');
-
-    // Remove excessive spacing
-    formatted = formatted.replace(/\s{3,}/g, '  ');
-
-    return formatted;
-  };
-
-  const handleQuickNoteAITransform = async (action) => {
-    if (!aiService || !quickNoteText.trim()) {
-      if (!quickNoteText.trim()) {
-        showTransientMessage('Please enter some text first', 'warn');
-      }
-      return;
-    }
-
-    setIsQuickNoteAIProcessing(true);
-    setShowQuickNoteAIMenu(false);
-
-    try {
-      // Store original content
-      setQuickNoteOriginalText(quickNoteText);
-
-      const transformed = await aiService.transformText(quickNoteText, action, aiSettings);
-
-      // Format the AI response
-      const formatted = formatQuickNoteAIResponse(transformed);
-
-      // Show suggestion for accept/reject
-      setQuickNoteAISuggestion(formatted);
-    } catch (error) {
-      console.error('AI transformation error:', error);
-      showTransientMessage(`AI transformation failed: ${error.message}`, 'error');
-    } finally {
-      setIsQuickNoteAIProcessing(false);
-    }
-  };
-
-  const handleAcceptQuickNoteAISuggestion = () => {
-    if (!quickNoteAISuggestion) return;
-
-    // Update quick note with the AI suggestion
-    // If it's HTML (markdown rendered), convert back to plain text for the textarea
-    let textToSet = quickNoteAISuggestion;
-    if (quickNoteAISuggestion.startsWith('<')) {
-      // Create a temporary div to extract text content from HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = quickNoteAISuggestion;
-      textToSet = tempDiv.textContent || tempDiv.innerText || '';
-    }
-    setQuickNoteText(textToSet);
-
-    // Clear suggestion
-    setQuickNoteAISuggestion(null);
-    setQuickNoteOriginalText('');
-  };
-
-  const handleRejectQuickNoteAISuggestion = () => {
-    // Restore original content
-    if (quickNoteOriginalText) {
-      setQuickNoteText(quickNoteOriginalText);
-    }
-
-    // Clear suggestion
-    setQuickNoteAISuggestion(null);
-    setQuickNoteOriginalText('');
-  };
 
   const handleQuickNotePaste = (event) => {
     const items = event.clipboardData?.items;
@@ -7755,51 +7127,6 @@ const TidyCode = () => {
     return map;
   }, [braceMatch]);
 
-  const renderAIButtons = () => (
-    <div className="flex gap-1.5 items-center">
-      <button
-        onClick={() => aiChat.setShowChatPanel(prev => !prev)}
-        className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-sm transition-colors ${
-          aiChat.showChatPanel
-            ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
-            : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
-        }`}
-        title="AI Chat - Open conversation panel (⇧⌘L)"
-      >
-        <MessageSquare className="w-4 h-4" />
-        <span className="hidden lg:inline">AI Chat</span>
-      </button>
-      <div className="relative" ref={currentPanel !== 'dev' ? aiDropdownRef : undefined}>
-        <button
-          onClick={() => setShowAIDropdown(!showAIDropdown)}
-          className={`flex items-center gap-1 px-2 py-1.5 rounded text-sm transition-colors ${
-            theme === 'dark'
-              ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
-              : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
-          }`}
-          title="AI Actions & Settings"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span className="hidden lg:inline">AI</span>
-          <ChevronDown className="w-3 h-3" />
-        </button>
-        {showAIDropdown && currentPanel !== 'dev' && (
-          <div className={`absolute top-full right-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-            <button
-              onClick={() => { setShowAISettings(true); setShowAIDropdown(false); }}
-              className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
-                theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              AI Settings
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   const renderNotesPanel = () => {
     const sidebarStyle = { width: `${Math.round(notesSidebarWidth)}px` };
     const modalNote = openNoteModalId ? notes.find(note => note.id === openNoteModalId) : null;
@@ -8006,7 +7333,6 @@ const TidyCode = () => {
                 <div className="text-xs text-gray-500">{visibleNotes.length} note{visibleNotes.length === 1 ? '' : 's'}</div>
               </div>
             </div>
-            {renderAIButtons()}
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div
@@ -8018,117 +7344,17 @@ const TidyCode = () => {
             >
               {isQuickNoteExpanded ? (
                 <form className="space-y-2" onSubmit={finishQuickNote}>
-                  <div className="flex items-center justify-between gap-2">
-                    <input
-                      ref={quickNoteInputRef}
-                      value={quickNoteTitle}
-                      onChange={(e) => setQuickNoteTitle(e.target.value)}
-                      className="flex-1 bg-transparent text-sm text-gray-200 focus:outline-none border-b border-gray-700 pb-1"
-                      placeholder="Title"
-                    />
-                    {aiService && aiSettings?.provider !== 'tinyllm' && (
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setShowQuickNoteAIMenu(!showQuickNoteAIMenu)}
-                          disabled={isQuickNoteAIProcessing || quickNoteAISuggestion}
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${(isQuickNoteAIProcessing || quickNoteAISuggestion) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800 text-gray-400 hover:text-white'}`}
-                          title="AI Tools"
-                        >
-                          {isQuickNoteAIProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                          <span>AI</span>
-                        </button>
-                        {showQuickNoteAIMenu && !quickNoteAISuggestion && (
-                          <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-10 min-w-[160px]">
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('improve')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Improve Writing
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('rewrite')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Rewrite
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('rephrase')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Rephrase
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('fix-grammar')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Fix Grammar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('summarize')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Summarize
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleQuickNoteAITransform('expand')}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-700 text-gray-200"
-                            >
-                              Expand
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* AI Suggestion Preview */}
-                  {quickNoteAISuggestion && (
-                    <div className="border border-blue-500 bg-gray-800 rounded p-2">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-3 h-3 text-blue-400" />
-                          <span className="text-xs font-medium text-gray-200">AI Suggestion</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={handleAcceptQuickNoteAISuggestion}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition-colors"
-                            title="Accept Suggestion"
-                          >
-                            <Check className="w-3 h-3" />
-                            Accept
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleRejectQuickNoteAISuggestion}
-                            className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition-colors"
-                            title="Reject Suggestion"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                      <div
-                        className="bg-gray-900 rounded p-2 text-gray-200 text-xs max-h-[150px] overflow-y-auto prose prose-invert prose-xs max-w-none"
-                        dangerouslySetInnerHTML={{ __html: quickNoteAISuggestion.startsWith('<') ? quickNoteAISuggestion : `<pre style="white-space: pre-wrap; margin: 0; font-size: 0.75rem;">${quickNoteAISuggestion}</pre>` }}
-                      />
-                    </div>
-                  )}
-
+                  <input
+                    ref={quickNoteInputRef}
+                    value={quickNoteTitle}
+                    onChange={(e) => setQuickNoteTitle(e.target.value)}
+                    className="flex-1 bg-transparent text-sm text-gray-200 focus:outline-none border-b border-gray-700 pb-1 w-full"
+                    placeholder="Title"
+                  />
                   <textarea
                     value={quickNoteText}
                     onChange={(e) => setQuickNoteText(e.target.value)}
-                    disabled={quickNoteAISuggestion}
-                    className="w-full bg-transparent text-sm text-gray-200 focus:outline-none resize-none min-h-[100px] disabled:opacity-50"
+                    className="w-full bg-transparent text-sm text-gray-200 focus:outline-none resize-none min-h-[100px]"
                     placeholder="Take a note..."
                   />
                   {quickNoteImages.length > 0 && (
@@ -8332,9 +7558,6 @@ const TidyCode = () => {
               <RichTextEditor
                 value={modalNote.content}
                 onChange={(value) => updateNote(modalNote.id, { content: value })}
-                aiService={aiService}
-                aiSettings={aiSettings}
-                notify={showTransientMessage}
               />
               {modalNote.images?.length ? (
                 <div className="grid grid-cols-2 gap-3">
@@ -8449,7 +7672,6 @@ const TidyCode = () => {
           </button>
           <div className="text-sm font-semibold text-white truncate">{activeTodoTab?.title || 'Tasks'}</div>
         </div>
-        {renderAIButtons()}
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 px-6 py-4">
         {activeTodoTab?.items?.map((item) => (
@@ -8709,8 +7931,6 @@ const TidyCode = () => {
           onVimModeChange={(mode) => {
             setVimMode(mode);
           }}
-          aiSettings={aiSettings}
-          lspSettings={aiSettings}
           searchTerm={findValue}
           caseSensitive={caseSensitive}
           onScrollChange={(line) => {
@@ -8821,21 +8041,6 @@ const TidyCode = () => {
               } else if (activeCsvRowIndex !== null && !isCSVTab) {
                 setActiveCsvRowIndex(null);
               }
-            }
-          }}
-          onContextMenu={({ x, y, selectedText: selText, selectionRange: selRange }) => {
-            aiActions.openActionsMenu({ x, y }, selText, selRange);
-          }}
-          onSelectionChange={(sel) => {
-            if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
-            if (sel && sel.text.length >= 10) {
-              setAiToolbarSelection({ text: sel.text, from: sel.from, to: sel.to });
-              // Re-show toolbar if it was closed and user selects text
-              if (!aiToolbarVisible && !aiActions.actionsMenuPos) {
-                selectionTimerRef.current = setTimeout(() => setAiToolbarVisible(true), 300);
-              }
-            } else if (sel === null && !aiToolbarVisible) {
-              setAiToolbarSelection(null);
             }
           }}
           placeholder="Start typing..."
@@ -9122,83 +8327,6 @@ const TidyCode = () => {
           </button>
         </div>
 
-        {/* Right side controls — AI Group */}
-        <div className="flex gap-1.5 ml-auto items-center flex-shrink-0">
-          <button
-            onClick={() => aiChat.setShowChatPanel(prev => !prev)}
-            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${
-              aiChat.showChatPanel
-                ? (theme === 'dark' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-purple-500 hover:bg-purple-400 text-white')
-                : (theme === 'dark' ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300' : 'bg-purple-100 hover:bg-purple-200 text-purple-700')
-            }`}
-            title="AI Chat - Open conversation panel (⇧⌘L)"
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span className="hidden lg:inline">AI Chat</span>
-          </button>
-
-          {/* AI Dropdown: Actions + Settings */}
-          <div className="relative" ref={aiDropdownRef}>
-            <button
-              onClick={() => setShowAIDropdown(!showAIDropdown)}
-              className={`flex items-center gap-1 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${
-                theme === 'dark'
-                  ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
-                  : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
-              }`}
-              title="AI Actions & Settings"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden lg:inline">AI</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {showAIDropdown && (
-              <div className={`absolute top-full right-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                {activeTab && (
-                  <button
-                    onClick={(e) => {
-                      setShowAIDropdown(false);
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      let selection = '';
-                      let range = null;
-                      try {
-                        const view = codeMirrorRef.current?.getView?.();
-                        if (view) {
-                          const sel = view.state.selection.main;
-                          if (sel && !sel.empty) {
-                            selection = view.state.sliceDoc(sel.from, sel.to);
-                            range = { from: sel.from, to: sel.to };
-                          }
-                        }
-                      } catch (_) { /* ignore */ }
-                      aiActions.openActionsMenu(
-                        { x: rect.left, y: rect.bottom + 4 },
-                        selection,
-                        range
-                      );
-                    }}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
-                      theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    AI Actions
-                    <span className={`ml-auto text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>⇧⌘A</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => { setShowAISettings(true); setShowAIDropdown(false); }}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
-                    theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  <Settings className="w-4 h-4" />
-                  AI Settings
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Find & Replace panel — shown when toggled via status bar or Cmd+F */}
@@ -9459,37 +8587,6 @@ const TidyCode = () => {
             <Plus className="w-4 h-4" />
           </button>
         </Tooltip>
-        {/* Auth button — top-right of tab bar (desktop) */}
-        {supabaseConfigured && (
-          <div className={`flex-shrink-0 border-l ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}>
-            {user ? (
-              <Tooltip content={`Signed in as ${user.email}\nClick to sign out`} placement="bottom">
-                <button
-                  onClick={signOut}
-                  className={`flex items-center justify-center px-3 py-2 transition-colors ${theme === 'dark' ? 'text-emerald-400 hover:bg-gray-700 hover:text-white' : 'text-emerald-600 hover:bg-gray-200'}`}
-                  aria-label="Sign out"
-                >
-                  {user.user_metadata?.picture || user.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.picture || user.user_metadata.avatar_url} referrerPolicy="no-referrer" alt="avatar" className="w-5 h-5 rounded-full object-cover" />
-                  ) : (
-                    <Cloud className="w-4 h-4" />
-                  )}
-                </button>
-              </Tooltip>
-            ) : (
-              <Tooltip content="Sign in to sync notes and tasks" placement="bottom">
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}
-                  aria-label="Sign in"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </button>
-              </Tooltip>
-            )}
-          </div>
-        )}
         </div>{/* end primary tabs section */}
         {/* Split pane tab selectors — each flex-1 to align with their editor pane */}
         {splitPanes.map((pane) => (
@@ -10015,7 +9112,7 @@ const TidyCode = () => {
                         />
                         <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
                         <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          A powerful code & text editor with PDF viewer, format conversion, syntax highlighting, AI assistance, and more
+                          A powerful code & text editor with PDF viewer, format conversion, syntax highlighting, and more
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-left mb-6">
@@ -10058,9 +9155,9 @@ const TidyCode = () => {
                             </div>
                           </div>
 
-                          {/* Column 2: AI & Advanced Features */}
+                          {/* Column 2: Advanced Features */}
                           <div>
-                            <p className={`text-xs font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>🤖 AI & Advanced Features</p>
+                            <p className={`text-xs font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>⚡ Advanced Features</p>
                             <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-500">★</span>
@@ -10072,23 +9169,11 @@ const TidyCode = () => {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
-                                <span>AI-assisted error fixing (JSON/XML)</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
-                                <span>AI text transformations with accept/reject</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
-                                <span>Multiple AI providers (Ollama, Groq, OpenAI)</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
                                 <span>Side-by-side diff viewer for changes</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
-                                <span>Notes with AI features & folders</span>
+                                <span>Notes & tasks with folders</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
@@ -10277,31 +9362,6 @@ const TidyCode = () => {
               </div>
             )}
 
-            {/* AI Results Panel Below Editor */}
-            {aiActions.showResultsPanel && (
-              <AIResultsPanel
-                theme={theme}
-                result={aiActions.actionResult}
-                isLoading={aiActions.actionLoading}
-                error={aiActions.actionError}
-                originalContent={activeTab?.content || ''}
-                onClose={aiActions.closeResults}
-                onCopy={() => showTransientMessage('Copied to clipboard', 'info')}
-                onOpenInNewTab={aiActions.openInNewTab}
-                onRegenerate={aiActions.regenerate}
-                onAccept={aiActions.acceptSuggestion}
-                showDiff={aiActions.showDiff}
-                onToggleDiff={() => aiActions.setShowDiff(d => !d)}
-                height={aiActions.resultsPanelHeight}
-                onHeightChange={aiActions.setResultsPanelHeight}
-                currentProvider={aiSettings.provider || ''}
-                currentModel={chatCurrentModel}
-                onProviderChange={handleProviderChange}
-                onModelChange={handleChatModelChange}
-                refreshKey={providerRefreshKey}
-              />
-            )}
-
             {/* Full-width Error/Warning Panel Below Editor */}
             {errorMessage && (
               <div
@@ -10389,7 +9449,7 @@ const TidyCode = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Only show AI Fix and related buttons for actual format errors */}
+                      {/* Only show Fix and related buttons for actual format errors */}
                       {(errorMessage.type === 'JSON' || errorMessage.type === 'XML' || errorMessage.type === 'YAML' || errorMessage.type === 'TOML') && (
                         <>
                           <button
@@ -10402,7 +9462,7 @@ const TidyCode = () => {
                                   ? 'bg-purple-600 hover:bg-purple-700 text-white'
                                   : 'bg-purple-500 hover:bg-purple-600 text-white'
                             }`}
-                            title="Use AI to automatically fix errors"
+                            title="Automatically fix errors"
                           >
                             {aiFixState.isLoading ? (
                               <>
@@ -10410,18 +9470,8 @@ const TidyCode = () => {
                                 {aiFixState.progress ? aiFixState.progress.text : 'Fixing...'}
                               </>
                             ) : (
-                              <>
-                                <Sparkles className="w-4 h-4" />
-                                AI Fix
-                              </>
+                              'Fix'
                             )}
-                          </button>
-                          <button
-                            onClick={() => setShowAISettings(true)}
-                            className={`px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                            title="Configure AI settings"
-                          >
-                            <Settings className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => {
@@ -10609,7 +9659,7 @@ const TidyCode = () => {
                           <p className={`text-sm font-semibold ${
                             theme === 'dark' ? 'text-red-300' : 'text-red-900'
                           }`}>
-                            AI Fix Failed
+                            Fix Failed
                           </p>
                           <p className={`text-xs mt-1 ${
                             theme === 'dark' ? 'text-red-400' : 'text-red-700'
@@ -10656,7 +9706,7 @@ const TidyCode = () => {
               />
               <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
               <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                A powerful code & text editor with syntax highlighting, AI-assisted error fixing, and more
+                A powerful code & text editor with syntax highlighting, format conversion, and more
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-left mb-6">
@@ -10699,9 +9749,9 @@ const TidyCode = () => {
                   </div>
                 </div>
 
-                {/* Column 2: AI & Advanced Features */}
+                {/* Column 2: Advanced Features */}
                 <div>
-                  <p className={`text-xs font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>🤖 AI & Advanced Features</p>
+                  <p className={`text-xs font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>⚡ Advanced Features</p>
                   <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -10709,27 +9759,11 @@ const TidyCode = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>AI-assisted error fixing (JSON/XML)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>AI text transformations with accept/reject</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Markdown formatting for AI responses</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Multiple AI providers (Ollama, Groq, OpenAI)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
                       <span>Side-by-side diff viewer for changes</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>Notes with AI features & folders</span>
+                      <span>Notes & tasks with folders</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -11258,8 +10292,8 @@ const TidyCode = () => {
             );
           })}
         </div>
-        {/* Privacy indicator (web only, when Supabase not configured) */}
-        {!isDesktop() && !supabaseConfigured && (
+        {/* Privacy indicator (web only — data is always local) */}
+        {!isDesktop() && (
           <div className="px-2 py-2">
             <Tooltip content="All data stored locally on your device" placement="right">
               <div className="flex items-center justify-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 rounded-md px-2 py-1.5 cursor-default">
@@ -11388,38 +10422,6 @@ const TidyCode = () => {
           {renderPanel()}
         </div>
 
-        {/* AI Chat Panel - available across all panels */}
-        {aiChat.showChatPanel && (
-          <AIChatPanel
-            theme={theme}
-            messages={aiChat.messages}
-            isStreaming={aiChat.isStreaming}
-            error={aiChat.error}
-            onSend={aiChat.sendMessage}
-            onAbort={aiChat.abortResponse}
-            onClear={aiChat.clearHistory}
-            onClose={() => aiChat.setShowChatPanel(false)}
-            onRetry={aiChat.retryLastMessage}
-            height={aiChat.chatPanelHeight}
-            onHeightChange={aiChat.setChatPanelHeight}
-            activeFileName={activeTab?.title || ''}
-            onApplyCode={aiChat.applyCodeToEditor}
-            onOpenInNewTab={aiChat.openCodeInNewTab}
-            currentProvider={aiSettings.provider || ''}
-            currentModel={chatCurrentModel}
-            availableModels={chatAvailableModels}
-            onProviderChange={handleProviderChange}
-            onModelChange={handleChatModelChange}
-            refreshKey={providerRefreshKey}
-            providerName={aiSettings.provider || ''}
-            sessions={aiChat.sessions}
-            activeSessionId={aiChat.activeSessionId}
-            onNewSession={aiChat.newSession}
-            onLoadSession={aiChat.loadSession}
-            onDeleteSession={aiChat.deleteSession}
-          />
-        )}
-
         {/* Terminal Panel */}
         {isDesktop() && (
           <div style={{ display: showTerminalPanel ? 'flex' : 'none', flexDirection: 'column' }}>
@@ -11427,7 +10429,6 @@ const TidyCode = () => {
               ref={terminalPanelRef}
               theme={theme}
               onClose={() => setShowTerminalPanel(false)}
-              renderExtraControls={renderAIButtons}
             />
           </div>
         )}
@@ -11460,30 +10461,6 @@ const TidyCode = () => {
             </button>
           );
         })}
-        {supabaseConfigured && (
-          user ? (
-            <button
-              onClick={signOut}
-              aria-label="Sign out"
-              className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-emerald-400 hover:text-white transition-colors"
-            >
-              {user.user_metadata?.picture || user.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.picture || user.user_metadata.avatar_url} referrerPolicy="no-referrer" alt="avatar" className="w-5 h-5 rounded-full object-cover" />
-              ) : (
-                <Cloud className="w-5 h-5" />
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              aria-label="Sign in"
-              className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-emerald-400 hover:text-indigo-400 transition-colors"
-            >
-              <LogIn className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Sign In</span>
-            </button>
-          )
-        )}
       </nav>
 
       {/* Tab Context Menu */}
@@ -11578,7 +10555,7 @@ const TidyCode = () => {
               <div className="flex-1 space-y-1">
                 <div className="text-xl font-semibold leading-tight">{aboutInfo?.name || 'Tidy Code'}</div>
                 <div className="text-sm text-gray-400">
-                  A powerful code, text editor & formatter with syntax highlighting, AI-assisted error fixing, and more.
+                  A powerful code, text editor & formatter with syntax highlighting, format conversion, and more.
                 </div>
               </div>
             </div>
@@ -11704,85 +10681,6 @@ const TidyCode = () => {
         />
       )}
 
-      {/* AI Floating Selection Toolbar (draggable, persistent) */}
-      {aiToolbarVisible && !aiActions.actionsMenuPos && activeTab?.title !== 'Welcome' && (
-        <AISelectionToolbar
-          theme={theme}
-          selectedText={aiToolbarSelection?.text || ''}
-          fileCategory={getFileCategory(syntaxLanguage || '', activeTab?.title || activeTab?.filePath || '')}
-          onAction={(actionId) => {
-            const selText = aiToolbarSelection?.text || '';
-            const range = aiToolbarSelection
-              ? { from: aiToolbarSelection.from, to: aiToolbarSelection.to }
-              : null;
-            aiActions.openActionsMenu(null, selText, range);
-            aiActions.executeAction(actionId, {}, selText);
-          }}
-          onOpenFullMenu={() => {
-            const selText = aiToolbarSelection?.text || '';
-            const range = aiToolbarSelection
-              ? { from: aiToolbarSelection.from, to: aiToolbarSelection.to }
-              : null;
-            setAiToolbarVisible(false);
-            aiActions.openActionsMenu(
-              { x: window.innerWidth / 2 - 140, y: window.innerHeight / 3 },
-              selText,
-              range
-            );
-          }}
-          onClose={() => {
-            setAiToolbarVisible(false);
-            setAiToolbarSelection(null);
-          }}
-        />
-      )}
-
-      {/* AI Actions Menu (Cmd+Shift+A) */}
-      {aiActions.actionsMenuPos && (
-        <AIActionsMenu
-          theme={theme}
-          position={aiActions.actionsMenuPos}
-          selectedText={aiActions.selectedText}
-          language={syntaxLanguage || ''}
-          fileCategory={getFileCategory(syntaxLanguage || '', activeTab?.title || activeTab?.filePath || '')}
-          onActionExecute={(actionId, options) => {
-            aiActions.closeActionsMenu();
-            aiActions.executeAction(actionId, options);
-          }}
-          onClose={aiActions.closeActionsMenu}
-        />
-      )}
-
-      {/* AI Code Suggestion Panel (for refactor/convert) */}
-      {aiActions.suggestion && (
-        <div className="fixed bottom-[calc(3.5rem+1.5rem)] md:bottom-24 right-4 md:right-8 z-50">
-          <CodeSuggestionPanel
-            theme={theme}
-            suggestion={aiActions.suggestion}
-            isLoading={aiActions.actionLoading}
-            onAccept={() => aiActions.acceptSuggestion(aiActions.suggestion.suggestedCode)}
-            onReject={() => {
-              aiActions.setSuggestion(null);
-              showTransientMessage('Suggestion rejected', 'info');
-            }}
-            onEdit={(editedCode) => aiActions.acceptSuggestion(editedCode)}
-            onRegenerate={aiActions.regenerate}
-          />
-        </div>
-      )}
-
-      {/* AI Settings Modal */}
-      {showAISettings && (
-        <AISettingsModal
-          settings={aiSettings}
-          onSave={handleSaveAISettings}
-          onClose={() => setShowAISettings(false)}
-          theme={theme}
-          isDesktop={isDesktop()}
-          desktopAIService={aiService}
-          onTriggerSetupWizard={handleTriggerSetupWizard}
-        />
-      )}
 
       {/* Diff Viewer */}
       {showDiffViewer && (
@@ -11897,19 +10795,6 @@ const TidyCode = () => {
         </div>
       )}
 
-      {/* Ollama Setup Wizard (Desktop Only) */}
-      {showOllamaSetup && aiService && (
-        <OllamaSetupWizard
-          onClose={() => setShowOllamaSetup(false)}
-          onComplete={() => {
-            localStorage.setItem('tidycode-ollama-setup-completed', 'true');
-            setShowOllamaSetup(false);
-          }}
-          theme={theme}
-          desktopAIService={aiService}
-          defaultModel={aiSettings.ollamaModel}
-        />
-      )}
 
       {/* PDF Viewer Modal */}
       {showPDFViewer && pdfViewerData && (
@@ -11968,13 +10853,6 @@ const TidyCode = () => {
       {/* Cookie Consent Banner - Only shown in web mode */}
       <CookieConsent theme={theme} />
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          initGoogleButton={initGoogleButton}
-        />
-      )}
 
     </div>
   );

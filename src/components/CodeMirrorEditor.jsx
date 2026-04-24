@@ -36,7 +36,6 @@ import { keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
 
 // LSP imports
-import { lspService } from '../services/LSPService';
 
 // Clipboard extension for Tauri
 import { clipboardExtension } from '../utils/codemirror/clipboardExtension';
@@ -115,12 +114,8 @@ const CodeMirrorEditor = forwardRef(({
   placeholder = '',
   className = '',
   style = {},
-  aiSettings = null, // AI completion settings
-  lspSettings = null, // LSP settings
   searchTerm = '', // Search term to highlight
   caseSensitive = false, // Case sensitivity for search
-  onContextMenu = null, // Right-click handler for AI actions
-  onSelectionChange = null, // Selection change handler for floating toolbar
   onScrollChange = null, // Fires with first-visible line number when editor scrolls
 }, ref) => {
   const editorRef = useRef(null);
@@ -129,10 +124,6 @@ const CodeMirrorEditor = forwardRef(({
   const [viewReady, setViewReady] = React.useState(false);
 
   // Stable refs for callbacks used inside extensions (avoids rebuilding extensions on every render)
-  const onSelectionChangeRef = useRef(onSelectionChange);
-  onSelectionChangeRef.current = onSelectionChange;
-  const onContextMenuRef = useRef(onContextMenu);
-  onContextMenuRef.current = onContextMenu;
   const onScrollChangeRef = useRef(onScrollChange);
   onScrollChangeRef.current = onScrollChange;
   const scrollThrottleRef = useRef(null);
@@ -261,21 +252,6 @@ const CodeMirrorEditor = forwardRef(({
       if (update.selectionSet) {
         const sel = update.state.selection.main;
         onCursorChange?.(sel.head);
-        const selCb = onSelectionChangeRef.current;
-        if (selCb) {
-          if (!sel.empty) {
-            const coords = update.view.coordsAtPos(sel.from);
-            const endCoords = update.view.coordsAtPos(sel.to);
-            selCb({
-              text: update.state.sliceDoc(sel.from, sel.to),
-              from: sel.from,
-              to: sel.to,
-              coords: coords ? { top: coords.top, left: coords.left, bottom: endCoords?.bottom || coords.bottom } : null,
-            });
-          } else {
-            selCb(null);
-          }
-        }
       }
       // Viewport change — use this instead of DOM scroll events (scroll doesn't bubble)
       if (update.viewportChanged) {
@@ -296,7 +272,6 @@ const CodeMirrorEditor = forwardRef(({
     // Add DOM-level event handlers with highest precedence
     exts.push(Prec.highest(EditorView.domEventHandlers({
       keydown: (event, view) => {
-        // Handle Tab for completion
         if (event.key === 'Tab') {
           const status = completionStatus(view.state);
           if (status === 'active') {
@@ -305,22 +280,6 @@ const CodeMirrorEditor = forwardRef(({
             acceptCompletion(view);
             return true;
           }
-        }
-        return false;
-      },
-      contextmenu: (event, view) => {
-        const ctxCb = onContextMenuRef.current;
-        if (ctxCb) {
-          const sel = view.state.selection.main;
-          const selectedText = sel.empty ? '' : view.state.sliceDoc(sel.from, sel.to);
-          ctxCb({
-            x: event.clientX,
-            y: event.clientY,
-            selectedText,
-            selectionRange: sel.empty ? null : { from: sel.from, to: sel.to },
-          });
-          event.preventDefault();
-          return true;
         }
         return false;
       },
@@ -339,10 +298,8 @@ const CodeMirrorEditor = forwardRef(({
       return false;
     }));
 
-    // Add custom completion source with language-specific keywords and snippets
-    // Pass AI settings to enable AI-powered completions
     exts.push(autocompletion({
-      override: [createSmartCompletionSource(language, aiSettings)],
+      override: [createSmartCompletionSource(language)],
       activateOnTyping: true,
       maxRenderedOptions: 10,
       closeOnBlur: true,
@@ -361,25 +318,6 @@ const CodeMirrorEditor = forwardRef(({
 
     // Add Tab indentation (lower priority, runs when completion doesn't handle it)
     exts.push(keymap.of([indentWithTab]));
-
-    // Initialize LSP if enabled
-    if (lspSettings?.enableLSP) {
-      lspService.initialize(lspSettings);
-
-      // LSP extensions will be added here when LSP client is fully implemented
-      // For now, just log that LSP is enabled
-      console.log('[CodeMirrorEditor] LSP enabled for language:', language);
-
-      // Check if language is supported
-      if (lspService.isLanguageSupported(language)) {
-        console.log('[CodeMirrorEditor] LSP support available for', language);
-        // Future: Add LSP extensions here
-        // const lspExts = lspService.getLSPExtensions(language, documentUri, view);
-        // lspExts.forEach(ext => exts.push(ext));
-      } else {
-        console.log('[CodeMirrorEditor] LSP not supported for', language);
-      }
-    }
 
     // Add search highlighting if searchTerm is provided
     if (searchTerm) {
@@ -441,7 +379,7 @@ const CodeMirrorEditor = forwardRef(({
     exts.push(clipboardExtension());
 
     return exts;
-  }, [vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, aiSettings, lspSettings, searchTerm, caseSensitive]);
+  }, [vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, searchTerm, caseSensitive]);
 
   // Prevent browser from intercepting VIM Ctrl keys (MUST use capture phase)
   useEffect(() => {
