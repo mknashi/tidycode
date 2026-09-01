@@ -1,0 +1,25 @@
+# Deployment compose for Dokploy. Static site: nginx serves the Vite build,
+# there is no application runtime and no database.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - dokploy-network
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+# Created by the Dokploy installer; Traefik routes to containers on it.
+networks:
+  dokploy-network:
+    external: true
