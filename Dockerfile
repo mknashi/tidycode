@@ -6,6 +6,12 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
+# One dependency is a git spec -- "tinyllm": "github:mknashi/tinyllm" -- and the
+# slim image ships no git client, so npm fails with an opaque
+# "unknown git error" / ENOENT. The repo is public, so no credentials needed.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 # package-lock.json is gitignored in this repo, so it is not in the clone
 # Dokploy builds from. `npm install` is what Render's build command uses too.
 # Committing the lockfile and switching to `npm ci` would make builds
