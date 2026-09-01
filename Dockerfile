@@ -9,7 +9,7 @@ WORKDIR /app
 # One dependency is a git spec -- "tinyllm": "github:mknashi/tinyllm" -- and the
 # slim image ships no git client, so npm fails with an opaque
 # "unknown git error" / ENOENT. The repo is public, so no credentials needed.
-RUN apt-get update && apt-get install -y --no-install-recommends git \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # package-lock.json is gitignored in this repo, so it is not in the clone
@@ -17,7 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 # Committing the lockfile and switching to `npm ci` would make builds
 # reproducible -- worth doing, but it is a repo-policy change.
 COPY package.json ./
-RUN npm install --no-audit --no-fund
+# npm resolves the github: shorthand to ssh://git@github.com/, which needs an
+# ssh client and a key even though the repo is public. Rewrite it to https so
+# the clone is anonymous.
+RUN git config --global --add url."https://github.com/".insteadOf ssh://git@github.com/ \
+ && git config --global --add url."https://github.com/".insteadOf git@github.com: \
+ && npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build:web
