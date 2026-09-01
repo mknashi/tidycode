@@ -6,8 +6,12 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# package-lock.json is gitignored in this repo, so it is not in the clone
+# Dokploy builds from. `npm install` is what Render's build command uses too.
+# Committing the lockfile and switching to `npm ci` would make builds
+# reproducible -- worth doing, but it is a repo-policy change.
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build:web
