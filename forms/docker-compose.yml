@@ -1,0 +1,34 @@
+# Deployment compose for Dokploy: a separate app from the TidyCode site, built
+# from this folder. Set the domain (forms.tidycode.ai -> port 8080) and the
+# environment variables in the Dokploy UI; see README.md.
+
+services:
+  forms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      HMAC_KEY: ${HMAC_KEY}
+      IP_SALT: ${IP_SALT}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-}
+    volumes:
+      - forms-data:/data
+    networks:
+      - dokploy-network
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  forms-data:
+
+networks:
+  dokploy-network:
+    external: true

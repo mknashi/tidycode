@@ -70,6 +70,28 @@ curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" https://tidycode.ai/
 # expect 301 -> https://www.tidycode.ai/docs
 ```
 
+## Forms service (forms.tidycode.ai)
+
+The contact and feedback backend in `forms/` is a separate Dokploy app, and
+unlike the site it **does keep data at runtime**: an archive of every message in
+SQLite at `/data/forms.db`, on the `forms-data` volume.
+
+Every message is also emailed when it arrives, so the inbox is the primary
+copy. The archive matters for messages whose email failed, and as a searchable
+record. Back it up occasionally:
+
+```bash
+# On the server: a consistent copy, safe while the service is running
+docker exec <forms container> node -e \
+  "new (require('node:sqlite').DatabaseSync)('/data/forms.db').exec(\"VACUUM INTO '/data/backup.db'\")"
+docker cp <forms container>:/data/backup.db ./forms-$(date +%F).db
+```
+
+To recover, recreate the app as described in `forms/README.md` (compose path
+`./forms/docker-compose.yml`, plus the environment variables, which live only
+in Dokploy). Then copy a backup to `/data/forms.db` before the first request.
+Losing the archive loses no settings: `sites.yaml` is in the repo.
+
 ## Certificates
 
 The origin serves a **Cloudflare Origin certificate** valid to 2041, loaded via

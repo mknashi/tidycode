@@ -1,0 +1,25 @@
+# Sites allowed to use the forms service.
+#
+#   <site-id>:              lowercase id the form sends as `site`
+#     name:                 shown in email subjects
+#     origins:              where the form may be used (scheme://host[:port], no path)
+#     to:                   address, or list of addresses, that receive messages
+#     from:                 optional sender; defaults to MAIL_FROM and must be verified in SES
+#     maxMessageLength:     optional, default 5000 characters
+#     maxLinks:             optional, default 2 links per message
+#     perHour / perDay:     optional per-IP limits, default 5 / 20
+#
+# Changes take effect on the next deploy.
+
+sites:
+  tidycode:
+    name: TidyCode
+    origins:
+      - https://www.tidycode.ai
+      - https://tidycode.ai
+      # Desktop app (macOS/Linux and Windows webviews)
+      - tauri://localhost
+      - http://tauri.localhost
+      # Local development
+      - http://localhost:5173
+    to: feedback@tidycode.ai
