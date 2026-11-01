@@ -1,7 +1,7 @@
 /**
  * Gemini Provider (Google)
  *
- * Supports Gemini 1.5, Gemini 2.0, and future Google AI models.
+ * Supports current Gemini models through the -latest aliases.
  * https://ai.google.dev/gemini-api/docs
  */
 
@@ -16,74 +16,20 @@ import {
  * Gemini model definitions
  */
 const GEMINI_MODELS = [
-  // Gemini 2.0 models (latest)
   new ModelInfo({
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
-    contextWindow: 1000000,
-    description: 'Fast and versatile, 1M token context',
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash (latest)',
+    contextWindow: 1048576,
+    description: 'Fast and versatile; tracks the current Flash release',
     isDefault: true,
     supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'gemini-2.0-flash-thinking',
-    name: 'Gemini 2.0 Flash Thinking',
-    contextWindow: 1000000,
-    description: 'Enhanced reasoning capabilities',
-    supportsVision: true,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'gemini-2.0-pro',
-    name: 'Gemini 2.0 Pro',
-    contextWindow: 2000000,
-    description: 'Most capable Gemini 2.0 model',
-    supportsVision: true,
-    status: 'preview',
-  }),
-
-  // Gemini 1.5 models
-  new ModelInfo({
-    id: 'gemini-1.5-pro',
-    name: 'Gemini 1.5 Pro',
-    contextWindow: 2000000,
-    description: '2M token context, highly capable',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'gemini-1.5-pro-latest',
-    name: 'Gemini 1.5 Pro (Latest)',
-    contextWindow: 2000000,
-    description: 'Latest Gemini 1.5 Pro version',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    contextWindow: 1000000,
-    description: 'Fast and efficient',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'gemini-1.5-flash-8b',
-    name: 'Gemini 1.5 Flash 8B',
-    contextWindow: 1000000,
-    description: 'Smaller, faster Flash variant',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // Gemini 1.0 models (legacy)
-  new ModelInfo({
-    id: 'gemini-1.0-pro',
-    name: 'Gemini 1.0 Pro',
-    contextWindow: 32768,
-    description: 'Legacy Gemini Pro model',
-    supportsVision: false,
+    id: 'gemini-flash-lite-latest',
+    name: 'Gemini Flash-Lite (latest)',
+    contextWindow: 1048576,
+    description: 'Fastest and cheapest; tracks the current Flash-Lite release',
     status: 'stable',
   }),
 ];

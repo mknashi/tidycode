@@ -1,8 +1,8 @@
 /**
  * Claude Provider (Anthropic)
  *
- * Supports Claude 3.x and Claude 4.x models.
- * https://docs.anthropic.com/claude/reference/messages_post
+ * Built-in list of current models; the settings UI adds the live list from
+ * GET /v1/models. https://docs.anthropic.com/claude/reference/messages_post
  */
 
 import {
@@ -11,96 +11,40 @@ import {
   ModelInfo,
   AI_CAPABILITIES,
 } from '../ProviderInterface.js';
+import {
+  ANTHROPIC_API_URL,
+  ANTHROPIC_VERSION,
+  anthropicHeaders,
+  claudeMaxTokens,
+  extractClaudeText,
+} from '../anthropic.js';
 
 /**
  * Claude model definitions
  */
 const CLAUDE_MODELS = [
-  // Claude 4.5/4.6 models (latest generation)
   new ModelInfo({
-    id: 'claude-opus-4-6',
-    name: 'Claude Opus 4.6',
-    contextWindow: 200000,
+    id: 'claude-opus-5-5',
+    name: 'Claude Opus 5.5',
+    contextWindow: 1000000,
     description: 'Most capable model for complex coding tasks',
     supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4.6',
-    contextWindow: 200000,
+    id: 'claude-sonnet-5-5',
+    name: 'Claude Sonnet 5.5',
+    contextWindow: 1000000,
     description: 'Excellent balance of intelligence and speed for coding',
     isDefault: true,
     supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'claude-haiku-4-5-20251001',
-    name: 'Claude Haiku 4.5',
-    contextWindow: 200000,
+    id: 'claude-haiku-5-5',
+    name: 'Claude Haiku 5.5',
+    contextWindow: 1000000,
     description: 'Fast and efficient for quick coding tasks',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // Claude 4 models
-  new ModelInfo({
-    id: 'claude-4-opus',
-    name: 'Claude 4 Opus',
-    contextWindow: 200000,
-    description: 'Highly capable Claude 4 model for complex tasks',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'claude-4-sonnet',
-    name: 'Claude 4 Sonnet',
-    contextWindow: 200000,
-    description: 'Balanced Claude 4 model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // Claude 3.5 models
-  new ModelInfo({
-    id: 'claude-3-5-sonnet-20241022',
-    name: 'Claude 3.5 Sonnet',
-    contextWindow: 200000,
-    description: 'Previous generation balanced model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'claude-3-5-haiku-20241022',
-    name: 'Claude 3.5 Haiku',
-    contextWindow: 200000,
-    description: 'Previous generation fast model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // Claude 3 models
-  new ModelInfo({
-    id: 'claude-3-opus-20240229',
-    name: 'Claude 3 Opus',
-    contextWindow: 200000,
-    description: 'Most capable Claude 3 model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'claude-3-sonnet-20240229',
-    name: 'Claude 3 Sonnet',
-    contextWindow: 200000,
-    description: 'Balanced Claude 3 model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'claude-3-haiku-20240307',
-    name: 'Claude 3 Haiku',
-    contextWindow: 200000,
-    description: 'Fast Claude 3 model',
     supportsVision: true,
     status: 'stable',
   }),
@@ -129,8 +73,8 @@ export class ClaudeProvider extends AIProvider {
         AI_CAPABILITIES.TRANSFORM_TEXT,
         AI_CAPABILITIES.VISION,
       ],
-      baseUrl: config.baseUrl || 'https://api.anthropic.com/v1',
-      apiVersion: '2023-06-01',
+      baseUrl: config.baseUrl || ANTHROPIC_API_URL,
+      apiVersion: ANTHROPIC_VERSION,
       requiresApiKey: true,
       apiKeyPrefix: 'sk-ant-',
       apiKeyUrl: 'https://console.anthropic.com/settings/keys',
@@ -147,15 +91,14 @@ export class ClaudeProvider extends AIProvider {
    */
   getRequestHeaders(options = {}) {
     return {
-      'Content-Type': 'application/json',
-      'x-api-key': this.apiKey,
-      'anthropic-version': this.config.apiVersion,
+      ...anthropicHeaders(this.apiKey),
       ...options.headers,
     };
   }
 
   /**
-   * Validate API key by making a simple request
+   * Validate API key by listing models (free, and doesn't depend on any
+   * one model still being served)
    */
   async validateConfig() {
     if (!this.apiKey) {
@@ -163,15 +106,8 @@ export class ClaudeProvider extends AIProvider {
     }
 
     try {
-      // Make a minimal request to validate the key
-      const response = await fetch(`${this.baseUrl}/messages`, {
-        method: 'POST',
+      const response = await fetch(`${this.baseUrl}/models?limit=1`, {
         headers: this.getRequestHeaders(),
-        body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
-          max_tokens: 1,
-          messages: [{ role: 'user', content: 'Hi' }],
-        }),
       });
 
       if (response.ok) {
@@ -194,7 +130,6 @@ export class ClaudeProvider extends AIProvider {
       language,
       model,
       maxTokens = 2048,
-      temperature = 0.2,
       task = 'completion',
       options = {},
     } = params;
@@ -203,13 +138,12 @@ export class ClaudeProvider extends AIProvider {
 
     const response = await this.makeRequest('/messages', {
       model: model || this.getCurrentModelId(),
-      max_tokens: maxTokens,
-      temperature,
+      max_tokens: claudeMaxTokens(maxTokens),
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content?.[0]?.text || '';
+    const text = extractClaudeText(response);
 
     return new CompletionResult({
       text: options.extractFormat ? this.extractContent(text, options.extractFormat) : text,
@@ -235,7 +169,6 @@ export class ClaudeProvider extends AIProvider {
       language,
       model,
       maxTokens = 2048,
-      temperature = 0.2,
       task = 'completion',
       options = {},
     } = params;
@@ -247,8 +180,7 @@ export class ClaudeProvider extends AIProvider {
       headers: this.getRequestHeaders(),
       body: JSON.stringify({
         model: model || this.getCurrentModelId(),
-        max_tokens: maxTokens,
-        temperature,
+        max_tokens: claudeMaxTokens(maxTokens),
         system: systemPrompt,
         messages: [{ role: 'user', content: prompt }],
         stream: true,
@@ -282,8 +214,8 @@ export class ClaudeProvider extends AIProvider {
             try {
               const parsed = JSON.parse(data);
 
-              if (parsed.type === 'content_block_delta') {
-                const text = parsed.delta?.text || '';
+              if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+                const text = parsed.delta.text || '';
                 if (text) {
                   fullText += text;
                   onChunk(text, false);
@@ -321,7 +253,6 @@ export class ClaudeProvider extends AIProvider {
     const {
       model,
       maxTokens = 2048,
-      temperature = 0.7,
       systemPrompt,
     } = options;
 
@@ -339,14 +270,13 @@ export class ClaudeProvider extends AIProvider {
 
     const response = await this.makeRequest('/messages', {
       model: model || this.getCurrentModelId(),
-      max_tokens: maxTokens,
-      temperature,
+      max_tokens: claudeMaxTokens(maxTokens),
       system,
       messages: anthropicMessages,
     });
 
     return new CompletionResult({
-      text: response.content?.[0]?.text || '',
+      text: extractClaudeText(response),
       metadata: {
         model: response.model,
         stopReason: response.stop_reason,
@@ -400,7 +330,6 @@ export class ClaudeProvider extends AIProvider {
     const {
       model,
       maxTokens = 2048,
-      temperature = 0.7,
       systemPrompt,
     } = options;
 
@@ -416,8 +345,7 @@ export class ClaudeProvider extends AIProvider {
       headers: this.getRequestHeaders(),
       body: JSON.stringify({
         model: model || this.getCurrentModelId(),
-        max_tokens: maxTokens,
-        temperature,
+        max_tokens: claudeMaxTokens(maxTokens),
         system,
         messages: anthropicMessages,
         stream: true,
@@ -446,8 +374,8 @@ export class ClaudeProvider extends AIProvider {
           if (line.startsWith('data: ')) {
             try {
               const parsed = JSON.parse(line.slice(6));
-              if (parsed.type === 'content_block_delta') {
-                const text = parsed.delta?.text || '';
+              if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+                const text = parsed.delta.text || '';
                 if (text) {
                   fullText += text;
                   onChunk(text, false);

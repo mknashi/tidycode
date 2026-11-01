@@ -3,7 +3,8 @@
  * Provides context-aware suggestions using AI models (Groq, OpenAI, Claude)
  */
 
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS } from '../../services/AIService';
+import { AI_PROVIDERS, DEFAULT_MODELS } from '../../services/AIService';
+import { ANTHROPIC_API_URL, anthropicHeaders, claudeEffort, extractClaudeText } from '../../services/ai/anthropic.js';
 
 class AICompletionService {
   constructor() {
@@ -180,7 +181,7 @@ Completion (1-3 words only):`;
    */
   isOpenAIReasoningModel(model) {
     const id = (model || '').toLowerCase();
-    return /^o\d/.test(id);
+    return /^(o\d|gpt-5)/.test(id);
   }
 
   async getOpenAICompletion(prompt, apiKey, model) {
@@ -288,9 +289,26 @@ Completion (1-3 words only):`;
       }
     }
 
-    // Browser fallback - will likely fail due to CORS
-    console.error('[aiCompletionService] Tauri not detected, cannot call Claude API');
-    throw new Error('Claude API requires desktop app due to browser CORS restrictions');
+    // Browser: call the API directly (allowed with the direct-browser-access header)
+    const response = await fetch(`${ANTHROPIC_API_URL}/messages`, {
+      method: 'POST',
+      headers: anthropicHeaders(apiKey),
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        system: 'You are a code completion assistant. Return only the completion text, no explanations or markdown.',
+        messages: [{ role: 'user', content: prompt }],
+        // Keep thinking short for a one-line suggestion
+        ...claudeEffort(model, 'low'),
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`Claude API error: ${error.error?.message || response.status}`);
+    }
+
+    return extractClaudeText(await response.json()).trim();
   }
 
   /**
@@ -348,19 +366,19 @@ Completion (1-3 words only):`;
         completionText = await this.getGroqCompletion(
           prompt,
           groqApiKey,
-          groqModel || GROQ_MODELS['llama-3.3-70b'].id
+          groqModel || DEFAULT_MODELS.groq
         );
       } else if (provider === AI_PROVIDERS.OPENAI) {
         completionText = await this.getOpenAICompletion(
           prompt,
           openaiApiKey,
-          openaiModel || OPENAI_MODELS['gpt-4o-mini'].id
+          openaiModel || DEFAULT_MODELS.openai
         );
       } else if (provider === 'claude') {
         completionText = await this.getClaudeCompletion(
           prompt,
           claudeApiKey,
-          claudeModel || CLAUDE_MODELS['claude-3-5-haiku'].id
+          claudeModel || DEFAULT_MODELS.claude
         );
       }
 

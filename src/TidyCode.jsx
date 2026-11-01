@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud, MessageCircle, AlignJustify } from 'lucide-react';
 import { useAuth } from './hooks/useAuth';
 import { useNotesSync } from './hooks/useNotesSync';
 import { useTasksSync } from './hooks/useTasksSync';
@@ -52,6 +52,7 @@ import { useAIActions } from './hooks/useAIActions.js';
 import { useAIChat } from './hooks/useAIChat.js';
 import { ACTION_IDS } from './services/ai/actions/ActionManager.js';
 import { shouldSuggestMoreProviders } from './services/ai/autoSelect.js';
+import { migrateRetiredModels, mergeModelLists } from './services/ai/modelCatalog.js';
 import OllamaSetupWizard from './components/OllamaSetupWizard';
 import CodeMirrorEditor from './components/CodeMirrorEditor';
 import TabsExplorer from './components/TabsExplorer';
@@ -61,15 +62,17 @@ import TerminalPanel from './components/TerminalPanelWrapper';
 import PDFViewer from './components/PDFViewer';
 import SVGViewer from './components/SVGViewer';
 import { HelpModal } from './components/help/HelpModal';
+import FeedbackModal from './components/FeedbackModal';
 import { HELP_URLS } from './components/help/HelpContent';
 import { formatService } from './services/formatters';
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS } from './services/AIService';
+import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS, DEFAULT_MODELS } from './services/AIService';
 import { isDesktop, getAIService } from './utils/platform';
 import { loadSecureSettings, saveSecureSettings } from './utils/secureStorage';
 import Tooltip from './components/Tooltip';
 import CookieConsent from './components/CookieConsent';
 import { openUrl } from './utils/openUrl';
 import { EditorView } from '@codemirror/view';
+import { foldable, foldEffect, unfoldEffect, foldedRanges } from '@codemirror/language';
 import { loadFile as loadFileWithWasm, unloadFile as unloadWasmFile, getContentFromWasm, formatFileSize, shouldUseWasm, shouldWarnUser, searchInFile } from './utils/wasmFileHandler';
 import { version as appVersion } from '../package.json';
 
@@ -734,6 +737,8 @@ const buildJSONStructure = (text) => {
         if ((trimmed.startsWith('}') && top.type === 'object') ||
             (trimmed.startsWith(']') && top.type === 'array')) {
           stack.pop();
+          top.node.endLine = lineNum;
+          top.node.closeLabel = trimmed.startsWith('}') ? '}' : ']';
           break;
         }
         stack.pop();
@@ -843,7 +848,11 @@ const buildXMLStructure = (text) => {
     if (closingMatch) {
       while (stack.length) {
         const top = stack.pop();
-        if (top.tag === closingMatch[1]) break;
+        if (top.tag === closingMatch[1]) {
+          top.node.endLine = lineNum;
+          top.node.closeLabel = `</${top.tag}>`;
+          break;
+        }
       }
       return;
     }
@@ -1478,6 +1487,7 @@ const TidyCode = () => {
 
   // Help modal state
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [helpContentType, setHelpContentType] = useState(null); // 'welcome', 'tips', 'documentation', 'releases'
 
   // Privacy banner state (show once for new users)
@@ -1544,19 +1554,19 @@ const TidyCode = () => {
     return {
       provider: AI_PROVIDERS.TINYLLM,
       groqApiKey: '',
-      groqModel: GROQ_MODELS['llama-3.3-70b'].id,
+      groqModel: DEFAULT_MODELS.groq,
       openaiApiKey: '',
-      openaiModel: 'gpt-4o-mini',
+      openaiModel: DEFAULT_MODELS.openai,
       claudeApiKey: '',
-      claudeModel: 'claude-3-5-haiku-20241022',
+      claudeModel: DEFAULT_MODELS.claude,
       geminiApiKey: '',
-      geminiModel: 'gemini-2.0-flash',
+      geminiModel: DEFAULT_MODELS.gemini,
       mistralApiKey: '',
-      mistralModel: 'mistral-large-latest',
+      mistralModel: DEFAULT_MODELS.mistral,
       cerebrasApiKey: '',
-      cerebrasModel: 'llama-3.3-70b',
+      cerebrasModel: DEFAULT_MODELS.cerebras,
       sambanovaApiKey: '',
-      sambanovaModel: 'Meta-Llama-3.3-70B-Instruct',
+      sambanovaModel: DEFAULT_MODELS.sambanova,
       ollamaModel: 'llama3.1:8b', // Desktop only - best for large files
       maxContextChars: 0, // 0 = unlimited; limits content sent to AI providers
       enableLSP: false,
@@ -1613,7 +1623,11 @@ const TidyCode = () => {
       ? aiSettings.ollamaModel || ''
       : '';
   const chatAvailableModels = providerModelInfo
-    ? Object.values(providerModelInfo.models).map((m) => ({ id: m.id, name: m.name }))
+    ? mergeModelLists(
+        Object.values(providerModelInfo.models).map((m) => ({ id: m.id, name: m.name })),
+        [],
+        chatCurrentModel
+      )
     : [];
   const handleChatModelChange = useCallback((modelId) => {
     if (aiSettings.provider === 'ollama') {
@@ -1687,13 +1701,26 @@ const TidyCode = () => {
   const braceMatchCacheRef = useRef({ contentHash: null, pos: null, result: null });
   const braceMatchThrottleRef = useRef(null);
   const structureRef = useRef(null);
+  const structureHeaderRef = useRef(null);
+  // Tabs whose content has been JSON, so the tree survives invalid states while typing
+  const jsonStructureTabsRef = useRef(new Set());
+  // True while the pointer is over the strip where the structure header floats
+  const [structureHeaderHover, setStructureHeaderHover] = useState(false);
+  // 'aligned': rows sit beside their lines, closing brackets included. 'compact': an outline.
+  const [structureLayout, setStructureLayout] = useState(() => {
+    try {
+      return localStorage.getItem('tidycode-structure-layout') === 'compact' ? 'compact' : 'aligned';
+    } catch {
+      return 'aligned';
+    }
+  });
+  const structureAligned = structureLayout === 'aligned';
+  // Bumped when the editor's line heights or folds change, so the aligned tree re-measures
+  const [editorLayoutVersion, setEditorLayoutVersion] = useState(0);
   const activeStructureNodeRef = useRef(null);
   const [structureSyncLine, setStructureSyncLine] = useState(1);
-  // Prevents scroll feedback loops: 'editor' when editor→structure in progress, 'structure' vice versa
-  const syncInProgressRef = useRef(null);
-  // Tracks whether the editor is actively being scrolled (for smooth vs instant structure scroll)
-  const isEditorScrollingRef = useRef(false);
-  const editorScrollEndTimerRef = useRef(null);
+  // scrollTop last set by code on each side, so the resulting scroll event isn't synced back
+  const programmaticScrollRef = useRef({ editor: null, structure: null });
   const structureDragState = useRef({ active: false, startX: 0, startWidth: 288 });
   const leftPanelDragState = useRef({ active: false, startX: 0, startWidth: 280 }); // For file explorer/file system panel
   const notesSidebarDragState = useRef({ active: false, startX: 0, startWidth: 288 });
@@ -2618,22 +2645,41 @@ const TidyCode = () => {
     return () => clearTimeout(timeoutId);
   }, [todoTabs, activeTodoTabId, nextTodoId]);
 
+  // Saving before the stored settings are loaded would overwrite them with defaults
+  const [aiSettingsLoaded, setAISettingsLoaded] = useState(false);
+
   // Load AI settings on mount (async decryption)
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const settings = await loadSecureSettings();
-        if (settings) {
-          setAISettings(prev => ({ ...prev, ...settings }));
+        const loaded = await loadSecureSettings();
+        if (loaded) {
+          const { settings, unreadableKeys, keychainError } = loaded;
+          if (keychainError) {
+            showTransientMessage("Couldn't reach the system keychain, so saved API keys weren't loaded. Re-enter them in AI Settings, or restart the app.", 'warn');
+          } else if (unreadableKeys.length > 0) {
+            const providers = unreadableKeys.map(field => field.replace('ApiKey', '')).join(', ');
+            showTransientMessage(`Your saved API key for ${providers} couldn't be read. Please re-enter it in AI Settings.`, 'warn');
+          }
+
+          // Saved settings may name models the provider has since retired
+          const { settings: current, migrated } = migrateRetiredModels(settings);
+          setAISettings(prev => ({ ...prev, ...current }));
+          if (migrated.length > 0) {
+            const names = migrated.map(m => `${m.from} → ${m.to}`).join(', ');
+            showTransientMessage(`Updated retired AI model${migrated.length > 1 ? 's' : ''}: ${names}`, 'info');
+          }
         }
       } catch (error) {
         console.warn('Failed to load AI settings', error);
+      } finally {
+        setAISettingsLoaded(true);
       }
     };
     loadSettings();
   }, []);
 
-  // Save AI settings to localStorage (async encryption)
+  // Save AI settings (API keys go to the keychain or encrypted storage)
   useEffect(() => {
     if (typeof window === 'undefined' || !window?.localStorage) return;
 
@@ -2645,11 +2691,10 @@ const TidyCode = () => {
       }
     };
 
-    // Only save if settings have values (not initial empty state)
-    if (aiSettings.provider) {
+    if (aiSettingsLoaded && aiSettings.provider) {
       saveSettings();
     }
-  }, [aiSettings]);
+  }, [aiSettings, aiSettingsLoaded]);
 
   // Initialize AI service based on platform
   useEffect(() => {
@@ -5154,6 +5199,10 @@ const TidyCode = () => {
         }
       );
 
+      if (!fixedContent || fixedContent.trim() === activeTab.content.trim()) {
+        throw new Error('The AI returned the content unchanged. Try again, or choose a different provider or model in AI Settings.');
+      }
+
       setAIFixState({
         isLoading: false,
         fixedContent,
@@ -6130,6 +6179,8 @@ const TidyCode = () => {
   const structureFontSize = structureFontSizeMap[fontSize] || '12px';
   const structureLineHeight = structureLineHeightMap[fontSize] || '1.3';
   const structureFont = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+  // One tree row is exactly one editor line, so rows line up with the code beside them
+  const structureRowHeight = `${parseFloat(structureFontSize) * parseFloat(structureLineHeight)}px`;
 
   const renderStructureNodes = (nodes, depth = 0) => {
     return nodes.map(node => {
@@ -6150,25 +6201,28 @@ const TidyCode = () => {
           key={node.id}
           data-node-id={node.id}
           className={`${nodeTextClass} transition-colors duration-150`}
-          style={{ marginLeft: depth * 12, fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureLineHeight }}
+          style={{ marginLeft: depth * 12, fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureRowHeight }}
           ref={isActive ? activeStructureNodeRef : null}
         >
-          <div className={`flex items-center gap-1 ${isActive ? 'bg-indigo-600 bg-opacity-40 rounded px-1 py-0.5 border border-indigo-400/70 shadow-sm' : ''}`}>
+          <div
+            className={`flex items-center gap-1 ${isActive ? 'bg-indigo-600/40 rounded ring-1 ring-inset ring-indigo-400/70' : ''}`}
+            style={{ height: structureRowHeight }}
+          >
             {hasChildren ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleStructureNode(node.id);
                 }}
-                className={`w-4 h-4 ${buttonHoverClass} flex items-center justify-center`}
+                className={`w-4 h-full shrink-0 ${buttonHoverClass} flex items-center justify-center`}
               >
                 {collapsed ? <Plus className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
               </button>
             ) : (
-              <span className={`w-4 h-4 ${bulletClass} flex items-center justify-center`}>•</span>
+              <span className={`w-4 h-full shrink-0 ${bulletClass} flex items-center justify-center`}>•</span>
             )}
             <button
-              onClick={() => goToPosition(node.line, 1)}
+              onClick={() => selectStructureNode(node)}
               className={`flex-1 text-left truncate ${isActive ? 'font-semibold' : ''}`}
               title={`Line ${node.line}`}
             >
@@ -6183,6 +6237,169 @@ const TidyCode = () => {
         </div>
       );
     });
+  };
+
+  // Range the editor folds when a node collapses: the language's own fold if it has one,
+  // otherwise from the end of the node's line to the line before its closing line
+  const structureFoldRange = (state, node) => {
+    const doc = state.doc;
+    if (node.line > doc.lines) return null;
+    const line = doc.line(node.line);
+    const range = foldable(state, line.from, line.to);
+    if (range) return range;
+    let lastLine = node.endLine ? node.endLine - 1 : node.line;
+    if (!node.endLine) {
+      for (let child = node.children?.[node.children.length - 1]; child; child = child.children?.[child.children.length - 1]) {
+        lastLine = Math.max(lastLine, child.endLine || child.line);
+      }
+    }
+    lastLine = Math.min(lastLine, doc.lines);
+    return lastLine > node.line ? { from: line.to, to: doc.line(lastLine).to } : null;
+  };
+
+  const foldsStartingOnLine = (state, lineNumber) => {
+    const line = state.doc.line(lineNumber);
+    const ranges = [];
+    foldedRanges(state).between(line.from, line.to, (from, to) => {
+      if (from >= line.from && from <= line.to) ranges.push({ from, to });
+    });
+    return ranges;
+  };
+
+  // In the aligned layout the editor's folds are the collapsed state, so the two never disagree
+  const toggleStructureFold = (node) => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view || node.line > view.state.doc.lines) return;
+    const existing = foldsStartingOnLine(view.state, node.line);
+    if (existing.length > 0) {
+      view.dispatch({ effects: existing.map(range => unfoldEffect.of(range)) });
+      return;
+    }
+    const range = structureFoldRange(view.state, node);
+    if (range) view.dispatch({ effects: foldEffect.of(range) });
+  };
+
+  const setAllStructureFolds = (collapse) => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view) return;
+    const { state } = view;
+    const effects = [];
+    if (collapse) {
+      structureNodeList.forEach(node => {
+        if (!node.children?.length || node.line > state.doc.lines) return;
+        if (foldsStartingOnLine(state, node.line).length > 0) return;
+        const range = structureFoldRange(state, node);
+        if (range) effects.push(foldEffect.of(range));
+      });
+    } else {
+      foldedRanges(state).between(0, state.doc.length, (from, to) => {
+        effects.push(unfoldEffect.of({ from, to }));
+      });
+    }
+    if (effects.length > 0) view.dispatch({ effects });
+  };
+
+  // Aligned layout: each row is placed at its line's height in the editor (wrapped lines and
+  // blank lines leave matching space) and closing brackets get rows of their own, so the
+  // tree is as tall as the code and scrolls with it one to one.
+  const renderAlignedStructure = () => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view) return null;
+    const { state } = view;
+    const doc = state.doc;
+
+    // Outermost folded ranges, for hiding lines a fold covers
+    const folds = [];
+    foldedRanges(state).between(0, doc.length, (from, to) => {
+      const last = folds[folds.length - 1];
+      if (last && from >= last.from && to <= last.to) return;
+      folds.push({ from, to });
+    });
+    const isHidden = (pos) => {
+      let low = 0;
+      let high = folds.length - 1;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        if (pos <= folds[mid].from) high = mid - 1;
+        else if (pos > folds[mid].to) low = mid + 1;
+        else return true;
+      }
+      return false;
+    };
+
+    const scroller = view.scrollDOM;
+    // Where the document starts inside the scroller's content (the editor's top padding)
+    const docOffset = view.documentTop - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const topOf = (lineNumber) => docOffset + view.lineBlockAt(doc.line(lineNumber).from).top;
+
+    const rows = [];
+    const walk = (nodes, depth) => {
+      nodes.forEach(node => {
+        if (node.line > doc.lines || isHidden(doc.line(node.line).from)) return;
+        const hasChildren = node.children?.length > 0;
+        const collapsed = hasChildren && foldsStartingOnLine(state, node.line).length > 0;
+        rows.push({ key: node.id, node, depth, line: node.line, top: topOf(node.line), hasChildren, collapsed });
+        if (collapsed) return;
+        if (hasChildren) walk(node.children, depth + 1);
+        if (node.endLine > node.line && node.endLine <= doc.lines && !isHidden(doc.line(node.endLine).from)) {
+          rows.push({ key: `${node.id}:end`, node, depth, line: node.endLine, top: topOf(node.endLine), closing: true });
+        }
+      });
+    };
+    walk(structureTree.nodes, 0);
+
+    // The cursor's row: the last row at or above the cursor line
+    let activeKey = null;
+    for (const row of rows) {
+      if (row.line > structureSyncLine) break;
+      activeKey = row.key;
+    }
+
+    const buttonHoverClass = theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900';
+    const bulletClass = theme === 'dark' ? 'text-gray-700' : 'text-gray-400';
+    const closingClass = theme === 'dark' ? 'text-gray-500' : 'text-gray-400';
+
+    return (
+      <div className="relative" style={{ height: scroller.scrollHeight, fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureRowHeight }}>
+        {rows.map(row => {
+          const isActive = row.key === activeKey;
+          const textClass = isActive
+            ? 'text-white'
+            : row.closing
+              ? closingClass
+              : theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900';
+          return (
+            <div
+              key={row.key}
+              className={`absolute right-0 flex items-center gap-1 ${textClass} ${isActive ? 'bg-indigo-600/40 rounded ring-1 ring-inset ring-indigo-400/70' : ''}`}
+              style={{ top: row.top, left: row.depth * 12, height: structureRowHeight }}
+            >
+              {row.hasChildren ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleStructureFold(row.node);
+                  }}
+                  className={`w-4 h-full shrink-0 ${buttonHoverClass} flex items-center justify-center`}
+                  aria-label={row.collapsed ? 'Expand' : 'Collapse'}
+                >
+                  {row.collapsed ? <Plus className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                </button>
+              ) : (
+                <span className={`w-4 h-full shrink-0 ${row.closing ? '' : bulletClass} flex items-center justify-center`}>{row.closing ? '' : '•'}</span>
+              )}
+              <button
+                onClick={() => selectStructureNode({ line: row.line })}
+                className={`flex-1 text-left truncate ${isActive ? 'font-semibold' : ''}`}
+                title={`Line ${row.line}`}
+              >
+                {row.closing ? row.node.closeLabel : row.node.label}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const handleEditorKeyDown = (event) => {
@@ -7444,6 +7661,8 @@ const TidyCode = () => {
 
   const structureTree = useMemo(() => {
     if (!activeTab?.content) return { type: null, nodes: [] };
+    // Once a tab has shown a JSON tree, keep it while the content is briefly invalid mid-edit
+    const wasJSON = jsonStructureTabsRef.current.has(activeTab.id);
     const trimmed = String(activeTab.content).trim();
     if (!trimmed) return { type: null, nodes: [] };
 
@@ -7479,7 +7698,9 @@ const TidyCode = () => {
 
     // Only show structure tree for supported formats
     if (detection.format === 'json' || ((fileType.type === 'json' || fileType.type === 'text') && (trimmed.startsWith('{') || trimmed.startsWith('[')))) {
-      if (looksLikeJSON(trimmed)) {
+      // The builder works line by line, so it copes with incomplete JSON
+      if (looksLikeJSON(trimmed) || fileType.type === 'json' || wasJSON) {
+        jsonStructureTabsRef.current.add(activeTab.id);
         return { type: 'JSON', nodes: buildJSONStructure(activeTab.content) };
       }
     }
@@ -7707,22 +7928,166 @@ const TidyCode = () => {
     });
   }, [isCSVTab, activeCsvRowIndex, activeTab?.id, syncScrollVisuals]);
 
-  useEffect(() => {
-    if (!structureRef.current || !activeStructureNodeRef.current) return;
+  // Structure ↔ editor scroll sync. Both panes share one mapping: each tree
+  // row corresponds to its node's first line, and positions between two rows
+  // are interpolated between their lines. The tree is more compact than the
+  // code (no closing brackets, no wrapped lines), so rows meet their lines at
+  // the top of the pane, and the mapping is the same in either direction.
+  const structureNodeById = useMemo(
+    () => new Map(structureNodeList.map(node => [node.id, node])),
+    [structureNodeList]
+  );
+
+  const setScrollTopQuietly = (side, element, top) => {
+    const next = Math.max(0, Math.min(element.scrollHeight - element.clientHeight, top));
+    if (Math.abs(element.scrollTop - next) < 1) return;
+    programmaticScrollRef.current[side] = next;
+    element.scrollTop = next;
+  };
+
+  const isProgrammaticScroll = (side, element) => {
+    const expected = programmaticScrollRef.current[side];
+    programmaticScrollRef.current[side] = null;
+    return expected !== null && Math.abs(element.scrollTop - expected) <= 1;
+  };
+
+  // Rendered tree rows in document order, with lazy geometry for both panes
+  const getStructureSyncContext = () => {
     const container = structureRef.current;
-    const target = activeStructureNodeRef.current;
+    const view = codeMirrorRef.current?.getView?.();
+    if (!container || !view) return null;
+    const rows = [];
+    container.querySelectorAll('[data-node-id]').forEach(el => {
+      const node = structureNodeById.get(el.getAttribute('data-node-id'));
+      if (node) rows.push({ node, el: el.firstElementChild });
+    });
+    if (rows.length === 0) return null;
     const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
-    const desiredTop = Math.max(0, relativeTop - container.clientHeight / 2 + target.offsetHeight / 2);
-    // Use instant scroll while editor is actively scrolling to avoid animation overlap;
-    // smooth only when driven by a cursor jump or click.
-    const behavior = isEditorScrollingRef.current ? 'instant' : 'smooth';
-    syncInProgressRef.current = 'editor';
-    container.scrollTo({ top: desiredTop, behavior });
-    const timer = setTimeout(() => { syncInProgressRef.current = null; }, 400);
-    return () => clearTimeout(timer);
-  }, [activeStructureId, structureTree, editorLines.length]);
+    const doc = view.state.doc;
+    return {
+      container,
+      view,
+      rows,
+      // The top of the area both panes show; the header above the tree is taller than the editor's
+      referenceY: Math.max(containerRect.top, view.scrollDOM.getBoundingClientRect().top),
+      // Row top, in the tree's content coordinates
+      rowTop: row => row.el.getBoundingClientRect().top - containerRect.top + container.scrollTop,
+      // Line top, in the editor's document coordinates
+      lineTop: row => view.lineBlockAt(doc.line(Math.min(row.node.line, doc.lines)).from).top,
+    };
+  };
+
+  // Last row whose position is at or before y, by binary search
+  const findRowAtOrBefore = (rows, positionOf, y) => {
+    let low = 0;
+    let high = rows.length - 1;
+    let found = -1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (positionOf(rows[mid]) <= y) {
+        found = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return found;
+  };
+
+  // Map y from one pane's coordinates to the other's, piecewise linearly between rows
+  const mapBetweenPanes = (rows, from, to, y) => {
+    const index = Math.max(0, findRowAtOrBefore(rows, from, y));
+    const a = rows[index];
+    const b = rows[index + 1];
+    const fromA = from(a);
+    if (!b || y < fromA) return to(a) + (y - fromA);
+    const fromB = from(b);
+    const fraction = fromB > fromA ? (y - fromA) / (fromB - fromA) : 0;
+    return to(a) + fraction * (to(b) - to(a));
+  };
+
+  // Aligned layout: the panes are the same height, so the scroll positions just differ by
+  // how far apart the panes' tops are on screen
+  const alignedPaneOffset = (container, view) =>
+    container.getBoundingClientRect().top - view.scrollDOM.getBoundingClientRect().top;
+
+  const alignStructureToEditor = () => {
+    if (structureAligned) {
+      const container = structureRef.current;
+      const view = codeMirrorRef.current?.getView?.();
+      if (container && view) {
+        setScrollTopQuietly('structure', container, view.scrollDOM.scrollTop + alignedPaneOffset(container, view));
+      }
+      return;
+    }
+    const ctx = getStructureSyncContext();
+    if (!ctx) return;
+    const { container, view, rows, referenceY, rowTop, lineTop } = ctx;
+    const docY = referenceY - view.documentTop;
+    const treeY = mapBetweenPanes(rows, lineTop, rowTop, docY);
+    const containerTop = container.getBoundingClientRect().top;
+    setScrollTopQuietly('structure', container, treeY - (referenceY - containerTop));
+  };
+
+  const alignEditorToStructure = () => {
+    if (structureAligned) {
+      const container = structureRef.current;
+      const view = codeMirrorRef.current?.getView?.();
+      if (container && view) {
+        setScrollTopQuietly('editor', view.scrollDOM, container.scrollTop - alignedPaneOffset(container, view));
+      }
+      return;
+    }
+    const ctx = getStructureSyncContext();
+    if (!ctx) return;
+    const { container, view, rows, referenceY, rowTop, lineTop } = ctx;
+    const treeY = container.scrollTop + (referenceY - container.getBoundingClientRect().top);
+    const docY = mapBetweenPanes(rows, rowTop, lineTop, treeY);
+    const scroller = view.scrollDOM;
+    setScrollTopQuietly('editor', scroller, scroller.scrollTop + (view.documentTop + docY - referenceY));
+  };
+
+  // Clicking a row moves the cursor; the editor only scrolls if the line is off screen
+  const selectStructureNode = (node) => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view) {
+      goToPosition(node.line, 1);
+      return;
+    }
+    const line = view.state.doc.line(Math.min(node.line, view.state.doc.lines));
+    const scrollerRect = view.scrollDOM.getBoundingClientRect();
+    const top = view.documentTop + view.lineBlockAt(line.from).top;
+    const visible = top >= scrollerRect.top && top + view.defaultLineHeight <= scrollerRect.bottom;
+    view.focus();
+    view.dispatch({
+      selection: { anchor: line.from },
+      ...(visible ? {} : { effects: EditorView.scrollIntoView(line.from, { y: 'center' }) }),
+    });
+  };
+
+  // Re-apply the mapping when the tree changes shape, and keep the cursor's row in view
+  useEffect(() => {
+    alignStructureToEditor();
+    if (structureAligned) return;
+    const container = structureRef.current;
+    const row = activeStructureNodeRef.current?.firstElementChild;
+    if (!container || !row) return;
+    const containerRect = container.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    if (rowRect.top < containerRect.top) {
+      setScrollTopQuietly('structure', container, container.scrollTop - (containerRect.top - rowRect.top));
+    } else if (rowRect.bottom > containerRect.bottom) {
+      setScrollTopQuietly('structure', container, container.scrollTop + (rowRect.bottom - containerRect.bottom));
+    }
+  }, [activeStructureId, structureTree, structureCollapsed, fontSize, structureLayout, editorLayoutVersion]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tidycode-structure-layout', structureLayout);
+    } catch {
+      // Not remembered; aligned is the default anyway
+    }
+  }, [structureLayout]);
 
   const errorsByLine = useMemo(() => {
     const map = new Map();
@@ -8713,33 +9078,37 @@ const TidyCode = () => {
           lspSettings={aiSettings}
           searchTerm={findValue}
           caseSensitive={caseSensitive}
-          onScrollChange={(line) => {
-            if (syncInProgressRef.current === 'structure') return;
-            isEditorScrollingRef.current = true;
-            clearTimeout(editorScrollEndTimerRef.current);
-            editorScrollEndTimerRef.current = setTimeout(() => {
-              isEditorScrollingRef.current = false;
-            }, 300);
-            setStructureSyncLine(line);
+          onGeometryChange={() => {
+            if (structurePanelVisible && structureTree.type && structureAligned) setEditorLayoutVersion(v => v + 1);
+          }}
+          onScrollChange={() => {
+            const view = codeMirrorRef.current?.getView?.();
+            if (!view || isProgrammaticScroll('editor', view.scrollDOM)) return;
+            alignStructureToEditor();
           }}
           onCursorChange={(pos) => {
             // Update cursor position for display
             if (activeTab) {
-              const contentForCursor = activeTab.content || '';
-
-              // Optimized line/column calculation - count newlines instead of split
-              // Avoids creating substring and array allocation on every cursor movement
+              // Read the line from the editor: activeTab.content can lag behind it (e.g. right after a paste)
+              const doc = codeMirrorRef.current?.getView?.()?.state.doc;
               let line = 1;
               let column = 1;
-              let lastNewlinePos = -1;
 
-              for (let i = 0; i < pos && i < contentForCursor.length; i++) {
-                if (contentForCursor[i] === '\n') {
-                  line++;
-                  lastNewlinePos = i;
+              if (doc) {
+                const docLine = doc.lineAt(Math.min(pos, doc.length));
+                line = docLine.number;
+                column = pos - docLine.from + 1;
+              } else {
+                const contentForCursor = activeTab.content || '';
+                let lastNewlinePos = -1;
+                for (let i = 0; i < pos && i < contentForCursor.length; i++) {
+                  if (contentForCursor[i] === '\n') {
+                    line++;
+                    lastNewlinePos = i;
+                  }
                 }
+                column = pos - lastNewlinePos;
               }
-              column = pos - lastNewlinePos;
 
               const cursorInfo = { line, column };
 
@@ -8754,9 +9123,7 @@ const TidyCode = () => {
               }
               cursorUpdateThrottleRef.current = setTimeout(() => {
                 setCursorPosition(cursorInfo);
-                if (syncInProgressRef.current !== 'structure') {
-                  setStructureSyncLine(line);
-                }
+                setStructureSyncLine(line);
                 cursorUpdateThrottleRef.current = null;
               }, 50);
 
@@ -9685,15 +10052,42 @@ const TidyCode = () => {
               {showStructurePane && (
                 <>
                   <div
-                    className="bg-gray-900 border-r border-gray-800 overflow-hidden transition-[width] flex flex-col"
+                    className="relative bg-gray-900 border-r border-gray-800 overflow-hidden transition-[width] flex flex-col"
                     style={structurePaneStyle}
+                    onMouseMove={(e) => {
+                      const header = structureHeaderRef.current;
+                      if (!header) return;
+                      const over = e.clientY - e.currentTarget.getBoundingClientRect().top < header.offsetHeight;
+                      if (over !== structureHeaderHover) setStructureHeaderHover(over);
+                    }}
+                    onMouseLeave={() => setStructureHeaderHover(false)}
                   >
-                    <div className="px-3 py-2 border-b border-gray-800 text-xs uppercase tracking-wide text-gray-300 flex items-center justify-between gap-2 bg-gray-900 flex-shrink-0">
-                      <span>Structure</span>
-                      <div className="flex items-center gap-2">
+                    {/* Header floats over the tree so the first row sits level with line 1. It appears
+                        while the pointer is over its strip; otherwise only faint controls show and the
+                        strip lets clicks through to the rows beneath. */}
+                    <div
+                      ref={structureHeaderRef}
+                      className={`absolute top-0 inset-x-0 z-10 px-3 py-2 text-xs uppercase tracking-wide text-gray-300 flex items-center justify-between gap-2 border-b transition-colors ${
+                        structureHeaderHover ? 'bg-gray-900 border-gray-800 shadow-md' : 'pointer-events-none border-transparent'
+                      }`}
+                    >
+                      <span className={`transition-opacity ${structureHeaderHover ? 'opacity-100' : 'opacity-0'}`}>Structure</span>
+                      <div className={`pointer-events-auto flex items-center gap-2 rounded transition-opacity ${structureHeaderHover ? 'opacity-100' : 'opacity-40 bg-gray-900/70'}`}>
+                        <button
+                          onClick={() => setStructureLayout(structureAligned ? 'compact' : 'aligned')}
+                          className={`transition-colors p-1 rounded hover:bg-gray-800 ${structureAligned ? 'text-indigo-300 hover:text-indigo-200' : 'text-gray-400 hover:text-white'}`}
+                          title={structureAligned ? 'Aligned with the code: click for a compact outline' : 'Compact outline: click to align with the code'}
+                          aria-pressed={structureAligned}
+                        >
+                          <AlignJustify className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             // Expand all nodes
+                            if (structureAligned) {
+                              setAllStructureFolds(false);
+                              return;
+                            }
                             setStructureCollapsed({});
                           }}
                           className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-800"
@@ -9704,6 +10098,10 @@ const TidyCode = () => {
                         <button
                           onClick={() => {
                             // Collapse all nodes
+                            if (structureAligned) {
+                              setAllStructureFolds(true);
+                              return;
+                            }
                             const allNodeIds = {};
                             const collectNodeIds = (nodes) => {
                               nodes.forEach(node => {
@@ -9725,38 +10123,15 @@ const TidyCode = () => {
                       </div>
                     </div>
                     <div
-                      className="p-3 flex-1 min-h-0 overflow-y-auto text-gray-200"
+                      className={`px-3 flex-1 min-h-0 overflow-y-auto text-gray-200 ${structureAligned ? '' : 'pb-3 pt-[2px]'}`}
                       ref={structureRef}
                       onScroll={() => {
-                        if (syncInProgressRef.current === 'editor') return;
-                        if (!structureRef.current || !codeMirrorRef.current) return;
-                        const container = structureRef.current;
-                        const containerTop = container.getBoundingClientRect().top;
-                        // Find the topmost visible node in the structure panel
-                        const nodeEls = container.querySelectorAll('[data-node-id]');
-                        let topNode = null;
-                        for (const el of nodeEls) {
-                          const rect = el.getBoundingClientRect();
-                          if (rect.bottom > containerTop) { topNode = el; break; }
-                        }
-                        if (!topNode) return;
-                        const nodeId = topNode.getAttribute('data-node-id');
-                        const node = structureNodeList.find(n => n.id === nodeId);
-                        if (!node) return;
-                        const content = codeMirrorRef.current.getValue();
-                        if (!content) return;
-                        const index = getIndexFromLineColumn(content, node.line, 1);
-                        const view = codeMirrorRef.current.getView();
-                        if (!view) return;
-                        syncInProgressRef.current = 'structure';
-                        view.dispatch({
-                          effects: EditorView.scrollIntoView(index, { y: 'start', yMargin: 10 })
-                        });
-                        setTimeout(() => { syncInProgressRef.current = null; }, 400);
+                        if (!structureRef.current || isProgrammaticScroll('structure', structureRef.current)) return;
+                        alignEditorToStructure();
                       }}
                     >
                       {structureTree.nodes.length > 0 ? (
-                        renderStructureNodes(structureTree.nodes)
+                        structureAligned ? renderAlignedStructure() : renderStructureNodes(structureTree.nodes)
                       ) : (
                         <p className="text-gray-500 text-xs">No structure detected</p>
                       )}
@@ -10805,8 +11180,42 @@ const TidyCode = () => {
     { id: 'notes', label: 'Notes', icon: StickyNote },
     { id: 'todo', label: 'Tasks', icon: CheckSquare },
     ...(isDesktop() ? [{ id: 'terminal', label: 'Terminal', icon: Terminal }] : []),
-    { id: 'help', label: 'Help', icon: HelpCircle }
+    // Shown at the bottom of the desktop sidebar, above Settings
+    { id: 'help', label: 'Help', icon: HelpCircle, bottom: true },
+    { id: 'feedback', label: 'Feedback', icon: MessageCircle, bottom: true }
   ];
+
+  const renderSidebarNavItem = item => {
+    const Icon = item.icon;
+    const active = item.id === 'terminal' ? showTerminalPanel : currentPanel === item.id;
+    return (
+      <button
+        key={item.id}
+        onClick={() => {
+          if (item.id === 'help') {
+            // Always open welcome page in new tab/window for both web and desktop
+            if (isDesktop()) {
+              openUrl(HELP_URLS.welcome);
+            } else {
+              window.open('/docs/index.html', '_blank');
+            }
+          } else if (item.id === 'feedback') {
+            setShowFeedbackModal(true);
+          } else if (item.id === 'terminal') {
+            // Toggle terminal panel at bottom
+            setShowTerminalPanel(prev => !prev);
+          } else {
+            setCurrentPanel(item.id);
+          }
+        }}
+        aria-label={item.label}
+        className={`w-full flex flex-col items-center justify-center px-1 py-2 border-l-4 transition-colors ${active ? navActiveClass : navInactiveClass}`}
+      >
+        <Icon className="w-5 h-5" />
+        <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+      </button>
+    );
+  };
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
@@ -11228,35 +11637,7 @@ const TidyCode = () => {
           <LogoMark size={26} />
         </div>
         <div className="flex-1">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const active = item.id === 'terminal' ? showTerminalPanel : currentPanel === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'help') {
-                    // Always open welcome page in new tab/window for both web and desktop
-                    if (isDesktop()) {
-                      openUrl(HELP_URLS.welcome);
-                    } else {
-                      window.open('/docs/index.html', '_blank');
-                    }
-                  } else if (item.id === 'terminal') {
-                    // Toggle terminal panel at bottom
-                    setShowTerminalPanel(prev => !prev);
-                  } else {
-                    setCurrentPanel(item.id);
-                  }
-                }}
-                aria-label={item.label}
-                className={`w-full flex flex-col items-center justify-center px-1 py-2 border-l-4 transition-colors ${active ? navActiveClass : navInactiveClass}`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] mt-1 font-medium">{item.label}</span>
-              </button>
-            );
-          })}
+          {navItems.filter(item => !item.bottom).map(renderSidebarNavItem)}
         </div>
         {/* Privacy indicator (web only, when Supabase not configured) */}
         {!isDesktop() && !supabaseConfigured && (
@@ -11271,6 +11652,9 @@ const TidyCode = () => {
             </Tooltip>
           </div>
         )}
+        <div>
+          {navItems.filter(item => item.bottom).map(renderSidebarNavItem)}
+        </div>
         <div className="border-t border-gray-800 px-2 py-2 flex justify-center">
           <div className="relative w-full" ref={settingsMenuRef}>
             <button
@@ -11446,6 +11830,8 @@ const TidyCode = () => {
               onClick={() => {
                 if (item.id === 'help') {
                   window.open('/docs/index.html', '_blank');
+                } else if (item.id === 'feedback') {
+                  setShowFeedbackModal(true);
                 } else {
                   setCurrentPanel(item.id);
                 }
@@ -11686,6 +12072,10 @@ const TidyCode = () => {
       )}
 
       {/* Help Modal */}
+      {showFeedbackModal && (
+        <FeedbackModal theme={theme} onClose={() => setShowFeedbackModal(false)} />
+      )}
+
       <HelpModal
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}

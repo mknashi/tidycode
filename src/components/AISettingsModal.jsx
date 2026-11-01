@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Cloud, Check, AlertCircle, Monitor, ExternalLink, CheckCircle, XCircle, Shield } from 'lucide-react';
-import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS } from '../services/AIService';
+import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS, DEFAULT_MODELS } from '../services/AIService';
 import { LSP_SERVERS } from '../services/LSPService';
+import { fetchProviderModels, mergeModelLists, MODEL_SETTING_KEYS } from '../services/ai/modelCatalog';
+import { API_KEY_STORAGE } from '../utils/secureStorage';
 
 // Default Ollama models (will be replaced if desktop version is available)
 const DEFAULT_OLLAMA_MODELS = {
@@ -17,6 +19,16 @@ const DEFAULT_OLLAMA_MODELS = {
     size: '2 GB',
     speed: 'Fast'
   }
+};
+
+const BUILT_IN_MODELS = {
+  groq: GROQ_MODELS,
+  openai: OPENAI_MODELS,
+  claude: CLAUDE_MODELS,
+  gemini: GEMINI_MODELS,
+  mistral: MISTRAL_MODELS,
+  cerebras: CEREBRAS_MODELS,
+  sambanova: SAMBANOVA_MODELS,
 };
 
 const DEFAULT_LSP_CONFIG = Object.keys(LSP_SERVERS).reduce((acc, lang) => {
@@ -45,6 +57,40 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
   const [openaiApiKeyStatus, setOpenaiApiKeyStatus] = useState(null);
   const [claudeApiKeyStatus, setClaudeApiKeyStatus] = useState(null);
   const [validatingApiKey, setValidatingApiKey] = useState(false);
+
+  // Models the selected provider currently serves for the entered key
+  const [liveModels, setLiveModels] = useState({});
+  const selectedProvider = localSettings.provider;
+  const selectedApiKey = localSettings[`${selectedProvider}ApiKey`];
+
+  useEffect(() => {
+    if (!BUILT_IN_MODELS[selectedProvider] || !selectedApiKey) return;
+
+    let cancelled = false;
+    // Wait for the user to finish typing or pasting the key
+    const timeoutId = setTimeout(async () => {
+      const models = await fetchProviderModels(selectedProvider, selectedApiKey);
+      if (!cancelled) {
+        setLiveModels(prev => ({ ...prev, [selectedProvider]: models }));
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [selectedProvider, selectedApiKey]);
+
+  // Built-in models first, then any others the provider lists for this key
+  const renderModelOptions = (provider) => {
+    const builtIn = Object.values(BUILT_IN_MODELS[provider]);
+    const selected = localSettings[MODEL_SETTING_KEYS[provider]];
+    return mergeModelLists(builtIn, liveModels[provider] || [], selected).map(model => (
+      <option key={model.id} value={model.id}>
+        {model.description ? `${model.name} - ${model.description}` : model.name}
+      </option>
+    ));
+  };
 
   // Sync incoming settings so toggling between web/desktop keeps defaults
   useEffect(() => {
@@ -296,6 +342,627 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
     onClose();
   };
 
+  // API key and model fields for the selected provider, shown directly under
+  // its card so they're visible without scrolling past the provider list
+  const renderSelectedProviderSettings = () => (
+    <div className={`mt-2 ml-3 pl-4 py-3 border-l-2 ${
+      theme === 'dark' ? 'border-purple-500/50' : 'border-purple-300'
+    }`}>
+      {/* Groq Settings */}
+      {localSettings.provider === AI_PROVIDERS.GROQ && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Groq API Key
+            </label>
+
+            {/* Get API Key Button */}
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('groq')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get API Key from Groq</span>
+            </button>
+
+            <div className="relative">
+              <input
+                type={showGroqApiKey ? 'text' : 'password'}
+                value={localSettings.groqApiKey || ''}
+                onChange={(e) => handleGroqApiKeyChange(e.target.value)}
+                placeholder="Paste your Groq API key (gsk_...)"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  groqApiKeyStatus === 'valid'
+                    ? theme === 'dark'
+                      ? 'border-green-500 bg-gray-700 text-gray-200'
+                      : 'border-green-500 bg-white text-gray-900'
+                    : groqApiKeyStatus === 'invalid'
+                      ? theme === 'dark'
+                        ? 'border-red-500 bg-gray-700 text-gray-200'
+                        : 'border-red-500 bg-white text-gray-900'
+                      : theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+
+              {/* Validation Icon */}
+              {groqApiKeyStatus && (
+                <div className="absolute right-16 top-1/2 -translate-y-1/2">
+                  {groqApiKeyStatus === 'valid' ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowGroqApiKey(!showGroqApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showGroqApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {groqApiKeyStatus === 'valid' && (
+              <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                API key format looks correct
+              </p>
+            )}
+            {groqApiKeyStatus === 'invalid' && (
+              <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                Invalid key format. Groq keys start with 'gsk_'
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Groq Model
+            </label>
+            <select
+              value={localSettings.groqModel || DEFAULT_MODELS.groq}
+              onChange={(e) => setLocalSettings({ ...localSettings, groqModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('groq')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* OpenAI Settings */}
+      {localSettings.provider === AI_PROVIDERS.OPENAI && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              OpenAI API Key
+            </label>
+
+            {/* Get API Key Button */}
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('openai')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get API Key from OpenAI</span>
+            </button>
+
+            <div className="relative">
+              <input
+                type={showOpenAIApiKey ? 'text' : 'password'}
+                value={localSettings.openaiApiKey || ''}
+                onChange={(e) => handleOpenAIApiKeyChange(e.target.value)}
+                placeholder="Paste your OpenAI API key (sk-...)"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  openaiApiKeyStatus === 'valid'
+                    ? theme === 'dark'
+                      ? 'border-green-500 bg-gray-700 text-gray-200'
+                      : 'border-green-500 bg-white text-gray-900'
+                    : openaiApiKeyStatus === 'invalid'
+                      ? theme === 'dark'
+                        ? 'border-red-500 bg-gray-700 text-gray-200'
+                        : 'border-red-500 bg-white text-gray-900'
+                      : theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+
+              {/* Validation Icon */}
+              {openaiApiKeyStatus && (
+                <div className="absolute right-16 top-1/2 -translate-y-1/2">
+                  {openaiApiKeyStatus === 'valid' ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowOpenAIApiKey(!showOpenAIApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showOpenAIApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {openaiApiKeyStatus === 'valid' && (
+              <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                API key format looks correct
+              </p>
+            )}
+            {openaiApiKeyStatus === 'invalid' && (
+              <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                Invalid key format. OpenAI keys start with 'sk-'
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              OpenAI Model
+            </label>
+            <select
+              value={localSettings.openaiModel || DEFAULT_MODELS.openai}
+              onChange={(e) => setLocalSettings({ ...localSettings, openaiModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('openai')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Claude Settings */}
+      {localSettings.provider === AI_PROVIDERS.CLAUDE && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Claude API Key
+            </label>
+
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('claude')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get API Key from Anthropic</span>
+            </button>
+
+            <div className="relative">
+              <input
+                type={showClaudeApiKey ? 'text' : 'password'}
+                value={localSettings.claudeApiKey || ''}
+                onChange={(e) => handleClaudeApiKeyChange(e.target.value)}
+                placeholder="Paste your Claude API key (sk-ant-...)"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  claudeApiKeyStatus === 'valid'
+                    ? theme === 'dark'
+                      ? 'border-green-500 bg-gray-700 text-gray-200'
+                      : 'border-green-500 bg-white text-gray-900'
+                    : claudeApiKeyStatus === 'invalid'
+                      ? theme === 'dark'
+                        ? 'border-red-500 bg-gray-700 text-gray-200'
+                        : 'border-red-500 bg-white text-gray-900'
+                      : theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+
+              {claudeApiKeyStatus && (
+                <div className="absolute right-16 top-1/2 -translate-y-1/2">
+                  {claudeApiKeyStatus === 'valid' ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowClaudeApiKey(!showClaudeApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showClaudeApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            {claudeApiKeyStatus === 'valid' && (
+              <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                API key format looks correct
+              </p>
+            )}
+            {claudeApiKeyStatus === 'invalid' && (
+              <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                Invalid key format. Claude keys start with 'sk-ant-'
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Claude Model
+            </label>
+            <select
+              value={localSettings.claudeModel || DEFAULT_MODELS.claude}
+              onChange={(e) => setLocalSettings({ ...localSettings, claudeModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('claude')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Gemini Settings */}
+      {localSettings.provider === AI_PROVIDERS.GEMINI && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Gemini API Key
+            </label>
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('gemini')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get API Key from Google AI Studio</span>
+            </button>
+            <div className="relative">
+              <input
+                type={showGeminiApiKey ? 'text' : 'password'}
+                value={localSettings.geminiApiKey || ''}
+                onChange={(e) => setLocalSettings({ ...localSettings, geminiApiKey: e.target.value.trim() })}
+                placeholder="Paste your Gemini API key"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowGeminiApiKey(!showGeminiApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showGeminiApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Gemini Model
+            </label>
+            <select
+              value={localSettings.geminiModel || DEFAULT_MODELS.gemini}
+              onChange={(e) => setLocalSettings({ ...localSettings, geminiModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('gemini')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Mistral Settings */}
+      {localSettings.provider === AI_PROVIDERS.MISTRAL && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Mistral API Key
+            </label>
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('mistral')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get API Key from Mistral</span>
+            </button>
+            <div className="relative">
+              <input
+                type={showMistralApiKey ? 'text' : 'password'}
+                value={localSettings.mistralApiKey || ''}
+                onChange={(e) => setLocalSettings({ ...localSettings, mistralApiKey: e.target.value.trim() })}
+                placeholder="Paste your Mistral API key"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowMistralApiKey(!showMistralApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showMistralApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Mistral Model
+            </label>
+            <select
+              value={localSettings.mistralModel || DEFAULT_MODELS.mistral}
+              onChange={(e) => setLocalSettings({ ...localSettings, mistralModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('mistral')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Cerebras Settings */}
+      {localSettings.provider === AI_PROVIDERS.CEREBRAS && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Cerebras API Key
+            </label>
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('cerebras')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get Free API Key from Cerebras</span>
+            </button>
+            <p className={`text-xs mb-3 ${
+              theme === 'dark' ? 'text-green-400' : 'text-green-600'
+            }`}>
+              Free: 1M tokens/day, no credit card required
+            </p>
+            <div className="relative">
+              <input
+                type={showCerebrasApiKey ? 'text' : 'password'}
+                value={localSettings.cerebrasApiKey || ''}
+                onChange={(e) => setLocalSettings({ ...localSettings, cerebrasApiKey: e.target.value.trim() })}
+                placeholder="Paste your Cerebras API key"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCerebrasApiKey(!showCerebrasApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showCerebrasApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Cerebras Model
+            </label>
+            <select
+              value={localSettings.cerebrasModel || DEFAULT_MODELS.cerebras}
+              onChange={(e) => setLocalSettings({ ...localSettings, cerebrasModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('cerebras')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* SambaNova Settings */}
+      {localSettings.provider === AI_PROVIDERS.SAMBANOVA && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              SambaNova API Key
+            </label>
+            <button
+              type="button"
+              onClick={() => openApiKeyPage('sambanova')}
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
+                theme === 'dark'
+                  ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
+                  : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="font-medium">Get Free API Key from SambaNova</span>
+            </button>
+            <p className={`text-xs mb-3 ${
+              theme === 'dark' ? 'text-green-400' : 'text-green-600'
+            }`}>
+              Free tier available with access to Llama 405B
+            </p>
+            <div className="relative">
+              <input
+                type={showSambanovaApiKey ? 'text' : 'password'}
+                value={localSettings.sambanovaApiKey || ''}
+                onChange={(e) => setLocalSettings({ ...localSettings, sambanovaApiKey: e.target.value.trim() })}
+                placeholder="Paste your SambaNova API key"
+                className={`w-full px-4 py-2 pr-20 rounded border ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-200'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowSambanovaApiKey(!showSambanovaApiKey)}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
+                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {showSambanovaApiKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              SambaNova Model
+            </label>
+            <select
+              value={localSettings.sambanovaModel || DEFAULT_MODELS.sambanova}
+              onChange={(e) => setLocalSettings({ ...localSettings, sambanovaModel: e.target.value })}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {renderModelOptions('sambanova')}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Ollama Settings - Desktop only */}
+      {isDesktop && localSettings.provider === AI_PROVIDERS.OLLAMA && (
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-3 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+            }`}>
+              Ollama Model
+            </label>
+            <p className={`text-xs mb-3 ${
+              theme === 'dark' ? 'text-green-400' : 'text-green-600'
+            }`}>
+              No API key required. Models run entirely on your device.
+            </p>
+            <select
+              value={localSettings.ollamaModel || 'qwen2.5-coder:1.5b'}
+              onChange={(e) => handleOllamaModelChange(e.target.value)}
+              disabled={checkingModel}
+              className={`w-full px-4 py-2 rounded border ${
+                theme === 'dark'
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-300 text-gray-900'
+              }`}
+            >
+              {Object.entries(ollamaModels).map(([key, model]) => (
+                <option key={key} value={model.id}>
+                  {model.name}{model.size ? ` (${model.size})` : ''}{model.speed ? ` - ${model.speed}` : ''}
+                </option>
+              ))}
+            </select>
+            {checkingModel && (
+              <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                Checking model availability...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div
@@ -458,6 +1125,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.GROQ && renderSelectedProviderSettings()}
 
               {/* OpenAI Mode */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -496,49 +1164,46 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.OPENAI && renderSelectedProviderSettings()}
 
-              {/* Claude Mode - Desktop only (CORS restrictions in browser) */}
-              {isDesktop && (
-                <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  localSettings.provider === AI_PROVIDERS.CLAUDE
-                    ? theme === 'dark'
-                      ? 'border-purple-500 bg-purple-900/20'
-                      : 'border-purple-500 bg-purple-50'
-                    : theme === 'dark'
-                      ? 'border-gray-700 hover:border-gray-600'
-                      : 'border-gray-200 hover:border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="provider"
-                    value={AI_PROVIDERS.CLAUDE}
-                    checked={localSettings.provider === AI_PROVIDERS.CLAUDE}
-                    onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Cloud className="w-5 h-5" />
-                      <span className={`font-semibold ${
-                        theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
-                      }`}>
-                        Claude
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                        Desktop
-                      </span>
-                    </div>
-                    <p className={`text-sm mt-1 ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              {/* Claude Mode */}
+              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                localSettings.provider === AI_PROVIDERS.CLAUDE
+                  ? theme === 'dark'
+                    ? 'border-purple-500 bg-purple-900/20'
+                    : 'border-purple-500 bg-purple-50'
+                  : theme === 'dark'
+                    ? 'border-gray-700 hover:border-gray-600'
+                    : 'border-gray-200 hover:border-gray-300'
+              }`}>
+                <input
+                  type="radio"
+                  name="provider"
+                  value={AI_PROVIDERS.CLAUDE}
+                  checked={localSettings.provider === AI_PROVIDERS.CLAUDE}
+                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-5 h-5" />
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
                     }`}>
-                      Advanced reasoning • Requires API key • Pay per use
-                    </p>
-                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                      Data: Anthropic does not train on API data. 30-day log retention.
-                    </p>
+                      Claude
+                    </span>
                   </div>
-                </label>
-              )}
+                  <p className={`text-sm mt-1 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Advanced reasoning • Requires API key • Pay per use
+                  </p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Data: Anthropic does not train on API data. 30-day log retention.
+                  </p>
+                </div>
+              </label>
+              {localSettings.provider === AI_PROVIDERS.CLAUDE && renderSelectedProviderSettings()}
 
               {/* Gemini Mode */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -577,6 +1242,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.GEMINI && renderSelectedProviderSettings()}
 
               {/* Mistral Mode */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -615,6 +1281,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.MISTRAL && renderSelectedProviderSettings()}
 
               {/* Cerebras Mode (Free) */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -659,6 +1326,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.CEREBRAS && renderSelectedProviderSettings()}
 
               {/* SambaNova Mode (Free) */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
@@ -700,6 +1368,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </p>
                 </div>
               </label>
+              {localSettings.provider === AI_PROVIDERS.SAMBANOVA && renderSelectedProviderSettings()}
 
               {/* Ollama Mode - Desktop only (fully local) */}
               {isDesktop && (
@@ -746,649 +1415,9 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   </div>
                 </label>
               )}
+              {isDesktop && localSettings.provider === AI_PROVIDERS.OLLAMA && renderSelectedProviderSettings()}
             </div>
           </div>
-
-          {/* Groq Settings */}
-          {localSettings.provider === AI_PROVIDERS.GROQ && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Groq API Key
-                </label>
-
-                {/* Get API Key Button */}
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('groq')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get API Key from Groq</span>
-                </button>
-
-                <div className="relative">
-                  <input
-                    type={showGroqApiKey ? 'text' : 'password'}
-                    value={localSettings.groqApiKey || ''}
-                    onChange={(e) => handleGroqApiKeyChange(e.target.value)}
-                    placeholder="Paste your Groq API key (gsk_...)"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      groqApiKeyStatus === 'valid'
-                        ? theme === 'dark'
-                          ? 'border-green-500 bg-gray-700 text-gray-200'
-                          : 'border-green-500 bg-white text-gray-900'
-                        : groqApiKeyStatus === 'invalid'
-                          ? theme === 'dark'
-                            ? 'border-red-500 bg-gray-700 text-gray-200'
-                            : 'border-red-500 bg-white text-gray-900'
-                          : theme === 'dark'
-                            ? 'bg-gray-700 border-gray-600 text-gray-200'
-                            : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-
-                  {/* Validation Icon */}
-                  {groqApiKeyStatus && (
-                    <div className="absolute right-16 top-1/2 -translate-y-1/2">
-                      {groqApiKeyStatus === 'valid' ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowGroqApiKey(!showGroqApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showGroqApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-
-                {groqApiKeyStatus === 'valid' && (
-                  <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    API key format looks correct
-                  </p>
-                )}
-                {groqApiKeyStatus === 'invalid' && (
-                  <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
-                    <XCircle className="w-3 h-3" />
-                    Invalid key format. Groq keys start with 'gsk_'
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Groq Model
-                </label>
-                <select
-                  value={localSettings.groqModel || GROQ_MODELS['llama-3.3-70b'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, groqModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(GROQ_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* OpenAI Settings */}
-          {localSettings.provider === AI_PROVIDERS.OPENAI && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  OpenAI API Key
-                </label>
-
-                {/* Get API Key Button */}
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('openai')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get API Key from OpenAI</span>
-                </button>
-
-                <div className="relative">
-                  <input
-                    type={showOpenAIApiKey ? 'text' : 'password'}
-                    value={localSettings.openaiApiKey || ''}
-                    onChange={(e) => handleOpenAIApiKeyChange(e.target.value)}
-                    placeholder="Paste your OpenAI API key (sk-...)"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      openaiApiKeyStatus === 'valid'
-                        ? theme === 'dark'
-                          ? 'border-green-500 bg-gray-700 text-gray-200'
-                          : 'border-green-500 bg-white text-gray-900'
-                        : openaiApiKeyStatus === 'invalid'
-                          ? theme === 'dark'
-                            ? 'border-red-500 bg-gray-700 text-gray-200'
-                            : 'border-red-500 bg-white text-gray-900'
-                          : theme === 'dark'
-                            ? 'bg-gray-700 border-gray-600 text-gray-200'
-                            : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-
-                  {/* Validation Icon */}
-                  {openaiApiKeyStatus && (
-                    <div className="absolute right-16 top-1/2 -translate-y-1/2">
-                      {openaiApiKeyStatus === 'valid' ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowOpenAIApiKey(!showOpenAIApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showOpenAIApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-
-                {openaiApiKeyStatus === 'valid' && (
-                  <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    API key format looks correct
-                  </p>
-                )}
-                {openaiApiKeyStatus === 'invalid' && (
-                  <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
-                    <XCircle className="w-3 h-3" />
-                    Invalid key format. OpenAI keys start with 'sk-'
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  OpenAI Model
-                </label>
-                <select
-                  value={localSettings.openaiModel || OPENAI_MODELS['gpt-4o-mini'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, openaiModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(OPENAI_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Claude Settings - Desktop only */}
-          {isDesktop && localSettings.provider === AI_PROVIDERS.CLAUDE && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Claude API Key
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('claude')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get API Key from Anthropic</span>
-                </button>
-
-                <div className="relative">
-                  <input
-                    type={showClaudeApiKey ? 'text' : 'password'}
-                    value={localSettings.claudeApiKey || ''}
-                    onChange={(e) => handleClaudeApiKeyChange(e.target.value)}
-                    placeholder="Paste your Claude API key (sk-ant-...)"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      claudeApiKeyStatus === 'valid'
-                        ? theme === 'dark'
-                          ? 'border-green-500 bg-gray-700 text-gray-200'
-                          : 'border-green-500 bg-white text-gray-900'
-                        : claudeApiKeyStatus === 'invalid'
-                          ? theme === 'dark'
-                            ? 'border-red-500 bg-gray-700 text-gray-200'
-                            : 'border-red-500 bg-white text-gray-900'
-                          : theme === 'dark'
-                            ? 'bg-gray-700 border-gray-600 text-gray-200'
-                            : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-
-                  {claudeApiKeyStatus && (
-                    <div className="absolute right-16 top-1/2 -translate-y-1/2">
-                      {claudeApiKeyStatus === 'valid' ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-500" />
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowClaudeApiKey(!showClaudeApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showClaudeApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-
-                {claudeApiKeyStatus === 'valid' && (
-                  <p className="text-xs mt-2 text-green-500 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    API key format looks correct
-                  </p>
-                )}
-                {claudeApiKeyStatus === 'invalid' && (
-                  <p className="text-xs mt-2 text-red-500 flex items-center gap-1">
-                    <XCircle className="w-3 h-3" />
-                    Invalid key format. Claude keys start with 'sk-ant-'
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Claude Model
-                </label>
-                <select
-                  value={localSettings.claudeModel || CLAUDE_MODELS['claude-3-5-haiku'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, claudeModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(CLAUDE_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Gemini Settings */}
-          {localSettings.provider === AI_PROVIDERS.GEMINI && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Gemini API Key
-                </label>
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('gemini')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get API Key from Google AI Studio</span>
-                </button>
-                <div className="relative">
-                  <input
-                    type={showGeminiApiKey ? 'text' : 'password'}
-                    value={localSettings.geminiApiKey || ''}
-                    onChange={(e) => setLocalSettings({ ...localSettings, geminiApiKey: e.target.value.trim() })}
-                    placeholder="Paste your Gemini API key"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-200'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGeminiApiKey(!showGeminiApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showGeminiApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Gemini Model
-                </label>
-                <select
-                  value={localSettings.geminiModel || GEMINI_MODELS['gemini-2.0-flash'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, geminiModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(GEMINI_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Mistral Settings */}
-          {localSettings.provider === AI_PROVIDERS.MISTRAL && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Mistral API Key
-                </label>
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('mistral')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get API Key from Mistral</span>
-                </button>
-                <div className="relative">
-                  <input
-                    type={showMistralApiKey ? 'text' : 'password'}
-                    value={localSettings.mistralApiKey || ''}
-                    onChange={(e) => setLocalSettings({ ...localSettings, mistralApiKey: e.target.value.trim() })}
-                    placeholder="Paste your Mistral API key"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-200'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowMistralApiKey(!showMistralApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showMistralApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Mistral Model
-                </label>
-                <select
-                  value={localSettings.mistralModel || MISTRAL_MODELS['mistral-large-latest'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, mistralModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(MISTRAL_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Cerebras Settings */}
-          {localSettings.provider === AI_PROVIDERS.CEREBRAS && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Cerebras API Key
-                </label>
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('cerebras')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get Free API Key from Cerebras</span>
-                </button>
-                <p className={`text-xs mb-3 ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                }`}>
-                  Free: 1M tokens/day, no credit card required
-                </p>
-                <div className="relative">
-                  <input
-                    type={showCerebrasApiKey ? 'text' : 'password'}
-                    value={localSettings.cerebrasApiKey || ''}
-                    onChange={(e) => setLocalSettings({ ...localSettings, cerebrasApiKey: e.target.value.trim() })}
-                    placeholder="Paste your Cerebras API key"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-200'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCerebrasApiKey(!showCerebrasApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showCerebrasApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Cerebras Model
-                </label>
-                <select
-                  value={localSettings.cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, cerebrasModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(CEREBRAS_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* SambaNova Settings */}
-          {localSettings.provider === AI_PROVIDERS.SAMBANOVA && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  SambaNova API Key
-                </label>
-                <button
-                  type="button"
-                  onClick={() => openApiKeyPage('sambanova')}
-                  className={`w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded border-2 border-dashed transition-colors ${
-                    theme === 'dark'
-                      ? 'border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/30 text-purple-300'
-                      : 'border-purple-400/50 bg-purple-50 hover:bg-purple-100 text-purple-700'
-                  }`}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="font-medium">Get Free API Key from SambaNova</span>
-                </button>
-                <p className={`text-xs mb-3 ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                }`}>
-                  Free tier available with access to Llama 405B
-                </p>
-                <div className="relative">
-                  <input
-                    type={showSambanovaApiKey ? 'text' : 'password'}
-                    value={localSettings.sambanovaApiKey || ''}
-                    onChange={(e) => setLocalSettings({ ...localSettings, sambanovaApiKey: e.target.value.trim() })}
-                    placeholder="Paste your SambaNova API key"
-                    className={`w-full px-4 py-2 pr-20 rounded border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-200'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSambanovaApiKey(!showSambanovaApiKey)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
-                      theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {showSambanovaApiKey ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  SambaNova Model
-                </label>
-                <select
-                  value={localSettings.sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id}
-                  onChange={(e) => setLocalSettings({ ...localSettings, sambanovaModel: e.target.value })}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(SAMBANOVA_MODELS).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Ollama Settings - Desktop only */}
-          {isDesktop && localSettings.provider === AI_PROVIDERS.OLLAMA && (
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                }`}>
-                  Ollama Model
-                </label>
-                <p className={`text-xs mb-3 ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                }`}>
-                  No API key required. Models run entirely on your device.
-                </p>
-                <select
-                  value={localSettings.ollamaModel || 'qwen2.5-coder:1.5b'}
-                  onChange={(e) => handleOllamaModelChange(e.target.value)}
-                  disabled={checkingModel}
-                  className={`w-full px-4 py-2 rounded border ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 border-gray-600 text-gray-200'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  {Object.entries(ollamaModels).map(([key, model]) => (
-                    <option key={key} value={model.id}>
-                      {model.name}{model.size ? ` (${model.size})` : ''}{model.speed ? ` - ${model.speed}` : ''}
-                    </option>
-                  ))}
-                </select>
-                {checkingModel && (
-                  <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                    Checking model availability...
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* AI Completions Toggle */}
           <div className={`border-t pt-6 ${
@@ -1442,6 +1471,49 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
             </label>
 
             <div className="space-y-4">
+              <div>
+                <span className={`block text-xs mb-2 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Remember API keys
+                </span>
+                <div className="space-y-2">
+                  {[
+                    {
+                      value: API_KEY_STORAGE.DEVICE,
+                      label: 'On this device',
+                      hint: isDesktop
+                        ? 'Stored in your system keychain.'
+                        : 'Stored encrypted in this browser. Anyone with access to this browser profile could still use them.',
+                    },
+                    {
+                      value: API_KEY_STORAGE.SESSION,
+                      label: 'For this session only',
+                      hint: isDesktop
+                        ? 'Cleared when you quit the app.'
+                        : 'Cleared when you close this tab.',
+                    },
+                  ].map(option => (
+                    <label key={option.value} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="apiKeyStorage"
+                        value={option.value}
+                        checked={(localSettings.apiKeyStorage || API_KEY_STORAGE.DEVICE) === option.value}
+                        onChange={() => setLocalSettings({ ...localSettings, apiKeyStorage: option.value })}
+                        className="mt-0.5"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                        {option.label}
+                        <span className={`block text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                          {option.hint}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className={`block text-xs mb-1 ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -1551,7 +1623,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 }`}>
                   <strong>Cloud AI:</strong> Your content will be sent to the provider's servers for processing.
                   <br />
-                  <strong>API Keys:</strong> Encrypted before storage using AES-256-GCM. Keys never leave your device.
+                  <strong>API Keys:</strong> {isDesktop ? 'Stored in your system keychain' : 'Stored encrypted in this browser'}, and sent only to the provider you choose.
                   <br />
                   <strong>Completions:</strong> Code context (up to ~20 lines) is sent when you manually trigger AI completions.
                 </p>

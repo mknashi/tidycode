@@ -16,120 +16,35 @@ import {
  * Mistral model definitions
  */
 const MISTRAL_MODELS = [
-  // Mistral Large models
   new ModelInfo({
     id: 'mistral-large-latest',
     name: 'Mistral Large',
     contextWindow: 128000,
-    description: 'Most capable Mistral model',
+    description: 'Most capable',
     isDefault: true,
-    supportsVision: false,
     status: 'stable',
   }),
-  new ModelInfo({
-    id: 'mistral-large-2411',
-    name: 'Mistral Large (Nov 2024)',
-    contextWindow: 128000,
-    description: 'Mistral Large snapshot',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // Pixtral models (vision)
-  new ModelInfo({
-    id: 'pixtral-large-latest',
-    name: 'Pixtral Large',
-    contextWindow: 128000,
-    description: 'Multimodal model with vision',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'pixtral-12b-2409',
-    name: 'Pixtral 12B',
-    contextWindow: 128000,
-    description: 'Efficient vision model',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // Mistral Medium/Small
   new ModelInfo({
     id: 'mistral-medium-latest',
     name: 'Mistral Medium',
-    contextWindow: 32000,
+    contextWindow: 128000,
     description: 'Balanced performance',
-    supportsVision: false,
+    supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
     id: 'mistral-small-latest',
     name: 'Mistral Small',
-    contextWindow: 32000,
+    contextWindow: 128000,
     description: 'Fast and efficient',
-    supportsVision: false,
+    supportsVision: true,
     status: 'stable',
   }),
-
-  // Codestral (code-specialized)
   new ModelInfo({
     id: 'codestral-latest',
     name: 'Codestral',
-    contextWindow: 32000,
-    description: 'Optimized for code generation',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'codestral-mamba-latest',
-    name: 'Codestral Mamba',
     contextWindow: 256000,
-    description: 'Long-context code model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // Ministral (lightweight)
-  new ModelInfo({
-    id: 'ministral-8b-latest',
-    name: 'Ministral 8B',
-    contextWindow: 128000,
-    description: 'Lightweight and fast',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'ministral-3b-latest',
-    name: 'Ministral 3B',
-    contextWindow: 128000,
-    description: 'Smallest Mistral model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // Open models
-  new ModelInfo({
-    id: 'open-mistral-nemo',
-    name: 'Mistral Nemo',
-    contextWindow: 128000,
-    description: 'Open-weight model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'open-mixtral-8x22b',
-    name: 'Mixtral 8x22B',
-    contextWindow: 64000,
-    description: 'Large mixture of experts',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'open-mixtral-8x7b',
-    name: 'Mixtral 8x7B',
-    contextWindow: 32000,
-    description: 'Efficient mixture of experts',
-    supportsVision: false,
+    description: 'Code-optimized',
     status: 'stable',
   }),
 ];

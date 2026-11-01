@@ -78,7 +78,7 @@
     "react-pdf": "^10.2.0",
     "react-zoom-pan-pinch": "^3.7.0",
     "smol-toml": "^1.6.0",
-    "tinyllm": "github:mknashi/tinyllm"
+    "tinyllm": "github:mknashi/tinyllm#d592d4a12e75c0e76204b496bfbdd4709dc9f08e"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.9.0",

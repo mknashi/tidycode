@@ -40,6 +40,8 @@ notify = "6"
 dirs = "5"
 portable-pty = "0.8"
 base64 = "0.22"
+# API keys in the OS keychain; vendored builds libdbus so Linux builds need no system package
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

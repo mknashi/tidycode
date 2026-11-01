@@ -1,9 +1,11 @@
+import { ANTHROPIC_API_URL, anthropicHeaders, claudeMaxTokens, extractClaudeText } from './ai/anthropic.js';
+
 // AI Provider types
 export const AI_PROVIDERS = {
   TINYLLM: 'tinyllm', // Lightweight browser-based model for JSON/XML only
   GROQ: 'groq',
   OPENAI: 'openai',
-  CLAUDE: 'claude', // Available in desktop mode (CORS restrictions apply in browser)
+  CLAUDE: 'claude',
   GEMINI: 'gemini',
   MISTRAL: 'mistral',
   CEREBRAS: 'cerebras', // Free: 1M tokens/day, no credit card
@@ -11,99 +13,72 @@ export const AI_PROVIDERS = {
   OLLAMA: 'ollama', // Desktop only - fully local, no data leaves device
 };
 
+// Built-in model lists. These are fallbacks: when a provider key is set, the
+// settings UI merges in the provider's live list (see ai/modelCatalog.js).
+
 // Groq models
 export const GROQ_MODELS = {
-  'llama-3.3-70b': {
-    id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B',
+  'openai/gpt-oss-120b': {
+    id: 'openai/gpt-oss-120b',
+    name: 'GPT-OSS 120B',
     description: 'Fast and capable'
   },
-  'mixtral-8x7b': {
-    id: 'mixtral-8x7b-32768',
-    name: 'Mixtral 8x7B',
-    description: 'Balanced performance'
+  'openai/gpt-oss-20b': {
+    id: 'openai/gpt-oss-20b',
+    name: 'GPT-OSS 20B',
+    description: 'Lightweight and very fast'
   }
 };
 
 // OpenAI models
 export const OPENAI_MODELS = {
-  'gpt-4o-mini': {
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
+  'gpt-5.4-mini': {
+    id: 'gpt-5.4-mini',
+    name: 'GPT-5.4 Mini',
     description: 'Fast and cost-effective'
   },
-  'gpt-4o': {
-    id: 'gpt-4o',
-    name: 'GPT-4o',
-    description: 'Most capable current model'
+  'gpt-5.5': {
+    id: 'gpt-5.5',
+    name: 'GPT-5.5',
+    description: 'Most capable'
   },
-  'gpt-5': {
-    id: 'gpt-5',
-    name: 'GPT-5',
-    description: 'Next-gen model (256K context)'
-  },
-  'gpt-5-mini': {
-    id: 'gpt-5-mini',
-    name: 'GPT-5 Mini',
-    description: 'Efficient GPT-5 variant'
-  },
-  'o1-preview': {
-    id: 'o1-preview',
-    name: 'O1 Preview',
-    description: 'Advanced reasoning'
-  },
-  'o1-mini': {
-    id: 'o1-mini',
-    name: 'O1 Mini',
-    description: 'Fast reasoning'
-  },
-  'o3-mini': {
-    id: 'o3-mini',
-    name: 'O3 Mini',
-    description: 'Fast reasoning (next-gen)'
-  },
-  'o4-mini': {
-    id: 'o4-mini',
-    name: 'O4 Mini',
-    description: 'Latest fast reasoning model'
+  'gpt-5.4-nano': {
+    id: 'gpt-5.4-nano',
+    name: 'GPT-5.4 Nano',
+    description: 'Fastest and cheapest'
   }
 };
 
 // Claude models
 export const CLAUDE_MODELS = {
-  'claude-3-5-haiku': {
-    id: 'claude-3-5-haiku-20241022',
-    name: 'Claude 3.5 Haiku',
+  'claude-haiku-5-5': {
+    id: 'claude-haiku-5-5',
+    name: 'Claude Haiku 5.5',
     description: 'Fast and efficient'
   },
-  'claude-3-5-sonnet': {
-    id: 'claude-3-5-sonnet-20241022',
-    name: 'Claude 3.5 Sonnet',
+  'claude-sonnet-5-5': {
+    id: 'claude-sonnet-5-5',
+    name: 'Claude Sonnet 5.5',
     description: 'Balanced intelligence'
+  },
+  'claude-opus-5-5': {
+    id: 'claude-opus-5-5',
+    name: 'Claude Opus 5.5',
+    description: 'Most capable'
   }
 };
 
-// Gemini models
+// Gemini models (aliases that Google keeps pointed at the current release)
 export const GEMINI_MODELS = {
-  'gemini-2.0-flash': {
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
+  'gemini-flash-latest': {
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash (latest)',
     description: 'Fast and versatile'
   },
-  'gemini-2.0-pro': {
-    id: 'gemini-2.0-pro',
-    name: 'Gemini 2.0 Pro',
-    description: 'Most capable'
-  },
-  'gemini-1.5-pro': {
-    id: 'gemini-1.5-pro',
-    name: 'Gemini 1.5 Pro',
-    description: '2M context'
-  },
-  'gemini-1.5-flash': {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    description: 'Fast and efficient'
+  'gemini-flash-lite-latest': {
+    id: 'gemini-flash-lite-latest',
+    name: 'Gemini Flash-Lite (latest)',
+    description: 'Fastest and cheapest'
   }
 };
 
@@ -126,17 +101,12 @@ export const MISTRAL_MODELS = {
   }
 };
 
-// Cerebras models (free: 1M tokens/day)
+// Cerebras models
 export const CEREBRAS_MODELS = {
-  'llama-3.3-70b': {
-    id: 'llama-3.3-70b',
-    name: 'Llama 3.3 70B',
+  'gpt-oss-120b': {
+    id: 'gpt-oss-120b',
+    name: 'GPT-OSS 120B',
     description: 'Fast and capable'
-  },
-  'llama3.1-8b': {
-    id: 'llama3.1-8b',
-    name: 'Llama 3.1 8B',
-    description: 'Lightweight and fast'
   }
 };
 
@@ -146,17 +116,18 @@ export const SAMBANOVA_MODELS = {
     id: 'Meta-Llama-3.3-70B-Instruct',
     name: 'Llama 3.3 70B',
     description: 'Fast and capable'
-  },
-  'Meta-Llama-3.1-405B-Instruct': {
-    id: 'Meta-Llama-3.1-405B-Instruct',
-    name: 'Llama 3.1 405B',
-    description: 'Most powerful open model'
-  },
-  'Meta-Llama-3.1-8B-Instruct': {
-    id: 'Meta-Llama-3.1-8B-Instruct',
-    name: 'Llama 3.1 8B',
-    description: 'Lightweight and fast'
   }
+};
+
+// Model used when the user hasn't picked one
+export const DEFAULT_MODELS = {
+  groq: GROQ_MODELS['openai/gpt-oss-120b'].id,
+  openai: OPENAI_MODELS['gpt-5.4-mini'].id,
+  claude: CLAUDE_MODELS['claude-haiku-5-5'].id,
+  gemini: GEMINI_MODELS['gemini-flash-latest'].id,
+  mistral: MISTRAL_MODELS['mistral-large-latest'].id,
+  cerebras: CEREBRAS_MODELS['gpt-oss-120b'].id,
+  sambanova: SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id,
 };
 
 class AIService {
@@ -169,7 +140,7 @@ class AIService {
   // Covers o1, o3, o4-mini, and future o-series models
   isOpenAIReasoningModel(model) {
     const id = (model || '').toLowerCase();
-    return /^o\d/.test(id);
+    return /^(o\d|gpt-5)/.test(id);
   }
 
   // Build OpenAI request body with correct parameters for the model
@@ -291,7 +262,7 @@ Fixed ${errorDetails.type}:`;
   }
 
   // Fix with Groq API
-  async fixWithGroq(content, errorDetails, apiKey, model = GROQ_MODELS['llama-3.3-70b'].id) {
+  async fixWithGroq(content, errorDetails, apiKey, model = DEFAULT_MODELS.groq) {
     if (!apiKey) {
       throw new Error('Groq API key is required');
     }
@@ -357,7 +328,7 @@ Fixed ${errorDetails.type}:`;
   }
 
   // Fix with OpenAI API
-  async fixWithOpenAI(content, errorDetails, apiKey, model = OPENAI_MODELS['gpt-4o-mini'].id) {
+  async fixWithOpenAI(content, errorDetails, apiKey, model = DEFAULT_MODELS.openai) {
     if (!apiKey) {
       throw new Error('OpenAI API key is required');
     }
@@ -408,7 +379,7 @@ Fixed ${errorDetails.type}:`;
   }
 
   // Fix with Claude API
-  async fixWithClaude(content, errorDetails, apiKey, model = CLAUDE_MODELS['claude-3-5-haiku'].id) {
+  async fixWithClaude(content, errorDetails, apiKey, model = DEFAULT_MODELS.claude) {
     if (!apiKey) {
       throw new Error('Claude API key is required');
     }
@@ -416,24 +387,19 @@ Fixed ${errorDetails.type}:`;
     const prompt = this.buildFixPrompt(content, errorDetails);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(`${ANTHROPIC_API_URL}/messages`, {
         method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json'
-        },
+        headers: anthropicHeaders(apiKey),
         body: JSON.stringify({
           model,
-          max_tokens: 16000,
+          max_tokens: claudeMaxTokens(16000),
           system: `You are a ${errorDetails.type} syntax error fixing assistant. Only output valid ${errorDetails.type}, nothing else.`,
           messages: [
             {
               role: 'user',
               content: prompt
             }
-          ],
-          temperature: 0.1
+          ]
         })
       });
 
@@ -451,7 +417,7 @@ Fixed ${errorDetails.type}:`;
       }
 
       const data = await response.json();
-      let fixed = data.content[0]?.text || '';
+      let fixed = extractClaudeText(data);
 
       // Remove markdown code block markers but preserve content
       if (fixed.includes('```')) {
@@ -479,18 +445,34 @@ Fixed ${errorDetails.type}:`;
 
       return fixed.trim();
     } catch (error) {
-      // Network error or fetch failed
-      if (error.message.includes('Claude API error')) {
-        throw error; // Re-throw API errors
+      // fetch throws TypeError only when the request never completed (offline, blocked, DNS)
+      if (error instanceof TypeError) {
+        throw new Error(`Could not reach the Claude API: ${error.message}`);
       }
-      // This is a network-level error (CORS, connection failed, etc.)
-      // Claude API has CORS restrictions in browsers
-      throw new Error(`Browser CORS restriction: Claude API cannot be called directly from web browsers. Please use the desktop app for Claude AI features, or switch to Groq/OpenAI providers which support browser access.`);
+      throw error;
     }
   }
 
-  // Fix with TinyLLM (browser-based, no API key needed)
-  async fixWithTinyLLM(content, errorDetails) {
+  // Whether fixed content actually parses, so a non-fix isn't presented as one
+  isValidContent(text, type) {
+    if (type === 'JSON') {
+      try {
+        JSON.parse(text);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    if (type === 'XML' && typeof DOMParser !== 'undefined') {
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      return !doc.getElementsByTagName('parsererror').length;
+    }
+    return true;
+  }
+
+  // Fix with TinyLLM (browser-based, no API key needed). Only content that parses counts
+  // as fixed; with allowPartial, an improved but still invalid result is returned too.
+  async fixWithTinyLLM(content, errorDetails, { allowPartial = false } = {}) {
     try {
       // Initialize TinyLLM with useAI: false to use rule-based fixing only
       // Note: Pre-trained model weights are not yet publicly available in the tinyllm package
@@ -537,14 +519,15 @@ Fixed ${errorDetails.type}:`;
       }
 
       // TinyLLM returns: { success, fixed, original, fixes, data, errors, method, canTryAI }
-      if (result && result.success && result.fixed) {
+      const isValid = Boolean(result?.fixed) && this.isValidContent(result.fixed, errorDetails.type);
+      if (result && result.success && isValid) {
         console.log(`[TinyLLM] ✓ Successfully fixed using ${result.method || 'rule-based'} approach`);
         console.log('[TinyLLM] FULL FIXED CONTENT:', result.fixed);
         console.log('[TinyLLM] First 500 chars:', result.fixed.substring(0, 500));
         console.log('[TinyLLM] Contains \\b character codes:', result.fixed.includes('\\b'));
         console.log('[TinyLLM] Sample quotes check:', result.fixed.match(/"[^"]*"/g)?.slice(0, 5));
         return result.fixed.trim();
-      } else if (result && result.fixed) {
+      } else if (allowPartial && result?.fixed && result.fixed.trim() !== content.trim()) {
         // Return the fixed version even if not fully successful (best effort)
         console.log('[TinyLLM] ⚠ Partial fix applied (validation may still fail)');
         console.log('[TinyLLM] PARTIAL FIXED CONTENT:', result.fixed);
@@ -612,7 +595,7 @@ Fixed ${errorDetails.type}:`;
   }
 
   // Fix with Gemini API (different format)
-  async fixWithGemini(content, errorDetails, apiKey, model = GEMINI_MODELS['gemini-2.0-flash'].id) {
+  async fixWithGemini(content, errorDetails, apiKey, model = DEFAULT_MODELS.gemini) {
     if (!apiKey) throw new Error('Gemini API key is required');
 
     const prompt = this.buildFixPrompt(content, errorDetails);
@@ -668,7 +651,8 @@ Fixed ${errorDetails.type}:`;
       // Fall back to the configured provider only if TinyLLM fails.
       if (errorDetails.type === 'JSON' || errorDetails.type === 'XML') {
         try {
-          return await this.fixWithTinyLLM(content, errorDetails);
+          // Partial fixes only when TinyLLM is the chosen provider; otherwise the provider gets a turn
+          return await this.fixWithTinyLLM(content, errorDetails, { allowPartial: provider === AI_PROVIDERS.TINYLLM });
         } catch (tinyErr) {
           console.warn('[AI Fix] TinyLLM failed, falling back to configured provider:', tinyErr.message);
           // If the user explicitly chose TinyLLM and it failed, there is no fallback — rethrow.
@@ -710,21 +694,21 @@ Fixed ${errorDetails.type}:`;
       // Mistral mode (OpenAI-compatible)
       if (provider === AI_PROVIDERS.MISTRAL) {
         return await this.fixWithOpenAICompatible(content, errorDetails, mistralApiKey,
-          mistralModel || MISTRAL_MODELS['mistral-large-latest'].id,
+          mistralModel || DEFAULT_MODELS.mistral,
           'https://api.mistral.ai/v1', 'Mistral');
       }
 
       // Cerebras mode (OpenAI-compatible, free)
       if (provider === AI_PROVIDERS.CEREBRAS) {
         return await this.fixWithOpenAICompatible(content, errorDetails, cerebrasApiKey,
-          cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id,
+          cerebrasModel || DEFAULT_MODELS.cerebras,
           'https://api.cerebras.ai/v1', 'Cerebras');
       }
 
       // SambaNova mode (OpenAI-compatible, free)
       if (provider === AI_PROVIDERS.SAMBANOVA) {
         return await this.fixWithOpenAICompatible(content, errorDetails, sambanovaApiKey,
-          sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id,
+          sambanovaModel || DEFAULT_MODELS.sambanova,
           'https://api.sambanova.ai/v1', 'SambaNova');
       }
 
@@ -796,7 +780,7 @@ Fixed ${errorDetails.type}:`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: groqModel || GROQ_MODELS['llama-3.3-70b'].id,
+            model: groqModel || DEFAULT_MODELS.groq,
             messages: [
               {
                 role: 'system',
@@ -825,7 +809,7 @@ Fixed ${errorDetails.type}:`;
       if (provider === AI_PROVIDERS.OPENAI) {
         if (!openaiApiKey) throw new Error('OpenAI API key is required');
 
-        const effectiveModel = openaiModel || OPENAI_MODELS['gpt-4o-mini'].id;
+        const effectiveModel = openaiModel || DEFAULT_MODELS.openai;
         const requestBody = this.buildOpenAIRequestBody(effectiveModel, [
             {
               role: 'system',
@@ -848,16 +832,12 @@ Fixed ${errorDetails.type}:`;
         if (!claudeApiKey) throw new Error('Claude API key is required');
 
         try {
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
+          const response = await fetch(`${ANTHROPIC_API_URL}/messages`, {
             method: 'POST',
-            headers: {
-              'x-api-key': claudeApiKey,
-              'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json'
-            },
+            headers: anthropicHeaders(claudeApiKey),
             body: JSON.stringify({
-              model: claudeModel || CLAUDE_MODELS['claude-3-5-haiku'].id,
-              max_tokens: 4000,
+              model: claudeModel || DEFAULT_MODELS.claude,
+              max_tokens: claudeMaxTokens(4000),
               system: 'You are a helpful writing assistant. Output only the transformed text, no explanations.',
               messages: [
                 {
@@ -881,12 +861,12 @@ Fixed ${errorDetails.type}:`;
           }
 
           const data = await response.json();
-          return data.content[0]?.text?.trim() || text;
+          return extractClaudeText(data).trim() || text;
         } catch (error) {
-          if (error.message.includes('Claude API error')) {
-            throw error;
+          if (error instanceof TypeError) {
+            throw new Error(`Could not reach the Claude API: ${error.message}`);
           }
-          throw new Error(`Browser CORS restriction: Claude API cannot be called directly from web browsers. Please use the desktop app for Claude AI features, or switch to Groq/OpenAI providers.`);
+          throw error;
         }
       }
 
@@ -894,7 +874,7 @@ Fixed ${errorDetails.type}:`;
       if (provider === AI_PROVIDERS.GEMINI) {
         if (!geminiApiKey) throw new Error('Gemini API key is required');
 
-        const model = geminiModel || GEMINI_MODELS['gemini-2.0-flash'].id;
+        const model = geminiModel || DEFAULT_MODELS.gemini;
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
           {
@@ -921,7 +901,7 @@ Fixed ${errorDetails.type}:`;
         if (!mistralApiKey) throw new Error('Mistral API key is required');
         const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
         return await this._chatComplete('https://api.mistral.ai/v1', mistralApiKey,
-          mistralModel || MISTRAL_MODELS['mistral-large-latest'].id, sysPrompt, prompt, 'Mistral') || text;
+          mistralModel || DEFAULT_MODELS.mistral, sysPrompt, prompt, 'Mistral') || text;
       }
 
       // Cerebras mode (OpenAI-compatible, free)
@@ -929,7 +909,7 @@ Fixed ${errorDetails.type}:`;
         if (!cerebrasApiKey) throw new Error('Cerebras API key is required');
         const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
         return await this._chatComplete('https://api.cerebras.ai/v1', cerebrasApiKey,
-          cerebrasModel || CEREBRAS_MODELS['llama-3.3-70b'].id, sysPrompt, prompt, 'Cerebras') || text;
+          cerebrasModel || DEFAULT_MODELS.cerebras, sysPrompt, prompt, 'Cerebras') || text;
       }
 
       // SambaNova mode (OpenAI-compatible, free)
@@ -937,7 +917,7 @@ Fixed ${errorDetails.type}:`;
         if (!sambanovaApiKey) throw new Error('SambaNova API key is required');
         const sysPrompt = 'You are a helpful writing assistant. Output only the transformed text, no explanations.';
         return await this._chatComplete('https://api.sambanova.ai/v1', sambanovaApiKey,
-          sambanovaModel || SAMBANOVA_MODELS['Meta-Llama-3.3-70B-Instruct'].id, sysPrompt, prompt, 'SambaNova') || text;
+          sambanovaModel || DEFAULT_MODELS.sambanova, sysPrompt, prompt, 'SambaNova') || text;
       }
 
       throw new Error('Invalid AI provider');

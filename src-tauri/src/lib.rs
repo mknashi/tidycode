@@ -1939,6 +1939,21 @@ async fn get_lsp_install_instructions(language: String) -> Result<serde_json::Va
     Ok(instructions)
 }
 
+// Join the text blocks of a Messages API response. Current Claude models
+// return thinking blocks before the text, so content[0] isn't always text.
+fn claude_response_text(data: &serde_json::Value) -> String {
+    data["content"]
+        .as_array()
+        .map(|blocks| {
+            blocks
+                .iter()
+                .filter(|block| block["type"] == "text")
+                .filter_map(|block| block["text"].as_str())
+                .collect::<String>()
+        })
+        .unwrap_or_default()
+}
+
 // Fix with Claude API
 #[tauri::command]
 async fn fix_with_claude(
@@ -1991,11 +2006,13 @@ Fixed {}:"#,
         details.error_type
     );
 
+    // Current models think before answering, so allow extra time
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
+        .timeout(std::time::Duration::from_secs(180))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
+    // Current models accept only the default sampling settings, so no temperature
     let request_body = serde_json::json!({
         "model": model,
         "max_tokens": 16000,
@@ -2005,8 +2022,7 @@ Fixed {}:"#,
                 "role": "user",
                 "content": prompt
             }
-        ],
-        "temperature": 0.1
+        ]
     });
 
     let response = client
@@ -2037,10 +2053,7 @@ Fixed {}:"#,
         .await
         .map_err(|e| format!("Failed to parse Claude response: {}", e))?;
 
-    let mut fixed = data["content"][0]["text"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
+    let mut fixed = claude_response_text(&data);
 
     // Remove markdown code block markers
     if fixed.contains("```") {
@@ -2347,23 +2360,31 @@ async fn get_claude_completion(
     api_key: String,
     model: String,
 ) -> Result<String, String> {
+    // Current models think before answering, so allow time and tokens for that
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    let request_body = serde_json::json!({
+    // Current models accept only the default sampling settings, so no temperature.
+    // Low effort keeps thinking short for a one-line suggestion.
+    let mut request_body = serde_json::json!({
         "model": model,
-        "max_tokens": 50,
+        "max_tokens": 1024,
         "system": "You are a code completion assistant. Return only the completion text, no explanations or markdown.",
         "messages": [
             {
                 "role": "user",
                 "content": prompt
             }
-        ],
-        "temperature": 0.2
+        ]
     });
+    let supports_effort = ["claude-opus-5", "claude-sonnet-5", "claude-haiku-5", "claude-fable-5"]
+        .iter()
+        .any(|prefix| model.starts_with(prefix));
+    if supports_effort {
+        request_body["output_config"] = serde_json::json!({ "effort": "low" });
+    }
 
     let response = client
         .post("https://api.anthropic.com/v1/messages")
@@ -2393,13 +2414,54 @@ async fn get_claude_completion(
         .await
         .map_err(|e| format!("Failed to parse Claude response: {}", e))?;
 
-    let completion = data["content"][0]["text"]
-        .as_str()
-        .unwrap_or("")
-        .trim()
-        .to_string();
+    let completion = claude_response_text(&data).trim().to_string();
 
     Ok(completion)
+}
+
+// API keys in the OS keychain (macOS Keychain, Windows Credential Manager,
+// Linux Secret Service). Only the provider key fields the settings UI uses
+// can be read or written.
+const KEYCHAIN_SERVICE: &str = "ai.tidycode";
+const KEYCHAIN_FIELDS: &[&str] = &[
+    "groqApiKey",
+    "openaiApiKey",
+    "claudeApiKey",
+    "geminiApiKey",
+    "mistralApiKey",
+    "cerebrasApiKey",
+    "sambanovaApiKey",
+];
+
+fn keychain_entry(name: &str) -> Result<keyring::Entry, String> {
+    if !KEYCHAIN_FIELDS.contains(&name) {
+        return Err(format!("Unknown secret: {}", name));
+    }
+    keyring::Entry::new(KEYCHAIN_SERVICE, name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn secret_get(name: String) -> Result<Option<String>, String> {
+    match keychain_entry(&name)?.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn secret_set(name: String, value: String) -> Result<(), String> {
+    keychain_entry(&name)?
+        .set_password(&value)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn secret_delete(name: String) -> Result<(), String> {
+    match keychain_entry(&name)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 // Helper function to extract JSON/XML content
@@ -3102,6 +3164,9 @@ pub fn run() {
             fix_with_groq,
             fix_with_openai,
             get_claude_completion,
+            secret_get,
+            secret_set,
+            secret_delete,
             check_model_available,
             ollama_api_get,
             ollama_chat,

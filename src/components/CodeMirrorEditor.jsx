@@ -121,12 +121,15 @@ const CodeMirrorEditor = forwardRef(({
   caseSensitive = false, // Case sensitivity for search
   onContextMenu = null, // Right-click handler for AI actions
   onSelectionChange = null, // Selection change handler for floating toolbar
-  onScrollChange = null, // Fires with first-visible line number when editor scrolls
+  onScrollChange = null, // Fires (once per frame) when the editor scrolls
+  onGeometryChange = null, // Fires (once per frame) when line heights, folds or the editor size change
 }, ref) => {
   const editorRef = useRef(null);
   const vimModeRef = useRef('normal');
   const viewRef = useRef(null);
   const [viewReady, setViewReady] = React.useState(false);
+  // The current view instance; the ref callback can run before the view exists
+  const [scrollView, setScrollView] = React.useState(null);
 
   // Stable refs for callbacks used inside extensions (avoids rebuilding extensions on every render)
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -135,7 +138,9 @@ const CodeMirrorEditor = forwardRef(({
   onContextMenuRef.current = onContextMenu;
   const onScrollChangeRef = useRef(onScrollChange);
   onScrollChangeRef.current = onScrollChange;
-  const scrollThrottleRef = useRef(null);
+  const onGeometryChangeRef = useRef(onGeometryChange);
+  onGeometryChangeRef.current = onGeometryChange;
+  const geometryFrameRef = useRef(null);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -277,19 +282,11 @@ const CodeMirrorEditor = forwardRef(({
           }
         }
       }
-      // Viewport change — use this instead of DOM scroll events (scroll doesn't bubble)
-      if (update.viewportChanged) {
-        const cb = onScrollChangeRef.current;
-        if (cb && !scrollThrottleRef.current) {
-          scrollThrottleRef.current = setTimeout(() => {
-            scrollThrottleRef.current = null;
-            try {
-              // view.viewport.from is the char offset of the first visible character
-              const firstLine = update.view.state.doc.lineAt(update.view.viewport.from).number;
-              cb(firstLine);
-            } catch (_) { /* ignore */ }
-          }, 80);
-        }
+      if ((update.heightChanged || update.geometryChanged) && onGeometryChangeRef.current && !geometryFrameRef.current) {
+        geometryFrameRef.current = requestAnimationFrame(() => {
+          geometryFrameRef.current = null;
+          onGeometryChangeRef.current?.();
+        });
       }
     }));
 
@@ -485,6 +482,26 @@ const CodeMirrorEditor = forwardRef(({
     };
   }, [vimEnabled, viewReady]); // Re-run when editor view becomes ready
 
+  // Report scrolling from the scroller itself: the viewport includes lines
+  // rendered above and below the visible area, so it isn't a scroll position
+  useEffect(() => {
+    const view = scrollView;
+    if (!view) return;
+    let frame = null;
+    const handleScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        onScrollChangeRef.current?.();
+      });
+    };
+    view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      view.scrollDOM.removeEventListener('scroll', handleScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [scrollView]);
+
   // Handle VIM mode changes
   useEffect(() => {
     if (!vimEnabled || !viewRef.current) return;
@@ -608,6 +625,7 @@ const CodeMirrorEditor = forwardRef(({
             setViewReady(false);
           }
         }}
+        onCreateEditor={setScrollView}
         value={typeof value === 'string' ? value : String(value || '')}
         height="100%"
         width="100%"

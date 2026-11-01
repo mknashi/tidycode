@@ -35,8 +35,9 @@ claudeProviderTests.test('should have Claude models defined', () => {
 
   // Check for expected models
   const modelIds = provider.models.map(m => m.id);
-  assert.ok(modelIds.some(id => id.includes('claude-3-5-sonnet')), 'Should have Claude 3.5 Sonnet');
-  assert.ok(modelIds.some(id => id.includes('claude-3-5-haiku')), 'Should have Claude 3.5 Haiku');
+  assert.ok(modelIds.includes('claude-sonnet-5-5'), 'Should have Claude Sonnet 5.5');
+  assert.ok(modelIds.includes('claude-haiku-5-5'), 'Should have Claude Haiku 5.5');
+  assert.ok(modelIds.includes('claude-opus-5-5'), 'Should have Claude Opus 5.5');
 });
 
 claudeProviderTests.test('should have expected capabilities', () => {
@@ -86,13 +87,18 @@ openaiProviderTests.test('should create with correct configuration', () => {
   assert.ok(provider.requiresApiKey);
 });
 
-openaiProviderTests.test('should have GPT models including GPT-5 placeholder', () => {
+openaiProviderTests.test('should have current GPT-5 models', () => {
   const provider = new OpenAIProvider();
 
   const modelIds = provider.models.map(m => m.id);
-  assert.ok(modelIds.includes('gpt-4o'), 'Should have GPT-4o');
-  assert.ok(modelIds.includes('gpt-4o-mini'), 'Should have GPT-4o-mini');
-  assert.ok(modelIds.includes('gpt-5'), 'Should have GPT-5 placeholder');
+  assert.ok(modelIds.includes('gpt-5.5'), 'Should have GPT-5.5');
+  assert.ok(modelIds.includes('gpt-5.4-mini'), 'Should have GPT-5.4 Mini');
+});
+
+openaiProviderTests.test('should not send temperature to GPT-5 models', () => {
+  const provider = new OpenAIProvider();
+  assert.ok(provider.isReasoningModel('gpt-5.5'));
+  assert.ok(provider.isReasoningModel('o4-mini'));
 });
 
 openaiProviderTests.test('should have expected capabilities', () => {
@@ -144,12 +150,12 @@ geminiProviderTests.test('should create with correct configuration', () => {
   assert.ok(provider.requiresApiKey);
 });
 
-geminiProviderTests.test('should have Gemini 2.0 models', () => {
+geminiProviderTests.test('should use the -latest model aliases', () => {
   const provider = new GeminiProvider();
 
   const modelIds = provider.models.map(m => m.id);
-  assert.ok(modelIds.includes('gemini-2.0-flash'), 'Should have Gemini 2.0 Flash');
-  assert.ok(modelIds.some(id => id.includes('gemini-1.5')), 'Should have Gemini 1.5 models');
+  assert.ok(modelIds.includes('gemini-flash-latest'), 'Should have Gemini Flash (latest)');
+  assert.ok(modelIds.includes('gemini-flash-lite-latest'), 'Should have Gemini Flash-Lite (latest)');
 });
 
 geminiProviderTests.test('should support code execution capability', () => {
@@ -160,7 +166,7 @@ geminiProviderTests.test('should support code execution capability', () => {
 geminiProviderTests.test('should have very large context windows', () => {
   const provider = new GeminiProvider();
 
-  const flashModel = provider.models.find(m => m.id === 'gemini-2.0-flash');
+  const flashModel = provider.models.find(m => m.id === 'gemini-flash-latest');
   assert.ok(flashModel);
   assert.greaterThan(flashModel.contextWindow, 100000);
 });
@@ -188,12 +194,12 @@ groqProviderTests.test('should create with correct configuration', () => {
   assert.ok(provider.requiresApiKey);
 });
 
-groqProviderTests.test('should have Llama and Mixtral models', () => {
+groqProviderTests.test('should have GPT-OSS models', () => {
   const provider = new GroqProvider();
 
   const modelIds = provider.models.map(m => m.id);
-  assert.ok(modelIds.some(id => id.includes('llama')), 'Should have Llama models');
-  assert.ok(modelIds.some(id => id.includes('mixtral')), 'Should have Mixtral models');
+  assert.ok(modelIds.includes('openai/gpt-oss-120b'), 'Should have GPT-OSS 120B');
+  assert.ok(modelIds.includes('openai/gpt-oss-20b'), 'Should have GPT-OSS 20B');
 });
 
 groqProviderTests.test('should validate Groq API key format', () => {
@@ -232,12 +238,11 @@ mistralProviderTests.test('should have Codestral models', () => {
   assert.ok(modelIds.some(id => id.includes('mistral-large')), 'Should have Mistral Large');
 });
 
-mistralProviderTests.test('should have Pixtral vision models', () => {
+mistralProviderTests.test('should have vision models', () => {
   const provider = new MistralProvider();
 
   const visionModels = provider.models.filter(m => m.supportsVision);
   assert.ok(visionModels.length > 0, 'Should have vision models');
-  assert.ok(visionModels.some(m => m.id.includes('pixtral')));
 });
 
 /**

@@ -1,7 +1,7 @@
 /**
  * OpenAI Provider
  *
- * Supports GPT-4, GPT-4o, GPT-5, and future OpenAI models.
+ * Supports the GPT-5 family and other OpenAI chat models.
  * https://platform.openai.com/docs/api-reference/chat/create
  */
 
@@ -16,150 +16,28 @@ import {
  * OpenAI model definitions
  */
 const OPENAI_MODELS = [
-  // Codex models (optimized for coding)
   new ModelInfo({
-    id: 'codex-mini-latest',
-    name: 'Codex Mini (Latest)',
-    contextWindow: 200000,
-    description: 'Fast, lightweight coding model — always points to newest mini',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'codex-mini-2025-01-24',
-    name: 'Codex Mini (Jan 2025)',
-    contextWindow: 200000,
-    description: 'Codex Mini snapshot from January 2025',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // GPT-5 models (next generation - placeholder for future)
-  new ModelInfo({
-    id: 'gpt-5',
-    name: 'GPT-5',
-    contextWindow: 256000,
-    description: 'Most advanced GPT model (when available)',
-    supportsVision: true,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'gpt-5-mini',
-    name: 'GPT-5 Mini',
-    contextWindow: 128000,
-    description: 'Efficient GPT-5 variant (when available)',
-    supportsVision: true,
-    status: 'preview',
-  }),
-
-  // GPT-4o models (current flagship)
-  new ModelInfo({
-    id: 'gpt-4o',
-    name: 'GPT-4o',
-    contextWindow: 128000,
-    description: 'Most capable current model, multimodal',
+    id: 'gpt-5.5',
+    name: 'GPT-5.5',
+    contextWindow: 400000,
+    description: 'Most capable model for complex coding tasks',
     isDefault: true,
     supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
-    contextWindow: 128000,
+    id: 'gpt-5.4-mini',
+    name: 'GPT-5.4 Mini',
+    contextWindow: 400000,
     description: 'Fast and cost-effective',
     supportsVision: true,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'gpt-4o-2024-11-20',
-    name: 'GPT-4o (Nov 2024)',
-    contextWindow: 128000,
-    description: 'GPT-4o snapshot from November 2024',
-    supportsVision: true,
-    status: 'stable',
-  }),
-
-  // GPT-4 Turbo
-  new ModelInfo({
-    id: 'gpt-4-turbo',
-    name: 'GPT-4 Turbo',
-    contextWindow: 128000,
-    description: 'GPT-4 Turbo with vision',
-    supportsVision: true,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'gpt-4-turbo-preview',
-    name: 'GPT-4 Turbo Preview',
-    contextWindow: 128000,
-    description: 'Latest GPT-4 Turbo preview',
-    supportsVision: false,
-    status: 'preview',
-  }),
-
-  // GPT-4 base
-  new ModelInfo({
-    id: 'gpt-4',
-    name: 'GPT-4',
-    contextWindow: 8192,
-    description: 'Original GPT-4 model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-  new ModelInfo({
-    id: 'gpt-4-32k',
-    name: 'GPT-4 32K',
-    contextWindow: 32768,
-    description: 'GPT-4 with extended context',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // GPT-3.5 models
-  new ModelInfo({
-    id: 'gpt-3.5-turbo',
-    name: 'GPT-3.5 Turbo',
-    contextWindow: 16385,
-    description: 'Fast and economical',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // O1 reasoning models
-  new ModelInfo({
-    id: 'o1-preview',
-    name: 'O1 Preview',
-    contextWindow: 128000,
-    description: 'Advanced reasoning model',
-    supportsVision: false,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'o1-mini',
-    name: 'O1 Mini',
-    contextWindow: 128000,
-    description: 'Fast reasoning model',
-    supportsVision: false,
-    status: 'preview',
-  }),
-
-  // O3 reasoning models
-  new ModelInfo({
-    id: 'o3-mini',
-    name: 'O3 Mini',
-    contextWindow: 200000,
-    description: 'Fast next-gen reasoning model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // O4 reasoning models
-  new ModelInfo({
-    id: 'o4-mini',
-    name: 'O4 Mini',
-    contextWindow: 200000,
-    description: 'Latest fast reasoning model',
-    supportsVision: true,
+    id: 'gpt-5.4-nano',
+    name: 'GPT-5.4 Nano',
+    contextWindow: 400000,
+    description: 'Fastest and cheapest',
     status: 'stable',
   }),
 ];
@@ -203,11 +81,11 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
-   * Check if a model is a reasoning model (o1, o3, o4-mini, etc.) that doesn't support temperature
+   * Check if a model accepts only the default temperature (o-series, GPT-5 family)
    */
   isReasoningModel(modelId) {
     const id = (modelId || this.getCurrentModelId() || '').toLowerCase();
-    return /^o\d/.test(id) || id.startsWith('codex');
+    return /^(o\d|gpt-5)/.test(id) || id.startsWith('codex');
   }
 
   /**

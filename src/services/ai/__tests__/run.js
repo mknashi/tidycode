@@ -16,6 +16,8 @@ import { allSuites as providerInterfaceSuites } from './ProviderInterface.test.j
 import { allSuites as providersSuites } from './providers.test.js';
 import { allSuites as providerManagerSuites } from './ProviderManager.test.js';
 import { allSuites as actionsSuites } from './actions.test.js';
+import { allSuites as modelCatalogSuites } from './modelCatalog.test.js';
+import { allSuites as secureStorageSuites } from './secureStorage.test.js';
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -68,6 +70,8 @@ ${colors.bright}${colors.cyan}╚═══════════════�
     ...providersSuites,
     ...providerManagerSuites,
     ...actionsSuites,
+    ...modelCatalogSuites,
+    ...secureStorageSuites,
   ];
 
   console.log(`${colors.gray}Running ${unitSuites.length} test suites...${colors.reset}\n`);

@@ -16,97 +16,20 @@ import {
  * Groq model definitions
  */
 const GROQ_MODELS = [
-  // Llama 3.3 models
   new ModelInfo({
-    id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B',
-    contextWindow: 128000,
-    description: 'Most capable Llama model, versatile',
+    id: 'openai/gpt-oss-120b',
+    name: 'GPT-OSS 120B',
+    contextWindow: 131072,
+    description: 'Fast and capable',
     isDefault: true,
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // Llama 3.2 models
-  new ModelInfo({
-    id: 'llama-3.2-90b-vision-preview',
-    name: 'Llama 3.2 90B Vision',
-    contextWindow: 8192,
-    description: 'Vision-capable Llama model',
-    supportsVision: true,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'llama-3.2-11b-vision-preview',
-    name: 'Llama 3.2 11B Vision',
-    contextWindow: 8192,
-    description: 'Smaller vision model',
-    supportsVision: true,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'llama-3.2-3b-preview',
-    name: 'Llama 3.2 3B',
-    contextWindow: 8192,
-    description: 'Fast and lightweight',
-    supportsVision: false,
-    status: 'preview',
-  }),
-  new ModelInfo({
-    id: 'llama-3.2-1b-preview',
-    name: 'Llama 3.2 1B',
-    contextWindow: 8192,
-    description: 'Fastest Llama model',
-    supportsVision: false,
-    status: 'preview',
-  }),
-
-  // Llama 3.1 models
-  new ModelInfo({
-    id: 'llama-3.1-70b-versatile',
-    name: 'Llama 3.1 70B',
-    contextWindow: 128000,
-    description: 'Large context Llama 3.1',
-    supportsVision: false,
     status: 'stable',
   }),
   new ModelInfo({
-    id: 'llama-3.1-8b-instant',
-    name: 'Llama 3.1 8B',
-    contextWindow: 128000,
-    description: 'Fast Llama 3.1',
-    supportsVision: false,
+    id: 'openai/gpt-oss-20b',
+    name: 'GPT-OSS 20B',
+    contextWindow: 131072,
+    description: 'Lightweight and very fast',
     status: 'stable',
-  }),
-
-  // Mixtral models
-  new ModelInfo({
-    id: 'mixtral-8x7b-32768',
-    name: 'Mixtral 8x7B',
-    contextWindow: 32768,
-    description: 'Mixture of experts model',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // Gemma models
-  new ModelInfo({
-    id: 'gemma2-9b-it',
-    name: 'Gemma 2 9B',
-    contextWindow: 8192,
-    description: 'Google Gemma 2 instruction-tuned',
-    supportsVision: false,
-    status: 'stable',
-  }),
-
-  // DeepSeek models
-  new ModelInfo({
-    id: 'deepseek-r1-distill-llama-70b',
-    name: 'DeepSeek R1 Distill 70B',
-    contextWindow: 8192,
-    description: 'DeepSeek reasoning model',
-    supportsVision: false,
-    status: 'preview',
   }),
 ];
 
