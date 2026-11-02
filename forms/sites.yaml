@@ -23,3 +23,15 @@ sites:
       # Local development
       - http://localhost:5173
     to: feedback@tidycode.ai
+
+  savet-health:
+    name: Savet Health
+    origins:
+      - https://savet.health
+    to: kodemaze@outlook.com
+
+  savet-health-pilot:
+    name: Savet Health Pilot Access
+    origins:
+      - https://savet.health
+    to: kodemaze@outlook.com

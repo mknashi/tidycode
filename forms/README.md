@@ -52,6 +52,17 @@ Every accepted message is saved to SQLite before the email is sent. If SES is un
 
    To theme it, set `--tcf-accent`, `--tcf-border`, `--tcf-radius` and `--tcf-gap` in CSS. Text colour and font come from the page.
 
+   To keep a form you've already designed, put the attribute on the form itself and remove its `action`. It needs a field named `message` (it can be hidden) and a submit button; `name` and `email` are used if present, and any other named fields are included in the email:
+   ```html
+   <form data-forms-site="my-site">
+     <input name="name" required>
+     <input name="email" type="email" required>
+     <textarea name="message" required></textarea>
+     <button type="submit">Send</button>
+   </form>
+   <script src="https://forms.tidycode.ai/v1/widget.js" defer></script>
+   ```
+
 Messages are sent from `MAIL_FROM` (`forms@tidycode.ai`) for every site, so new sites need no SES changes. To send from a site's own domain instead, set `from:` for that site and verify that domain in SES.
 
 ## One-time setup

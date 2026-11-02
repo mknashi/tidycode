@@ -11,6 +11,12 @@
  *
  * Theme with CSS variables on the div or any parent:
  *   --tcf-accent, --tcf-border, --tcf-radius, --tcf-gap
+ *
+ * To keep a site's own form and styling, put the attribute on the form instead.
+ * It needs a field named "message" (it can be hidden); "name" and "email" are used
+ * if present, and any other named fields are included in the email:
+ *
+ *   <form data-forms-site="your-site-id"> ...fields and a submit button... </form>
  */
 (function () {
   'use strict';
@@ -28,7 +34,7 @@
     '.tcf button{align-self:flex-start;font:inherit;cursor:pointer;border:0;border-radius:var(--tcf-radius,6px);padding:9px 18px;background:var(--tcf-accent,#7c3aed);color:#fff}',
     '.tcf button[disabled]{opacity:.6;cursor:default}',
     '.tcf-hp{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}',
-    '.tcf-status{font-size:.9em;min-height:1.2em}',
+    '.tcf-status{font-size:.9em;min-height:1.2em;grid-column:1/-1;margin:0}',
     '.tcf-status[data-tone=error]{color:#dc2626}',
     '.tcf-optional{opacity:.65;font-weight:normal}'
   ].join('');
@@ -107,15 +113,12 @@
 
     var siteId = container.getAttribute('data-forms-site');
     var hideName = container.getAttribute('data-forms-hide-name') === 'true';
-    var submitLabel = container.getAttribute('data-forms-submit-label') || 'Send';
+    var existingForm = container.tagName === 'FORM';
     var successText = container.getAttribute('data-forms-success') || 'Thanks! Your message was sent.';
 
-    var nameInput = el('input', { type: 'text', name: 'name', maxlength: '100', autocomplete: 'name' });
-    var emailInput = el('input', { type: 'email', name: 'email', maxlength: '254', autocomplete: 'email' });
-    var messageInput = el('textarea', { name: 'message', required: 'required', maxlength: '5000' });
     var honeypot = el('input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off' });
-    var button = el('button', { type: 'submit', text: submitLabel });
     var status = el('p', { class: 'tcf-status', role: 'status', 'aria-live': 'polite' });
+    var form, nameInput, emailInput, messageInput, button, submitLabel;
 
     function field(labelText, input, optional) {
       var label = el('label', {}, [document.createTextNode(labelText)]);
@@ -124,15 +127,37 @@
       return label;
     }
 
-    var form = el('form', { class: 'tcf', novalidate: 'novalidate' }, [
-      hideName ? document.createTextNode('') : field('Name', nameInput, true),
-      field('Email', emailInput, true),
-      field('Message', messageInput, false),
-      el('div', { class: 'tcf-hp', 'aria-hidden': 'true' }, [field('Leave this field empty', honeypot, false)]),
-      button,
-      status
-    ]);
-    container.appendChild(form);
+    var honeypotField = el('div', { class: 'tcf-hp', 'aria-hidden': 'true' }, [field('Leave this field empty', honeypot, false)]);
+
+    if (existingForm) {
+      form = container;
+      nameInput = form.elements.namedItem('name');
+      emailInput = form.elements.namedItem('email');
+      messageInput = form.elements.namedItem('message');
+      button = form.querySelector('button[type=submit], button:not([type]), input[type=submit]');
+      if (!messageInput || !button) {
+        console.error('[forms] A form with data-forms-site needs a "message" field and a submit button');
+        return;
+      }
+      submitLabel = button.textContent;
+      form.appendChild(honeypotField);
+      form.appendChild(status);
+    } else {
+      submitLabel = container.getAttribute('data-forms-submit-label') || 'Send';
+      nameInput = el('input', { type: 'text', name: 'name', maxlength: '100', autocomplete: 'name' });
+      emailInput = el('input', { type: 'email', name: 'email', maxlength: '254', autocomplete: 'email' });
+      messageInput = el('textarea', { name: 'message', required: 'required', maxlength: '5000' });
+      button = el('button', { type: 'submit', text: submitLabel });
+      form = el('form', { class: 'tcf', novalidate: 'novalidate' }, [
+        hideName ? document.createTextNode('') : field('Name', nameInput, true),
+        field('Email', emailInput, true),
+        field('Message', messageInput, false),
+        honeypotField,
+        button,
+        status
+      ]);
+      container.appendChild(form);
+    }
 
     var pending = null; // { promise, fetchedAt }
 
@@ -156,6 +181,19 @@
       status.setAttribute('data-tone', tone || '');
     }
 
+    // Fields of a site's own form beyond the standard ones, sent as extra details
+    function extraFields() {
+      var extras = {};
+      if (!existingForm) return extras;
+      Array.prototype.forEach.call(form.elements, function (input) {
+        if (!input.name || input.disabled || /^(name|email|message|website)$/.test(input.name)) return;
+        if (/^(submit|button|reset|file)$/.test(input.type)) return;
+        if ((input.type === 'checkbox' || input.type === 'radio') && !input.checked) return;
+        extras[input.name] = input.value;
+      });
+      return extras;
+    }
+
     async function send(retried) {
       var solution = await prepare(false);
       var response = await fetch(BASE + '/v1/submit', {
@@ -163,9 +201,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           site: siteId,
-          name: hideName ? '' : nameInput.value,
-          email: emailInput.value,
+          name: nameInput && !hideName ? nameInput.value : '',
+          email: emailInput ? emailInput.value : '',
           message: messageInput.value,
+          meta: extraFields(),
           page: location.href,
           website: honeypot.value,
           altcha: solution
@@ -175,9 +214,13 @@
       if (response.ok && body.ok) return;
 
       var code = body.error;
-      // A fresh challenge fixes expired, reused or too-quick submissions
-      if (!retried && (code === 'challenge_expired' || code === 'challenge_used' || code === 'challenge_failed' || code === 'too_fast')) {
-        if (code === 'too_fast') await new Promise(function (r) { setTimeout(r, 3000); });
+      if (!retried && code === 'too_fast') {
+        // Sent before the minimum time on the form: the same solution works once it has passed
+        await new Promise(function (r) { setTimeout(r, 3000); });
+        return send(true);
+      }
+      // A fresh challenge fixes expired or reused ones
+      if (!retried && (code === 'challenge_expired' || code === 'challenge_used' || code === 'challenge_failed')) {
         prepare(true);
         return send(true);
       }
