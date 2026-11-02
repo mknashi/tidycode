@@ -35,3 +35,19 @@ sites:
     origins:
       - https://savet.health
     to: kodemaze@outlook.com
+
+  indiamovieguide-contact:
+    name: IndiaMovieGuide Contact
+    origins:
+      - https://www.indiamovieguide.com
+      - https://indiamovieguide.com
+      - http://localhost:5173
+    to: kodemaze@outlook.com
+
+  indiamovieguide-feedback:
+    name: IndiaMovieGuide Feedback
+    origins:
+      - https://www.indiamovieguide.com
+      - https://indiamovieguide.com
+      - http://localhost:5173
+    to: kodemaze@outlook.com
