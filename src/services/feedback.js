@@ -101,10 +101,13 @@ export function createFeedbackSession() {
     const body = await response.json().catch(() => ({}));
     if (response.ok && body.ok) return;
 
-    // A fresh challenge fixes expired, reused or too-quick submissions
-    const retryable = ['challenge_expired', 'challenge_used', 'challenge_failed', 'too_fast'];
-    if (!retried && retryable.includes(body.error)) {
-      if (body.error === 'too_fast') await new Promise(resolve => setTimeout(resolve, 3000));
+    if (!retried && body.error === 'too_fast') {
+      // Sent before the minimum time on the form: the same solution works once it has passed
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      return submit(fields, true);
+    }
+    // A fresh challenge fixes expired or reused ones
+    if (!retried && ['challenge_expired', 'challenge_used', 'challenge_failed'].includes(body.error)) {
       prepare(true);
       return submit(fields, true);
     }
