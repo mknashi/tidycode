@@ -458,3 +458,116 @@ body.theme-light .cm-line span::selection {
     display: none !important;
   }
 }
+
+/* Markdown export to PDF: print only the rendered document, in light colors */
+.markdown-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  html:has(body.markdown-printing),
+  body.markdown-printing {
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body.markdown-printing > :not(.markdown-print-root) {
+    display: none !important;
+  }
+
+  body.markdown-printing .markdown-print-root {
+    display: block;
+    color: #111827;
+    font-size: 11pt;
+    line-height: 1.55;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .markdown-print-root h1,
+  .markdown-print-root h2,
+  .markdown-print-root h3,
+  .markdown-print-root h4,
+  .markdown-print-root h5,
+  .markdown-print-root h6 {
+    margin: 1.2em 0 0.5em;
+    line-height: 1.25;
+    font-weight: 600;
+    break-after: avoid;
+  }
+
+  .markdown-print-root h1 { font-size: 1.9em; border-bottom: 1px solid #d1d5db; padding-bottom: 0.25em; }
+  .markdown-print-root h2 { font-size: 1.45em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2em; }
+  .markdown-print-root h3 { font-size: 1.2em; }
+  .markdown-print-root h4 { font-size: 1em; }
+  .markdown-print-root h6 { color: #4b5563; }
+  .markdown-print-root > :first-child { margin-top: 0; }
+
+  .markdown-print-root p,
+  .markdown-print-root ul,
+  .markdown-print-root ol,
+  .markdown-print-root blockquote,
+  .markdown-print-root pre,
+  .markdown-print-root table {
+    margin: 0 0 0.9em;
+  }
+
+  .markdown-print-root ul { list-style: disc; padding-left: 1.8em; }
+  .markdown-print-root ol { list-style: decimal; padding-left: 1.8em; }
+  .markdown-print-root ul ul { list-style: circle; }
+  .markdown-print-root li > ul,
+  .markdown-print-root li > ol { margin-bottom: 0; }
+  .markdown-print-root li:has(> input[type="checkbox"]) { list-style: none; }
+
+  .markdown-print-root a { color: #1d4ed8; text-decoration: underline; }
+
+  .markdown-print-root code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #f3f4f6;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+  }
+
+  .markdown-print-root pre {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 0.8em 1em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    break-inside: avoid;
+  }
+
+  .markdown-print-root pre code { background: none; padding: 0; font-size: 0.85em; }
+
+  /* The Prism theme colors language-* code for a dark background */
+  .markdown-print-root pre,
+  .markdown-print-root code {
+    color: #111827 !important;
+    text-shadow: none !important;
+  }
+
+  .markdown-print-root blockquote {
+    border-left: 3px solid #d1d5db;
+    padding: 0 1em;
+    color: #4b5563;
+  }
+
+  .markdown-print-root table { border-collapse: collapse; width: 100%; break-inside: auto; }
+  .markdown-print-root tr { break-inside: avoid; }
+  .markdown-print-root th,
+  .markdown-print-root td { border: 1px solid #d1d5db; padding: 0.35em 0.6em; }
+  .markdown-print-root th:not([align]) { text-align: left; }
+  .markdown-print-root th { background: #f3f4f6; font-weight: 600; }
+
+  .markdown-print-root img { max-width: 100%; break-inside: avoid; }
+  .markdown-print-root hr { border: 0; border-top: 1px solid #d1d5db; margin: 1.5em 0; }
+}

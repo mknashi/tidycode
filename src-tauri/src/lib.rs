@@ -1632,6 +1632,16 @@ async fn save_file_to_path(file_path: String, content: String) -> Result<String,
     Ok(format!("Successfully saved to {}", file_path))
 }
 
+// Save binary content (e.g. an exported .docx) to a specific path
+#[tauri::command]
+async fn save_binary_to_path(file_path: String, data: Vec<u8>) -> Result<String, String> {
+    tokio::fs::write(Path::new(&file_path), data)
+        .await
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    Ok(format!("Successfully saved to {}", file_path))
+}
+
 #[tauri::command]
 async fn store_security_bookmark(app_handle: tauri::AppHandle, file_path: String) -> Result<bool, String> {
     #[cfg(target_os = "macos")]
@@ -2680,7 +2690,11 @@ fn build_native_menu(app: &tauri::AppHandle, recent_state: &RecentFilesState) ->
     let save_as = MenuItemBuilder::with_id("save_as", "Save As...")
         .accelerator("CmdOrCtrl+Shift+S")
         .build(handle)?;
-    let close_tab = MenuItemBuilder::with_id("close_tab", "Close Tab")
+    let export_word = MenuItemBuilder::with_id("export_word", "Export Markdown as Word...")
+        .build(handle)?;
+    let export_pdf = MenuItemBuilder::with_id("export_pdf", "Export Markdown as PDF...")
+        .build(handle)?;
+    let close_tab =MenuItemBuilder::with_id("close_tab", "Close Tab")
         .accelerator("CmdOrCtrl+W")
         .build(handle)?;
     let close_window = MenuItemBuilder::with_id("close_window", "Close Window")
@@ -2826,6 +2840,9 @@ fn build_native_menu(app: &tauri::AppHandle, recent_state: &RecentFilesState) ->
         .separator()
         .item(&save_file)
         .item(&save_as)
+        .separator()
+        .item(&export_word)
+        .item(&export_pdf)
         .separator()
         .item(&close_tab)
         .item(&close_window);
@@ -2990,6 +3007,8 @@ pub fn run() {
                     "open_file" => { let _ = app.emit("menu:open_file", ()); },
                     "save_file" => { let _ = app.emit("menu:save_file", ()); },
                     "save_as" => { let _ = app.emit("menu:save_as", ()); },
+                    "export_word" => { let _ = app.emit("menu:export_word", ()); },
+                    "export_pdf" => { let _ = app.emit("menu:export_pdf", ()); },
                     "close_tab" => { let _ = app.emit("menu:close_tab", ()); },
                     "close_window" => {
                         if let Some(window) = app.get_webview_window("main") {
@@ -3172,6 +3191,7 @@ pub fn run() {
             ollama_chat,
             ollama_chat_stream,
             save_file_to_path,
+            save_binary_to_path,
             store_security_bookmark,
             read_file_from_path,
             read_large_file_chunked,

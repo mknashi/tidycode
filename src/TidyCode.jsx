@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud, MessageCircle, AlignJustify } from 'lucide-react';
+import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud, MessageCircle, AlignJustify, FileDown, Printer } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useAuth } from './hooks/useAuth';
 import { useNotesSync } from './hooks/useNotesSync';
 import { useTasksSync } from './hooks/useTasksSync';
 import { AuthModal } from './components/AuthModal';
-import { marked } from 'marked';
+import { renderMarkdown, sanitizeHtml } from './utils/markdown';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 // Import Prism language components
@@ -105,6 +106,9 @@ const getSafeFileName = (name = '') => {
   const trimmed = stripVirtualPrefix(name.trim());
   return trimmed || 'untitled';
 };
+// Autosave keeps edits in localStorage when it can't write the file itself
+// (no file handle or path), so those edits still need a real Save.
+const hasUnsavedChanges = (tab) => !!tab && (tab.isModified || tab.autosavedToLocalStorage);
 
 // File type detection utility
 const getFileType = (filename = '') => {
@@ -1125,7 +1129,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
     if (hasMarkdown) {
       // Text appears to be markdown, parse it
       try {
-        const html = marked.parse(text, { breaks: true });
+        const html = renderMarkdown(text, { breaks: true });
         return html;
       } catch (e) {
         console.error('Error parsing markdown:', e);
@@ -1145,7 +1149,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
     return formatted;
   };
 
-  const handleAITransform = async (action) => {
+  const handleAITransform =async (action) => {
     if (!editorRef.current) return;
     if (!aiService) {
       notifyUser('AI service not initialized. Please configure an AI provider in AI Settings.', 'error');
@@ -1317,7 +1321,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
           </div>
           <div
             className="bg-gray-900 rounded p-3 text-gray-200 text-sm max-h-[200px] overflow-y-auto prose prose-invert prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: aiSuggestion.startsWith('<') ? aiSuggestion : `<pre style="white-space: pre-wrap; margin: 0;">${aiSuggestion}</pre>` }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(aiSuggestion.startsWith('<') ? aiSuggestion : `<pre style="white-space: pre-wrap; margin: 0;">${aiSuggestion}</pre>`) }}
           />
         </div>
       )}
@@ -1810,6 +1814,7 @@ const TidyCode = () => {
   const createNewTabRef = useRef(null);
   const saveFileRef = useRef(null);
   const saveFileAsRef = useRef(null);
+  const exportMarkdownRef = useRef(null);
   const closeTabRef = useRef(null);
 
   // Listen for native menu events (desktop only)
@@ -1868,6 +1873,16 @@ const TidyCode = () => {
           saveFileAsRef.current?.();
         });
         unlisten.push(unlistenSaveAs);
+
+        const unlistenExportWord = await listen('menu:export_word', () => {
+          exportMarkdownRef.current?.('docx');
+        });
+        unlisten.push(unlistenExportWord);
+
+        const unlistenExportPdf = await listen('menu:export_pdf', () => {
+          exportMarkdownRef.current?.('pdf');
+        });
+        unlisten.push(unlistenExportPdf);
 
         const unlistenCloseTab = await listen('menu:close_tab', () => {
           console.log('[Menu Event] Close Tab triggered');
@@ -3996,7 +4011,7 @@ const TidyCode = () => {
     const tabToClose = tabs.find(t => t.id === tabId);
     console.log('[closeTab] Tab to close:', tabToClose ? { id: tabToClose.id, title: tabToClose.title, isModified: tabToClose.isModified } : 'NOT FOUND');
 
-    if (tabToClose && tabToClose.isModified) {
+    if (hasUnsavedChanges(tabToClose)) {
       console.log('[closeTab] Tab has unsaved changes, showing confirm dialog');
 
       let shouldClose = false;
@@ -5353,7 +5368,7 @@ const TidyCode = () => {
                   ...tab,
                   absolutePath: filePath,
                   title: filePath.split(/[/\\]/).pop() || suggestedName,
-                  isModified: false
+                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5408,7 +5423,7 @@ const TidyCode = () => {
                   fileHandle: handle,
                   absolutePath: virtualPath,
                   title: getSafeFileName(handle.name),
-                  isModified: false
+                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5436,7 +5451,7 @@ const TidyCode = () => {
       // Mark as saved
       setTabs(tabs.map(tab =>
         tab.id === activeTabId
-          ? { ...tab, isModified: false }
+          ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: null }
           : tab
       ));
     }
@@ -5497,7 +5512,7 @@ const TidyCode = () => {
           // Mark as saved
           setTabs(tabs.map(tab =>
             tab.id === tabId
-              ? { ...tab, isModified: false }
+              ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual' }
               : tab
           ));
 
@@ -5538,7 +5553,7 @@ const TidyCode = () => {
               // Mark as saved
               setTabs(tabs.map(tab =>
                 tab.id === tabId
-                  ? { ...tab, isModified: false }
+                  ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual' }
                   : tab
               ));
               console.log('[saveFile] File saved using existing handle');
@@ -5591,7 +5606,7 @@ const TidyCode = () => {
                   fileHandle: handle,
                   absolutePath: virtualPath,
                   title: getSafeFileName(handle.name),
-                  isModified: false
+                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5619,7 +5634,7 @@ const TidyCode = () => {
       // Mark as saved
       setTabs(tabs.map(tab =>
         tab.id === activeTabId
-          ? { ...tab, isModified: false }
+          ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: null }
           : tab
       ));
     }
@@ -5664,7 +5679,7 @@ const TidyCode = () => {
             filePath: modifiedTab.absolutePath,
             content: String(contentToSave || '')
           });
-          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'auto' } : tab));
           console.log('[Autosave] Saved to filesystem (Tauri):', modifiedTab.title);
           setAutosaveStatus('saved');
         } else if (hasFileHandle) {
@@ -5673,15 +5688,15 @@ const TidyCode = () => {
           const writable = await modifiedTab.fileHandle.createWritable();
           await writable.write(String(contentToSave || ''));
           await writable.close();
-          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false } : tab));
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'auto' } : tab));
           console.log('[Autosave] Saved to filesystem (Browser):', modifiedTab.title);
           setAutosaveStatus('saved');
         } else {
           // No filesystem path - save content to localStorage
           setAutosaveStatus('saving');
-          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false, autosavedToLocalStorage: true } : tab));
+          setTabs(prev => prev.map(tab => tab.id === tabId ? { ...tab, isModified: false, autosavedToLocalStorage: true, savedToFile: null } : tab));
           console.log('[Autosave] Saved to local storage:', modifiedTab.title);
-          setAutosaveStatus('saved');
+          setAutosaveStatus('saved-local');
         }
 
         // Clear "saved" indicator after 3 seconds
@@ -7262,7 +7277,7 @@ const TidyCode = () => {
     if (hasMarkdown) {
       // Text appears to be markdown, parse it
       try {
-        const html = marked.parse(text, { breaks: true });
+        const html = renderMarkdown(text, { breaks: true });
         return html;
       } catch (e) {
         console.error('Error parsing markdown:', e);
@@ -7561,12 +7576,130 @@ const TidyCode = () => {
   const markdownHtml = useMemo(() => {
     if (!isMarkdownTab || !activeTab?.content) return '';
     try {
-      return marked.parse(activeTab.content);
+      return renderMarkdown(activeTab.content);
     } catch (error) {
       console.error('Markdown parsing error:', error);
       return '<p style="color: red;">Error parsing markdown</p>';
     }
   }, [isMarkdownTab, activeTab?.content]);
+
+  // Markdown export: 'docx' builds a Word file, 'pdf' prints the rendered
+  // document so the system dialog can save it as PDF.
+  const [markdownPrintHtml, setMarkdownPrintHtml] = useState(null);
+  const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
+
+  const exportMarkdown = async (format) => {
+    if (!activeTab || !isMarkdownTab) {
+      showTransientMessage('Open a Markdown file to export it', 'warn');
+      return;
+    }
+    const content = String(activeTab.content || '');
+    const baseName = getSafeFileName(activeTab.title || activeTab.filePath || '')
+      .split(/[/\\]/).pop()
+      .replace(/\.(md|markdown)$/i, '') || 'document';
+
+    if (format === 'pdf') {
+      setMarkdownPrintHtml({ html: renderMarkdown(content), title: baseName });
+      return;
+    }
+
+    const isTauri = window.__TAURI_INTERNALS__;
+    const tabPath = activeTab.absolutePath && !/^(virtual|browser):/.test(activeTab.absolutePath)
+      ? activeTab.absolutePath
+      : null;
+    const fileName = `${baseName}.docx`;
+
+    setIsExportingMarkdown(true);
+    try {
+      const { markdownToDocx } = await import('./utils/markdownExport.js');
+      const resolveImage = isTauri && tabPath
+        ? async (href) => {
+            const separator = tabPath.includes('\\') && !tabPath.includes('/') ? '\\' : '/';
+            const folder = tabPath.slice(0, tabPath.lastIndexOf(separator));
+            const relative = decodeURI(href.split(/[?#]/)[0]).replace(/^\.\//, '');
+            const { invoke } = await import('@tauri-apps/api/core');
+            const bytes = await invoke('read_file_from_path', {
+              filePath: relative.startsWith('/') ? relative : `${folder}${separator}${relative}`,
+            });
+            return new Uint8Array(bytes);
+          }
+        : undefined;
+      const bytes = await markdownToDocx(content, { title: baseName, resolveImage });
+
+      if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { save } = await import('@tauri-apps/plugin-dialog');
+        const folder = tabPath ? tabPath.slice(0, Math.max(tabPath.lastIndexOf('/'), tabPath.lastIndexOf('\\'))) : fileSystemBrowserRootPath;
+        const filePath = await save({
+          defaultPath: folder ? `${folder}/${fileName}` : fileName,
+          filters: [{ name: 'Word Document', extensions: ['docx'] }],
+        });
+        if (!filePath) return;
+        await invoke('save_binary_to_path', { filePath, data: Array.from(bytes) });
+        showTransientMessage(`Exported ${filePath.split(/[/\\]/).pop()}`, 'success');
+        return;
+      }
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: 'Word Document',
+              accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(bytes);
+          await writable.close();
+          showTransientMessage(`Exported ${handle.name}`, 'success');
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.log('File System Access API error:', err);
+        }
+      }
+
+      const url = URL.createObjectURL(new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export Markdown as Word:', error);
+      showTransientMessage('Failed to export: ' + (error?.message || error), 'error');
+    } finally {
+      setIsExportingMarkdown(false);
+    }
+  };
+
+  exportMarkdownRef.current = exportMarkdown;
+
+  // Print once the print-only copy of the document is in the DOM. Browsers
+  // name the PDF after document.title; Tauri's print dialog ignores it and
+  // may not fire afterprint, so leave the title alone there.
+  useEffect(() => {
+    if (!markdownPrintHtml) return;
+    const previousTitle = document.title;
+    document.body.classList.add('markdown-printing');
+    if (!window.__TAURI_INTERNALS__) document.title = markdownPrintHtml.title;
+    const finish = () => {
+      document.body.classList.remove('markdown-printing');
+      document.title = previousTitle;
+      setMarkdownPrintHtml(null);
+    };
+    window.addEventListener('afterprint', finish, { once: true });
+    const frame = requestAnimationFrame(() => window.print());
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('afterprint', finish);
+      document.body.classList.remove('markdown-printing');
+      document.title = previousTitle;
+    };
+  }, [markdownPrintHtml]);
   const csvRowCount = useMemo(() => {
     if (!csvData || csvData.length <= 1) return 0;
     return csvData.length - 1;
@@ -8484,7 +8617,7 @@ const TidyCode = () => {
                       </div>
                       <div
                         className="bg-gray-900 rounded p-2 text-gray-200 text-xs max-h-[150px] overflow-y-auto prose prose-invert prose-xs max-w-none"
-                        dangerouslySetInnerHTML={{ __html: quickNoteAISuggestion.startsWith('<') ? quickNoteAISuggestion : `<pre style="white-space: pre-wrap; margin: 0; font-size: 0.75rem;">${quickNoteAISuggestion}</pre>` }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(quickNoteAISuggestion.startsWith('<') ? quickNoteAISuggestion : `<pre style="white-space: pre-wrap; margin: 0; font-size: 0.75rem;">${quickNoteAISuggestion}</pre>`) }}
                       />
                     </div>
                   )}
@@ -9267,13 +9400,15 @@ const TidyCode = () => {
               <div className={`absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
                 <button
                   onClick={() => { saveFile(); setShowFileDropdown(false); }}
-                  disabled={!activeTab || !activeTab.isModified || activeTab.title === 'Welcome'}
+                  disabled={!hasUnsavedChanges(activeTab) || activeTab.title === 'Welcome'}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
-                    (!activeTab || !activeTab.isModified || activeTab.title === 'Welcome')
+                    (!hasUnsavedChanges(activeTab) || activeTab.title === 'Welcome')
                       ? 'opacity-40 cursor-not-allowed text-gray-500'
                       : theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
                   }`}
-                  title="Autosave is enabled — files are saved automatically"
+                  title={activeTab?.autosavedToLocalStorage
+                    ? 'Changes are kept in this browser only — Save writes them to a file'
+                    : 'Autosave is enabled — files are saved automatically'}
                 >
                   <Save className="w-4 h-4" />
                   Save
@@ -10169,6 +10304,27 @@ const TidyCode = () => {
                       >
                         <div className="flex items-center justify-between px-4 py-2 text-xs uppercase tracking-wide text-gray-400 flex-shrink-0">
                           <span>Markdown Preview</span>
+                          <div className="flex items-center gap-1 normal-case tracking-normal">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-gray-800 hover:text-gray-200 disabled:opacity-50"
+                              onClick={() => exportMarkdown('docx')}
+                              disabled={isExportingMarkdown}
+                              title="Export as a Word document (.docx)"
+                            >
+                              {isExportingMarkdown ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+                              Word
+                            </button>
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-gray-800 hover:text-gray-200"
+                              onClick={() => exportMarkdown('pdf')}
+                              title="Export as PDF (choose Save as PDF in the print dialog)"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              PDF
+                            </button>
+                          </div>
                         </div>
                         <div
                           ref={markdownPreviewRef}
@@ -11159,8 +11315,20 @@ const TidyCode = () => {
           </div>
           <div className="flex gap-3 items-center">
             {autosaveStatus === 'saving' && <span className="text-blue-400">Autosaving...</span>}
-            {autosaveStatus === 'saved' && <span className="text-green-400">Autosaved</span>}
+            {/* Stays visible while the tab matches the file; green just after a save, muted after */}
+            {autosaveStatus !== 'saving' && !activeTab?.isModified && activeTab?.savedToFile && (
+              <span
+                className={autosaveStatus === 'saved' ? 'text-green-400' : 'text-gray-500'}
+                title="All changes are saved to the file"
+              >
+                ✓ {activeTab.savedToFile === 'auto' ? 'Autosaved' : 'Saved'}
+              </span>
+            )}
+            {autosaveStatus === 'saved-local' && <span className="text-yellow-400">Kept in browser — not saved to file</span>}
             {!autosaveStatus && activeTab?.isModified && <span className="text-yellow-400">● Modified</span>}
+            {!autosaveStatus && !activeTab?.isModified && activeTab?.autosavedToLocalStorage && (
+              <span className="text-yellow-400" title="Changes are kept in this browser only — use Save to write them to a file">● Not saved to file</span>
+            )}
             <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>v{appVersion}</span>
           </div>
         </div>
@@ -12364,6 +12532,15 @@ const TidyCode = () => {
           onClose={() => setShowAuthModal(false)}
           initGoogleButton={initGoogleButton}
         />
+      )}
+
+      {/* Print-only copy of a Markdown document being exported as PDF */}
+      {markdownPrintHtml && createPortal(
+        <div
+          className="markdown-print-root"
+          dangerouslySetInnerHTML={{ __html: markdownPrintHtml.html }}
+        />,
+        document.body
       )}
 
     </div>
