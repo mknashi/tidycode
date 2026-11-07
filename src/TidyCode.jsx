@@ -89,6 +89,14 @@ const BRACE_LOOKUP = Object.entries(BRACE_PAIRS).reduce((acc, [open, close]) => 
 }, {});
 
 const INDENT_UNIT = '  ';
+// Mirrors the footer link list on the static pages under public/.
+const WELCOME_TOOL_LINKS = [
+  ['/json-editor/', 'JSON Editor'], ['/xml-editor/', 'XML Editor'],
+  ['/yaml-editor/', 'YAML Editor'], ['/toml-editor/', 'TOML Editor'],
+  ['/csv-editor/', 'CSV Editor'], ['/markdown-editor/', 'Markdown Editor'],
+  ['/diff-viewer/', 'Diff Viewer'],
+  ['/docs/', 'Documentation'],
+];
 const DEFAULT_CSV_COLUMN_WIDTH = 140;
 const MIN_CSV_COLUMN_WIDTH = 60;
 const MAX_CSV_COLUMN_WIDTH = 420;
@@ -3286,7 +3294,7 @@ const TidyCode = () => {
             if (isTauriDesktop) {
               displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for desktop mode.\n\nPlease use a specialized tool for files of this size.`;
             } else {
-              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for web mode.\n\n💡 The Tidy Code desktop app supports files up to ${formatFileSize(1024 * 1024 * 1024)}!\n\n📥 Download the desktop app:\nhttps://tidycode.ai/download-alpha.html`;
+              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for web mode.\n\n💡 The Tidy Code desktop app supports files up to ${formatFileSize(1024 * 1024 * 1024)}!\n\n📥 Download the desktop app:\nhttps://www.tidycode.ai/download-alpha`;
             }
             showTransientMessage(`File too large: ${formatFileSize(fileSize)}`, 'error');
           }
@@ -10654,6 +10662,27 @@ const TidyCode = () => {
                           </button>
                           {' '}to get started
                         </p>
+
+                        {/* Real <a href> links so search engines can reach the tool pages from
+                            the homepage. Web only: in the desktop app they would navigate the
+                            app window away from the editor. */}
+                        {!isDesktop() && (
+                          <nav aria-label="Free online tools" className={`mt-8 pt-4 border-t text-xs ${theme === 'dark' ? 'border-gray-800 text-gray-500' : 'border-gray-200 text-gray-500'}`}>
+                            <p className="mb-2">Free online tools</p>
+                            <p className="leading-relaxed">
+                              {WELCOME_TOOL_LINKS.map(([href, label], i) => (
+                                <React.Fragment key={href}>
+                                  {/* nowrap keeps each separator on the line of the link before it */}
+                                  <span className="whitespace-nowrap">
+                                    <a href={href} className={theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}>{label}</a>
+                                    {i < WELCOME_TOOL_LINKS.length - 1 && ' ·'}
+                                  </span>
+                                  {' '}
+                                </React.Fragment>
+                              ))}
+                            </p>
+                          </nav>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -11365,7 +11394,7 @@ const TidyCode = () => {
             if (isDesktop()) {
               openUrl(HELP_URLS.welcome);
             } else {
-              window.open('/docs/index.html', '_blank');
+              window.open('/docs/', '_blank');
             }
           } else if (item.id === 'feedback') {
             setShowFeedbackModal(true);
@@ -11920,7 +11949,7 @@ const TidyCode = () => {
                   </div>
                   <div className="pt-3 border-t border-gray-800">
                     <a
-                      href="/privacy.html"
+                      href="/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-indigo-400 hover:bg-gray-900 rounded transition-colors"
@@ -11997,7 +12026,7 @@ const TidyCode = () => {
               key={item.id}
               onClick={() => {
                 if (item.id === 'help') {
-                  window.open('/docs/index.html', '_blank');
+                  window.open('/docs/', '_blank');
                 } else if (item.id === 'feedback') {
                   setShowFeedbackModal(true);
                 } else {

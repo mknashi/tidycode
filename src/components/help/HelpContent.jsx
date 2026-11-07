@@ -473,8 +473,8 @@ export const HelpContent = {
 };
 
 export const HELP_URLS = {
-  welcome: 'https://tidycode.ai/docs/index.html',
-  tips: 'https://tidycode.ai/docs/tips-and-tricks.html',
-  documentation: 'https://tidycode.ai/docs/features.html',
-  releases: 'https://tidycode.ai/docs/release-notes.html'
+  welcome: 'https://www.tidycode.ai/docs/',
+  tips: 'https://www.tidycode.ai/docs/tips-and-tricks',
+  documentation: 'https://www.tidycode.ai/docs/features',
+  releases: 'https://www.tidycode.ai/docs/release-notes'
 };

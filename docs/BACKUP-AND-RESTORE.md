@@ -49,16 +49,17 @@ returns 200 for everything while browsers download the page instead of
 rendering it.
 
 ```bash
-for p in / /docs /download /private-alpha /json-formatter /nonexistent-xyz; do
+for p in / /docs/ /download /private-alpha /json-formatter/ /nonexistent-xyz; do
   printf "%-20s " "$p"
   curl -s -o /dev/null -w "%{http_code}  %{content_type}\n" \
     "https://www.tidycode.ai$p?cb=$RANDOM"
 done
 ```
 
-Expected: `200 text/html` for all but the last, which must be **404** — the SPA
-catch-all in `public/_redirects` has never been active in production, and
-`nginx.conf` deliberately preserves that.
+Expected: `200 text/html` for all but the last, which must be **404** — there
+is no SPA catch-all in production, and `nginx.conf` deliberately preserves that.
+The old spellings must redirect to these: `/docs` and `/docs/index.html` to
+`/docs/`, `/download.html` to `/download`, both with a **301**.
 
 Also confirm an asset and the apex redirect:
 

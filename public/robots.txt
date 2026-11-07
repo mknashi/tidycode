@@ -1,25 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-
-# Allowed pages
 Allow: /
-Allow: /app
-Allow: /docs/
-Allow: /json-formatter/
-Allow: /xml-formatter/
-Allow: /json-editor/
-Allow: /xml-editor/
-Allow: /yaml-editor/
-Allow: /toml-editor/
-Allow: /csv-editor/
-Allow: /markdown-editor/
-Allow: /diff-viewer/
-Allow: /vim-editor/
-Allow: /download.html
-Allow: /privacy.html
 
-# Disallowed pages (alpha/private)
-Disallow: /private-alpha.html
-Disallow: /download-alpha.html
+# private-alpha and download-alpha are deliberately NOT disallowed here: they
+# carry <meta name="robots" content="noindex">, and Google can only see that
+# tag on pages it is allowed to crawl. A Disallow would hide the noindex and
+# let the bare URL show up in results anyway.
 
-Sitemap: https://tidycode.ai/sitemap.xml
+Sitemap: https://www.tidycode.ai/sitemap.xml

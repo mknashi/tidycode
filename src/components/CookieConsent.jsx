@@ -138,7 +138,7 @@ const CookieConsent = ({ theme = 'dark' }) => {
         {/* Privacy link */}
         <p className={`text-xs mt-3 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           <a
-            href="/privacy.html"
+            href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className={isDark ? 'text-blue-400 hover:underline' : 'text-blue-600 hover:underline'}
