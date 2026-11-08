@@ -6,6 +6,7 @@ import { useNotesSync } from './hooks/useNotesSync';
 import { useTasksSync } from './hooks/useTasksSync';
 import { AuthModal } from './components/AuthModal';
 import { renderMarkdown, sanitizeHtml } from './utils/markdown';
+import { generateJsonSchema } from './utils/jsonSchema';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 // Import Prism language components
@@ -89,6 +90,7 @@ const BRACE_LOOKUP = Object.entries(BRACE_PAIRS).reduce((acc, [open, close]) => 
 }, {});
 
 const INDENT_UNIT = '  ';
+const SCHEMA_SOURCE_FORMATS = ['json', 'yaml', 'toml'];
 // Mirrors the footer link list on the static pages under public/.
 const WELCOME_TOOL_LINKS = [
   ['/json-editor/', 'JSON Editor'], ['/xml-editor/', 'XML Editor'],
@@ -5087,6 +5089,75 @@ const TidyCode = () => {
     }));
   };
 
+  // Infer a JSON Schema from the active tab's data and open it in a new tab
+  const generateSchema = () => {
+    if (!activeTab) return;
+
+    const content = activeTab.content;
+    const trimmed = String(content).trim();
+    if (!trimmed) return;
+
+    const detection = formatService.detect(trimmed, activeTab.title || '');
+    if (!SCHEMA_SOURCE_FORMATS.includes(detection.format)) {
+      setErrorMessage({
+        type: 'Conversion',
+        title: 'Schema Generation Failed',
+        message: 'Could not generate a schema. Please ensure the content is valid JSON, YAML, or TOML.',
+        allErrors: [],
+        tips: ['Format the content first to find syntax errors']
+      });
+      return;
+    }
+
+    const sourceTitle = activeTab.title || 'Untitled';
+    const baseName = sourceTitle.replace(/\.[^.]+$/, '');
+    let schemaText;
+    try {
+      const data = formatService.getFormatter(detection.format).parse(content);
+      schemaText = JSON.stringify(generateJsonSchema(data, { title: baseName }), null, 2);
+    } catch (error) {
+      setErrorMessage({
+        type: 'Conversion',
+        title: 'Schema Generation Failed',
+        message: `Failed to parse ${detection.format.toUpperCase()}: ${error.message}`,
+        allErrors: [],
+        tips: ['Format the content first to find syntax errors']
+      });
+      return;
+    }
+
+    const newTabId = nextIdRef.current;
+    nextIdRef.current += 1;
+
+    const newTab = {
+      id: newTabId,
+      title: `${baseName}.schema.json`,
+      content: schemaText,
+      isModified: true,
+      filePath: null
+    };
+
+    setTabs(currentTabs => [...currentTabs, newTab]);
+    setActiveTabId(newTab.id);
+    requestEditorFocus(newTabId);
+    setNextId(nextIdRef.current);
+    setTimeout(() => scrollTabIntoView(newTabId), 0);
+
+    setTabErrorMessages(prev => ({
+      ...prev,
+      [newTabId]: {
+        type: 'Warning',
+        title: 'Schema Generated - Please Review',
+        message: `Generated a JSON Schema from ${sourceTitle}. Please review it before use.`,
+        allErrors: [],
+        tips: [
+          'Every key found in the sample is marked required; keys missing from some array items are optional',
+          'Loosen types, add descriptions, or remove "format" hints where the sample is not representative'
+        ]
+      }
+    }));
+  };
+
   const queueAutoFormat = (tabId, content) => {
     if (autoFormatTimeoutRef.current) {
       clearTimeout(autoFormatTimeoutRef.current);
@@ -9593,6 +9664,20 @@ const TidyCode = () => {
                     <ArrowRightLeft className="w-4 h-4" />
                     Convert to TOML {currentFormat === 'toml' && '(current)'}
                   </button>
+                  <div className={`my-1 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}></div>
+                  <button
+                    onClick={() => { generateSchema(); setShowFormatConvertDropdown(false); }}
+                    disabled={!SCHEMA_SOURCE_FORMATS.includes(currentFormat)}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
+                      !SCHEMA_SOURCE_FORMATS.includes(currentFormat)
+                        ? 'opacity-40 cursor-not-allowed text-gray-500'
+                        : theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
+                    }`}
+                    title="Infer a JSON Schema from this data and open it in a new tab"
+                  >
+                    <Braces className="w-4 h-4" />
+                    Generate JSON Schema
+                  </button>
                 </div>
               );
             })()}
@@ -10934,7 +11019,9 @@ const TidyCode = () => {
                           ? theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
                           : theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
                       }`}>
-                        {errorMessage.type === 'Warning' ? (
+                        {errorMessage.title ? (
+                          <>{errorMessage.title}</>
+                        ) : errorMessage.type === 'Warning' ? (
                           <>Conversion Complete - Please Review</>
                         ) : errorMessage.type === 'Conversion' ? (
                           <>Conversion Failed</>
