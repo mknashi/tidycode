@@ -105,6 +105,26 @@ const FeedbackModal = ({ onClose, theme }) => {
           </button>
         </div>
 
+        {/* Separate from the message: a rating is saved on click, with no Send */}
+        <section
+          aria-labelledby="feedback-rating-title"
+          className={`px-5 py-4 border-b ${dark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h3 id="feedback-rating-title" className={`text-sm font-semibold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+              {savedRating() ? 'Your rating' : 'Rate Tidy Code'}
+            </h3>
+            <StarPicker value={stars} onPick={rate} disabled={rating === 'sending'} dark={dark} size="w-5 h-5" />
+            {rating === 'sending' && <Loader2 className={`w-4 h-4 animate-spin ${hintClass}`} aria-label="Saving" />}
+          </div>
+          <p className={`mt-1 ${hintClass}`} aria-live="polite">
+            {rating === 'saved'
+              ? 'Thanks, your rating is saved. Pick again to change it.'
+              : 'Saved as soon as you pick a star. No need to press Send.'}
+          </p>
+          {ratingError && <p role="alert" className="mt-1 text-xs text-red-500">{ratingError}</p>}
+        </section>
+
         {sent ? (
           <div className="p-6 text-center space-y-3">
             <CheckCircle className="w-10 h-10 mx-auto text-green-500" />
@@ -196,26 +216,6 @@ const FeedbackModal = ({ onClose, theme }) => {
             </div>
           </form>
         )}
-
-        {/* Separate from the message: a rating is saved on click, with no Send */}
-        <section
-          aria-labelledby="feedback-rating-title"
-          className={`px-5 py-4 border-t rounded-b-lg ${dark ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50'}`}
-        >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h3 id="feedback-rating-title" className={`text-sm font-semibold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
-              {savedRating() ? 'Your rating' : 'Rate Tidy Code'}
-            </h3>
-            <StarPicker value={stars} onPick={rate} disabled={rating === 'sending'} dark={dark} size="w-5 h-5" />
-            {rating === 'sending' && <Loader2 className={`w-4 h-4 animate-spin ${hintClass}`} aria-label="Saving" />}
-          </div>
-          <p className={`mt-1 ${hintClass}`} aria-live="polite">
-            {rating === 'saved'
-              ? 'Thanks, your rating is saved. Pick again to change it.'
-              : 'Saved as soon as you pick a star. No need to press Send.'}
-          </p>
-          {ratingError && <p role="alert" className="mt-1 text-xs text-red-500">{ratingError}</p>}
-        </section>
       </div>
     </div>
   );
