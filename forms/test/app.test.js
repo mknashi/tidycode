@@ -59,7 +59,8 @@ beforeEach(async () => {
   store = new Store(':memory:');
   const config = buildConfig({
     sites: {
-      example: { name: 'Example', origins: [ORIGIN], to: 'inbox@example.com', perHour: 2 },
+      example: { name: 'Example', origins: [ORIGIN], to: 'inbox@example.com', perHour: 2, ratings: true },
+      plain: { name: 'Plain', origins: [ORIGIN], to: 'inbox@example.com' },
     },
   });
   app = createApp({
@@ -246,4 +247,130 @@ test('serves the widget script to any site', async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /javascript/);
   assert.match(await response.text(), /data-forms-site/);
+});
+
+const CLIENT_A = 'client-aaaaaaaaaaaaaaaa';
+const CLIENT_B = 'client-bbbbbbbbbbbbbbbb';
+
+async function rate(body, origin = ORIGIN, headers = {}) {
+  return fetch(`${baseUrl}/v1/rate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: origin, ...headers },
+    body: JSON.stringify(body),
+  });
+}
+
+async function validRating(overrides = {}) {
+  return { site: 'example', stars: 5, clientId: CLIENT_A, page: '/json-editor/', altcha: await solvedChallenge(), ...overrides };
+}
+
+async function summary(site = 'example') {
+  return fetch(`${baseUrl}/v1/ratings/summary?site=${site}`);
+}
+
+test('stores a rating and includes it in the public summary', async () => {
+  const response = await rate(await validRating({ stars: 4 }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, created: true });
+
+  const res = await summary();
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  assert.match(res.headers.get('cache-control'), /public/);
+  assert.deepEqual(await res.json(), {
+    ok: true, site: 'example', count: 1, average: 4, distribution: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0 },
+  });
+  assert.equal(sent.length, 0, 'ratings are not emailed');
+});
+
+test('a client rating again replaces its earlier rating', async () => {
+  await rate(await validRating({ stars: 2 }));
+  const again = await rate(await validRating({ stars: 5 }));
+  assert.deepEqual(await again.json(), { ok: true, created: false });
+  await rate(await validRating({ stars: 4, clientId: CLIENT_B }));
+
+  const body = await (await summary()).json();
+  assert.equal(body.count, 2);
+  assert.equal(body.average, 4.5);
+  assert.deepEqual(body.distribution, { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1 });
+});
+
+test('counts low ratings like any other', async () => {
+  await rate(await validRating({ stars: 1 }));
+  await rate(await validRating({ stars: 5, clientId: CLIENT_B }));
+  const body = await (await summary()).json();
+  assert.equal(body.count, 2);
+  assert.equal(body.average, 3);
+});
+
+test('summary of a site with no ratings yet', async () => {
+  const body = await (await summary()).json();
+  assert.equal(body.count, 0);
+  assert.equal(body.average, null);
+});
+
+test('rejects ratings for sites without ratings enabled', async () => {
+  const response = await rate(await validRating({ site: 'plain' }));
+  assert.equal(response.status, 404);
+  assert.equal((await response.json()).error, 'ratings_disabled');
+  assert.equal((await summary('plain')).status, 404);
+  assert.equal((await summary('nope')).status, 404);
+});
+
+test('rejects ratings from other origins or without proof of work', async () => {
+  assert.equal((await rate(await validRating(), 'https://evil.example')).status, 403);
+  const noPow = await rate({ site: 'example', stars: 5, clientId: CLIENT_A });
+  assert.equal((await noPow.json()).error, 'challenge_failed');
+  assert.equal((await (await summary()).json()).count, 0);
+});
+
+test('validates stars and client id', async () => {
+  for (const [overrides, field] of [
+    [{ stars: 0 }, 'invalid_stars'],
+    [{ stars: 6 }, 'invalid_stars'],
+    [{ stars: 4.5 }, 'invalid_stars'],
+    [{ stars: '5' }, 'invalid_stars'],
+    [{ clientId: 'short' }, 'invalid_client_id'],
+    [{ clientId: 'has spaces in it, sixteen+' }, 'invalid_client_id'],
+  ]) {
+    const response = await rate(await validRating(overrides));
+    assert.equal(response.status, 400);
+    assert.deepEqual((await response.json()).fields, [field], JSON.stringify(overrides));
+  }
+});
+
+test('does not accept the same solved challenge for two ratings', async () => {
+  const altcha = await solvedChallenge();
+  assert.equal((await rate(await validRating({ altcha }))).status, 200);
+  const replay = await rate(await validRating({ altcha, clientId: CLIENT_B }));
+  assert.equal((await replay.json()).error, 'challenge_used');
+});
+
+test('rate limits ratings per IP', async () => {
+  for (let i = 0; i < 5; i++) {
+    const clientId = `client-${String(i).repeat(16)}`;
+    assert.equal((await rate(await validRating({ clientId }), ORIGIN, { 'X-Forwarded-For': '203.0.113.9' })).status, 200);
+  }
+  const limited = await rate(await validRating({ clientId: CLIENT_B }), ORIGIN, { 'X-Forwarded-For': '203.0.113.9' });
+  assert.equal(limited.status, 429);
+  const other = await rate(await validRating({ clientId: CLIENT_B }), ORIGIN, { 'X-Forwarded-For': '203.0.113.10' });
+  assert.equal(other.status, 200);
+});
+
+test('admin can list and delete ratings', async () => {
+  await rate(await validRating({ stars: 1 }));
+  await rate(await validRating({ stars: 5, clientId: CLIENT_B }));
+  const auth = { Authorization: 'Bearer admin-secret' };
+
+  assert.equal((await fetch(`${baseUrl}/admin/ratings`)).status, 401);
+  const list = await (await fetch(`${baseUrl}/admin/ratings?site=example`, { headers: auth })).json();
+  assert.equal(list.ratings.length, 2);
+  assert.equal(list.ratings[0].stars, 5);
+  assert.equal(list.ratings[0].page, '/json-editor/');
+  assert.ok(!('client_hash' in list.ratings[0]));
+
+  assert.equal((await fetch(`${baseUrl}/admin/ratings/${list.ratings[0].id}`, { method: 'DELETE' })).status, 401);
+  assert.equal((await fetch(`${baseUrl}/admin/ratings/${list.ratings[0].id}`, { method: 'DELETE', headers: auth })).status, 200);
+  assert.equal((await fetch(`${baseUrl}/admin/ratings/${list.ratings[0].id}`, { method: 'DELETE', headers: auth })).status, 404);
+  assert.equal((await (await summary()).json()).average, 1);
 });

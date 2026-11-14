@@ -4,21 +4,32 @@
  *   GET  /health                 liveness check
  *   GET  /v1/challenge?site=ID   proof-of-work challenge for a form
  *   POST /v1/submit              submit a message (JSON)
+ *   POST /v1/rate                1-5 star rating (JSON), for sites with `ratings: true`
+ *   GET  /v1/ratings/summary?site=ID   public count, average and distribution
  *   GET  /v1/widget.js           embeddable form for any configured site
  *   GET  /admin/submissions      archive (Authorization: Bearer ADMIN_TOKEN)
+ *   GET  /admin/ratings          ratings, newest first (same token)
+ *   DELETE /admin/ratings/ID     remove a rating, e.g. one of a spam burst (same token)
  *
  * Spam defenses on submit, cheapest first: allowed origin, honeypot field,
  * proof of work (also enforces a minimum time on the form and is single
- * use), per-IP rate limits, and content rules.
+ * use), per-IP rate limits, and content rules. Ratings get the same
+ * defenses except the honeypot, and count once per client id.
  */
 
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createChallenge, verifySolution } from './pow.js';
-import { validateSubmission } from './validate.js';
+import { validateRating, validateSubmission } from './validate.js';
 
 const MAX_BODY_BYTES = 32 * 1024;
 const CHALLENGE_LIMITS = [{ windowMs: 60 * 60 * 1000, max: 60 }];
+// Per IP and site. Changing your rating counts too.
+const RATING_LIMITS = [
+  { windowMs: 60 * 60 * 1000, max: 5 },
+  { windowMs: 24 * 60 * 60 * 1000, max: 10 },
+];
+const SUMMARY_CACHE_SECONDS = 300;
 const WIDGET_SOURCE = readFileSync(new URL('../public/widget.js', import.meta.url), 'utf8');
 
 class HttpError extends Error {
@@ -112,7 +123,7 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     }
   }
 
-  async function handleSubmit(req, res, origin) {
+  async function readJson(req) {
     if (!String(req.headers['content-type'] || '').includes('application/json')) {
       throw new HttpError(415, 'json_required');
     }
@@ -124,14 +135,12 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
       throw new HttpError(400, 'invalid_json');
     }
     if (!body || typeof body !== 'object') throw new HttpError(400, 'invalid_json');
+    return body;
+  }
 
-    const site = siteForRequest(body.site, origin);
-    const cors = corsHeaders(origin);
-
-    // Honeypot: people never see this field. Pretend success so bots learn nothing.
-    if (body.website) return sendJson(res, 200, { ok: true }, cors);
-
-    const pow = verifySolution(body.altcha, {
+  /** @returns {number} When the challenge expires, for marking it used */
+  function checkProofOfWork(altcha) {
+    const pow = verifySolution(altcha, {
       hmacKey: options.hmacKey,
       ttlMs: options.challengeTtlMs,
       minAgeMs: options.minFormMs,
@@ -141,6 +150,25 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
       const code = pow.reason === 'expired' ? 'challenge_expired' : pow.reason === 'too_fast' ? 'too_fast' : 'challenge_failed';
       throw new HttpError(400, code);
     }
+    return pow.expiresAt;
+  }
+
+  function requireAdmin(req) {
+    const auth = String(req.headers.authorization || '');
+    if (!options.adminToken || !safeEqual(auth, `Bearer ${options.adminToken}`)) {
+      throw new HttpError(401, 'unauthorized');
+    }
+  }
+
+  async function handleSubmit(req, res, origin) {
+    const body = await readJson(req);
+    const site = siteForRequest(body.site, origin);
+    const cors = corsHeaders(origin);
+
+    // Honeypot: people never see this field. Pretend success so bots learn nothing.
+    if (body.website) return sendJson(res, 200, { ok: true }, cors);
+
+    const expiresAt = checkProofOfWork(body.altcha);
 
     const validation = validateSubmission(body, site);
     if (!validation.ok) {
@@ -152,7 +180,7 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
       throw new HttpError(429, 'rate_limited');
     }
     // Checked last so a rejected submission doesn't burn the solved challenge
-    if (!store.useChallenge(body.altcha.signature, pow.expiresAt)) throw new HttpError(400, 'challenge_used');
+    if (!store.useChallenge(body.altcha.signature, expiresAt)) throw new HttpError(400, 'challenge_used');
 
     const id = store.insertSubmission({ site: site.id, ...validation.value, ipHash: hashIp(ip) });
     // The message is safely stored; email failures are retried in the background
@@ -160,11 +188,61 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     return sendJson(res, 200, { ok: true }, cors);
   }
 
-  function handleAdmin(req, res, url) {
-    const auth = String(req.headers.authorization || '');
-    if (!options.adminToken || !safeEqual(auth, `Bearer ${options.adminToken}`)) {
-      throw new HttpError(401, 'unauthorized');
+  async function handleRate(req, res, origin) {
+    const body = await readJson(req);
+    const site = siteForRequest(body.site, origin);
+    if (!site.ratings) throw new HttpError(404, 'ratings_disabled');
+    const cors = corsHeaders(origin);
+
+    const expiresAt = checkProofOfWork(body.altcha);
+
+    const validation = validateRating(body);
+    if (!validation.ok) {
+      return sendJson(res, 400, { ok: false, error: 'invalid_fields', fields: validation.errors }, cors);
     }
+
+    const ip = clientIp(req);
+    if (!rateLimiter.allow(`rate:${site.id}:${ip}`, RATING_LIMITS, now())) {
+      throw new HttpError(429, 'rate_limited');
+    }
+    if (!store.useChallenge(body.altcha.signature, expiresAt)) throw new HttpError(400, 'challenge_used');
+
+    const { stars, clientId, page } = validation.value;
+    const created = store.upsertRating(
+      { site: site.id, clientHash: hashIp(`client:${clientId}`), stars, page, ipHash: hashIp(ip) },
+      new Date(now()),
+    );
+    return sendJson(res, 200, { ok: true, created }, cors);
+  }
+
+  /** Public, so the site's build can read it; no origin check */
+  function handleRatingSummary(res, url) {
+    const site = config.sites.get(url.searchParams.get('site'));
+    if (!site || !site.ratings) throw new HttpError(404, 'unknown_site');
+    return sendJson(res, 200, { ok: true, site: site.id, ...store.ratingSummary(site.id) }, {
+      'Cache-Control': `public, max-age=${SUMMARY_CACHE_SECONDS}`,
+      'Access-Control-Allow-Origin': '*',
+    });
+  }
+
+  function handleAdminRatings(req, res, url) {
+    requireAdmin(req);
+    if (req.method === 'DELETE') {
+      const id = Number(url.pathname.slice('/admin/ratings/'.length));
+      if (!Number.isInteger(id) || id < 1) throw new HttpError(404, 'not_found');
+      if (!store.deleteRating(id)) throw new HttpError(404, 'not_found');
+      return sendJson(res, 200, { ok: true });
+    }
+    const ratings = store.listRatings({
+      site: url.searchParams.get('site') || undefined,
+      limit: Number(url.searchParams.get('limit')) || 50,
+      beforeId: Number(url.searchParams.get('before')) || undefined,
+    });
+    return sendJson(res, 200, { ok: true, ratings });
+  }
+
+  function handleAdmin(req, res, url) {
+    requireAdmin(req);
     const submissions = store.listSubmissions({
       site: url.searchParams.get('site') || undefined,
       limit: Number(url.searchParams.get('limit')) || 50,
@@ -210,6 +288,19 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
 
       if (req.method === 'POST' && url.pathname === '/v1/submit') {
         return await handleSubmit(req, res, origin);
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/rate') {
+        return await handleRate(req, res, origin);
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/ratings/summary') {
+        return handleRatingSummary(res, url);
+      }
+
+      if ((req.method === 'GET' && url.pathname === '/admin/ratings')
+        || (req.method === 'DELETE' && url.pathname.startsWith('/admin/ratings/'))) {
+        return handleAdminRatings(req, res, url);
       }
 
       if (req.method === 'GET' && url.pathname === '/v1/widget.js') {

@@ -66,6 +66,7 @@ import PDFViewer from './components/PDFViewer';
 import SVGViewer from './components/SVGViewer';
 import { HelpModal } from './components/help/HelpModal';
 import FeedbackModal from './components/FeedbackModal';
+import RatingPrompt, { SiteRatingLine } from './components/RatingPrompt';
 import { HELP_URLS } from './components/help/HelpContent';
 import { formatService } from './services/formatters';
 import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS, DEFAULT_MODELS } from './services/AIService';
@@ -10714,6 +10715,7 @@ const TidyCode = () => {
                           alt="Tidy Code"
                         />
                         <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
+                        <SiteRatingLine dark={theme === 'dark'} className="mb-2" />
                         <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                           A powerful code & text editor with PDF viewer, format conversion, syntax highlighting, AI assistance, and more
                         </p>
@@ -11380,6 +11382,7 @@ const TidyCode = () => {
                 alt="Tidy Code"
               />
               <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
+              <SiteRatingLine dark={theme === 'dark'} className="mb-2" />
               <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 A powerful code & text editor with syntax highlighting, AI-assisted error fixing, and more
               </p>
@@ -12719,6 +12722,13 @@ const TidyCode = () => {
 
       {/* Cookie Consent Banner - Only shown in web mode */}
       <CookieConsent theme={theme} />
+
+      {/* Asks for a star rating after a few days of use */}
+      <RatingPrompt
+        theme={theme}
+        blocked={showFeedbackModal || showAuthModal}
+        onSendFeedback={() => setShowFeedbackModal(true)}
+      />
 
       {/* Auth Modal */}
       {showAuthModal && (

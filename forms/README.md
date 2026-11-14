@@ -27,8 +27,21 @@ Every accepted message is saved to SQLite before the email is sent. If SES is un
 | `GET /health` | Liveness check |
 | `GET /v1/challenge?site=ID` | Proof-of-work challenge (request must come from the site's origin) |
 | `POST /v1/submit` | JSON: `site`, `message`, optional `name`, `email`, `page`, `meta` (flat string pairs), `website` (honeypot, must be empty), `altcha` (solved challenge) |
+| `POST /v1/rate` | JSON: `site`, `stars` (whole number 1–5), `clientId` (random id the client keeps, 16–100 of `A-Z a-z 0-9 _ -`), optional `page`, `altcha`. Only for sites with `ratings: true`. Returns `created: false` when it replaced the client's earlier rating. |
+| `GET /v1/ratings/summary?site=ID` | Public: `count`, `average` (2 decimals, `null` with no ratings) and `distribution` by stars. Any origin; cached for 5 minutes. |
 | `GET /v1/widget.js` | Embeddable form |
 | `GET /admin/submissions?site=ID&limit=50&before=ID` | Archive; needs `Authorization: Bearer $ADMIN_TOKEN` |
+| `GET /admin/ratings?site=ID&limit=50&before=ID` | Ratings, newest first (same token) |
+| `DELETE /admin/ratings/ID` | Remove one rating (same token) |
+
+## Star ratings
+
+Sites with `ratings: true` in `sites.yaml` accept 1–5 star ratings, used for the rating shown on the site and in its structured data.
+
+- **One rating per client.** The client sends a random id it created and kept. Rating again replaces the earlier rating. Only a salted hash of the id is stored.
+- **Every rating counts.** Don't delete ratings because they're low. Asking only happy users, or hiding negative ratings, breaks Google's review guidelines and the FTC's rule on consumer reviews. Delete only clear abuse, such as a burst of ratings from one IP hash.
+- **Same spam defenses as messages** except the honeypot: allowed origins, proof of work, and per-IP limits of 5 an hour and 10 a day per site.
+- Ratings aren't emailed. Check them with the admin endpoint.
 
 ## Adding a website
 
@@ -119,6 +132,12 @@ Optional settings:
 curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/submissions?site=tidycode&limit=20"
 ```
 Each entry shows its email status (`sent`, `failed` with `last_error`, or `pending`).
+
+Ratings, and removing one:
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/ratings?site=tidycode"
+curl -X DELETE -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/ratings/42"
+```
 
 ## Development
 ```bash

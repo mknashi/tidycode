@@ -54,6 +54,9 @@ export function buildConfig(raw) {
     if (site.from !== undefined && typeof site.from !== 'string') {
       fail(`site "${id}": "from" must be a string`);
     }
+    if (site.ratings !== undefined && typeof site.ratings !== 'boolean') {
+      fail(`site "${id}": "ratings" must be true or false`);
+    }
 
     const merged = { ...SITE_DEFAULTS, ...site };
     for (const key of Object.keys(SITE_DEFAULTS)) {
@@ -66,6 +69,7 @@ export function buildConfig(raw) {
       origins: site.origins.map(origin => normalizeOrigin(id, origin)),
       to,
       from: site.from,
+      ratings: site.ratings === true,
       maxMessageLength: merged.maxMessageLength,
       maxLinks: merged.maxLinks,
       limits: [

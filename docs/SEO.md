@@ -199,6 +199,20 @@ Google has recrawled, nothing above has any effect.
      ratings break Google's spam policies.
    - Check every page with the
      [Rich Results Test](https://search.google.com/test/rich-results).
+   - **Star ratings are optional and don't improve ranking.** Stars aren't a
+     ranking factor: at best Google shows them on a result, which can get more
+     clicks, and on a new site it often won't.
+   - **Ratings are built (stars only, one overall rating).** The app asks after
+     3 days of use and from the Feedback dialog (`src/services/rating.js`,
+     `src/components/RatingPrompt.jsx`); the forms service stores them
+     (`POST /v1/rate`, see `forms/README.md`). At build time
+     `scripts/vite-plugin-site-rating.js` reads the public summary and, from 5
+     ratings up, writes `aggregateRating` into `index.html` plus a meta tag the
+     welcome screen shows as "★ 4.6 from 38 ratings". Both come from one
+     summary, so they match. The ten tool pages get no rating until they have
+     their own (each rating records its page). Ratings refresh only on rebuild,
+     so schedule a daily redeploy. Never on `Organization`, never copied from
+     other sites, and never filter out low ratings.
 
 6. **Small cleanups.**
    - Remove `<meta name="keywords">` (Google says it doesn't use it),

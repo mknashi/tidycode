@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, MessageCircle, Send, Loader2, CheckCircle } from 'lucide-react';
 import { createFeedbackSession, feedbackContext } from '../services/feedback';
+import { createRatingSession, savedRating } from '../services/rating';
+import { StarPicker } from './RatingPrompt';
 
 const MAX_MESSAGE = 5000;
 
@@ -17,6 +19,26 @@ const FeedbackModal = ({ onClose, theme }) => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+
+  const ratingSession = useMemo(() => createRatingSession(), []);
+  const [stars, setStars] = useState(() => savedRating());
+  const [rating, setRating] = useState('idle'); // idle | sending | saved
+  const [ratingError, setRatingError] = useState('');
+
+  const rate = async (picked) => {
+    const previous = stars;
+    setStars(picked);
+    setRating('sending');
+    setRatingError('');
+    try {
+      await ratingSession.submit(picked);
+      setRating('saved');
+    } catch (rateError) {
+      setStars(previous);
+      setRatingError(rateError.message);
+      setRating('idle');
+    }
+  };
 
   // Solve the proof of work in the background while the user writes
   useEffect(() => {
@@ -150,6 +172,18 @@ const FeedbackModal = ({ onClose, theme }) => {
               </details>
 
               {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+
+              <div className={`pt-4 border-t ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {savedRating() ? 'Your rating' : 'Rate Tidy Code'}
+                  </span>
+                  <StarPicker value={stars} onPick={rate} disabled={rating === 'sending'} dark={dark} size="w-5 h-5" />
+                  {rating === 'sending' && <Loader2 className={`w-4 h-4 animate-spin ${hintClass}`} aria-label="Saving" />}
+                  {rating === 'saved' && <span className={hintClass}>Thanks, saved.</span>}
+                </div>
+                {ratingError && <p role="alert" className="mt-1 text-xs text-red-500">{ratingError}</p>}
+              </div>
             </div>
 
             <div className={`flex items-center justify-end gap-3 p-5 border-t ${dark ? 'border-gray-700' : 'border-gray-200'}`}>

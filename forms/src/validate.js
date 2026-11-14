@@ -57,3 +57,22 @@ export function validateSubmission(body, site) {
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: { name, email, message, page, meta } };
 }
+
+// Random id the client creates once and keeps (e.g. crypto.randomUUID())
+const CLIENT_ID_PATTERN = /^[A-Za-z0-9_-]{16,100}$/;
+
+/**
+ * @param {Object} body - Parsed request body
+ * @returns {{ ok: true, value: Object } | { ok: false, errors: string[] }}
+ */
+export function validateRating(body) {
+  const errors = [];
+  const page = cleanText(body.page);
+
+  if (!Number.isInteger(body.stars) || body.stars < 1 || body.stars > 5) errors.push('invalid_stars');
+  if (typeof body.clientId !== 'string' || !CLIENT_ID_PATTERN.test(body.clientId)) errors.push('invalid_client_id');
+  if (page.length > MAX_PAGE) errors.push('page_too_long');
+
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true, value: { stars: body.stars, clientId: body.clientId, page } };
+}

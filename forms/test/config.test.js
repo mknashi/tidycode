@@ -8,6 +8,7 @@ test('the committed sites.yaml is valid', () => {
   const config = loadConfig(fileURLToPath(new URL('../sites.yaml', import.meta.url)));
   assert.ok(config.sites.has('tidycode'));
   assert.ok(config.sites.get('tidycode').origins.includes('tauri://localhost'));
+  assert.equal(config.sites.get('tidycode').ratings, true);
 });
 
 test('fills in defaults', () => {
@@ -16,6 +17,7 @@ test('fills in defaults', () => {
   assert.equal(site.maxMessageLength, 5000);
   assert.deepEqual(site.to, ['x@a.example']);
   assert.equal(site.limits[0].max, 5);
+  assert.equal(site.ratings, false);
 });
 
 test('rejects invalid sites', () => {
@@ -23,6 +25,7 @@ test('rejects invalid sites', () => {
   assert.throws(() => buildConfig({ sites: { a: { origins: ['https://a.example'], to: 'nope' } } }), /email/);
   assert.throws(() => buildConfig({ sites: { 'Bad Id': { origins: ['https://a.example'], to: 'x@a.example' } } }), /lowercase/);
   assert.throws(() => buildConfig({ sites: {} }), /no sites/);
+  assert.throws(() => buildConfig({ sites: { a: { origins: ['https://a.example'], to: 'x@a.example', ratings: 'yes' } } }), /ratings/);
 });
 
 test('rate limiter enforces every window', () => {

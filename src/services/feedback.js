@@ -8,7 +8,7 @@ import { version as appVersion } from '../../package.json';
 import { isDesktop } from '../utils/platform';
 
 export const FORMS_URL = import.meta.env.VITE_FORMS_URL || 'https://forms.tidycode.ai';
-const SITE_ID = 'tidycode';
+export const SITE_ID = 'tidycode';
 // Challenges expire after an hour; refetch before that
 const CHALLENGE_MAX_AGE_MS = 50 * 60 * 1000;
 
@@ -58,13 +58,14 @@ async function fetchSolution() {
 }
 
 /**
- * One feedback form session. Call prepare() when the form opens so the proof
- * of work is done by the time the user presses Send.
+ * A solved challenge, fetched once and reused until it is old or used.
+ * Call prepare() early so the proof of work is done before it's needed;
+ * prepare(true) fetches a fresh one.
  */
-export function createFeedbackSession() {
+export function createSolutionCache() {
   let pending = null;
 
-  function prepare(force = false) {
+  return function prepare(force = false) {
     if (force || !pending || Date.now() - pending.fetchedAt > CHALLENGE_MAX_AGE_MS) {
       const promise = fetchSolution();
       promise.catch(() => {
@@ -73,7 +74,15 @@ export function createFeedbackSession() {
       pending = { promise, fetchedAt: Date.now() };
     }
     return pending.promise;
-  }
+  };
+}
+
+/**
+ * One feedback form session. Call prepare() when the form opens so the proof
+ * of work is done by the time the user presses Send.
+ */
+export function createFeedbackSession() {
+  const prepare = createSolutionCache();
 
   /**
    * @param {{ name?: string, email?: string, message: string, website?: string }} fields - `website` is the honeypot

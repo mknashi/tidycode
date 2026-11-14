@@ -1,6 +1,7 @@
 /**
  * SQLite archive of every accepted submission, so nothing is lost when email
- * delivery fails, plus the record of used challenges (replay protection).
+ * delivery fails, the record of used challenges (replay protection), and
+ * star ratings (one per site and client; rating again replaces it).
  */
 
 import { DatabaseSync } from 'node:sqlite';
@@ -33,6 +34,17 @@ export class Store {
       CREATE TABLE IF NOT EXISTS used_challenges (
         signature TEXT PRIMARY KEY,
         expires_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS ratings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        site TEXT NOT NULL,
+        client_hash TEXT NOT NULL,
+        stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+        page TEXT,
+        ip_hash TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (site, client_hash)
       );
     `);
   }
@@ -101,6 +113,55 @@ export class Store {
     if (beforeId) { where.push('id < ?'); params.push(beforeId); }
     const sql = `SELECT * FROM submissions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`;
     return this.db.prepare(sql).all(...params, Math.min(limit, 200)).map(parseRow);
+  }
+
+  /**
+   * Save a client's rating, replacing any earlier one from the same client.
+   * @returns {boolean} true if this is the client's first rating
+   */
+  upsertRating({ site, clientHash, stars, page, ipHash }, now = new Date()) {
+    const existing = this.db
+      .prepare('SELECT id FROM ratings WHERE site = ? AND client_hash = ?')
+      .get(site, clientHash);
+    this.db
+      .prepare(`INSERT INTO ratings (site, client_hash, stars, page, ip_hash, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (site, client_hash) DO UPDATE SET
+                  stars = excluded.stars, page = excluded.page, ip_hash = excluded.ip_hash, updated_at = excluded.updated_at`)
+      .run(site, clientHash, stars, page || null, ipHash, now.toISOString(), now.toISOString());
+    return !existing;
+  }
+
+  /** @returns {{ count: number, average: number|null, distribution: Object<string, number> }} */
+  ratingSummary(site) {
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const rows = this.db
+      .prepare('SELECT stars, COUNT(*) AS n FROM ratings WHERE site = ? GROUP BY stars')
+      .all(site);
+    let count = 0;
+    let total = 0;
+    for (const { stars, n } of rows) {
+      distribution[stars] = n;
+      count += n;
+      total += stars * n;
+    }
+    return { count, average: count ? Math.round((total / count) * 100) / 100 : null, distribution };
+  }
+
+  /** Newest first; `beforeId` pages backwards. Client ids stay hidden. */
+  listRatings({ site, limit = 50, beforeId } = {}) {
+    const where = [];
+    const params = [];
+    if (site) { where.push('site = ?'); params.push(site); }
+    if (beforeId) { where.push('id < ?'); params.push(beforeId); }
+    const sql = `SELECT id, site, stars, page, ip_hash, created_at, updated_at FROM ratings
+                 ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`;
+    return this.db.prepare(sql).all(...params, Math.min(limit, 200));
+  }
+
+  /** @returns {boolean} false if there was no such rating */
+  deleteRating(id) {
+    return this.db.prepare('DELETE FROM ratings WHERE id = ?').run(id).changes === 1;
   }
 
   close() {

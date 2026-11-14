@@ -4,6 +4,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 import { writeFileSync } from 'fs'
 import { resolve } from 'path'
 import pkg from './package.json' with { type: 'json' }
+import siteRating from './scripts/vite-plugin-site-rating.js'
 
 // Generate version.json for static pages
 function generateVersionFile() {
@@ -19,6 +20,7 @@ function generateVersionFile() {
 export default defineConfig({
   plugins: [
     generateVersionFile(),
+    siteRating(),
     react(),
     viteStaticCopy({
       targets: [

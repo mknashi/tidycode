@@ -8,6 +8,7 @@
 #     maxMessageLength:     optional, default 5000 characters
 #     maxLinks:             optional, default 2 links per message
 #     perHour / perDay:     optional per-IP limits, default 5 / 20
+#     ratings:              optional, true to accept 1-5 star ratings (default false)
 #
 # Changes take effect on the next deploy.
 
@@ -23,6 +24,7 @@ sites:
       # Local development
       - http://localhost:5173
     to: feedback@tidycode.ai
+    ratings: true
 
   savet-health:
     name: Savet Health
