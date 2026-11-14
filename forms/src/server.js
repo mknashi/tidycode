@@ -31,7 +31,7 @@ const mailer = createMailer({
 });
 const rateLimiter = new RateLimiter();
 
-const { handler, retryPendingDeliveries } = createApp({
+const { handler, retryPendingDeliveries, recordSmtpCheck } = createApp({
   config,
   store,
   mailer,
@@ -54,13 +54,24 @@ server.listen(port, () => {
   console.log(`[forms] Listening on :${port} for sites: ${[...config.sites.keys()].join(', ')}`);
 });
 
-mailer.verify().then(
-  () => console.log('[forms] SMTP connection verified'),
-  error => console.error('[forms] SMTP check failed (messages will be stored and retried):', error.message),
-);
+// Shown on the admin page; repeated so it reflects the SMTP server now, not at startup
+function checkSmtp() {
+  return mailer.verify().then(
+    () => {
+      recordSmtpCheck(true);
+      console.log('[forms] SMTP connection verified');
+    },
+    error => {
+      recordSmtpCheck(false, error.message);
+      console.error('[forms] SMTP check failed (messages will be stored and retried):', error.message);
+    },
+  );
+}
+checkSmtp();
 
 const timers = [
   setInterval(() => retryPendingDeliveries().catch(error => console.error('[forms] Retry failed:', error)), 5 * 60 * 1000),
+  setInterval(checkSmtp, 6 * 60 * 60 * 1000),
   setInterval(() => {
     store.pruneChallenges();
     rateLimiter.prune(24 * 60 * 60 * 1000);

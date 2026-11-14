@@ -30,9 +30,9 @@ Every accepted message is saved to SQLite before the email is sent. If SES is un
 | `POST /v1/rate` | JSON: `site`, `stars` (whole number 1–5), `clientId` (random id the client keeps, 16–100 of `A-Z a-z 0-9 _ -`), optional `page`, `altcha`. Only for sites with `ratings: true`. Returns `created: false` when it replaced the client's earlier rating. |
 | `GET /v1/ratings/summary?site=ID` | Public: `count`, `average` (2 decimals, `null` with no ratings) and `distribution` by stars. Any origin; cached for 5 minutes. |
 | `GET /v1/widget.js` | Embeddable form |
-| `GET /admin/submissions?site=ID&limit=50&before=ID` | Archive; needs `Authorization: Bearer $ADMIN_TOKEN` |
-| `GET /admin/ratings?site=ID&limit=50&before=ID` | Ratings, newest first (same token) |
-| `DELETE /admin/ratings/ID` | Remove one rating (same token) |
+| `GET /admin` | Admin page (see [Admin page](#admin-page)) |
+| `/admin/api/...` | Admin API used by that page; needs `Authorization: Bearer $ADMIN_TOKEN`. Routes are listed at the top of [`src/admin.js`](src/admin.js). |
+| `GET /admin/submissions`, `GET /admin/ratings`, `DELETE /admin/ratings/ID` | Earlier admin URLs, still working (same token) |
 
 ## Star ratings
 
@@ -41,7 +41,7 @@ Sites with `ratings: true` in `sites.yaml` accept 1–5 star ratings, used for t
 - **One rating per client.** The client sends a random id it created and kept. Rating again replaces the earlier rating. Only a salted hash of the id is stored.
 - **Every rating counts.** Don't delete ratings because they're low. Asking only happy users, or hiding negative ratings, breaks Google's review guidelines and the FTC's rule on consumer reviews. Delete only clear abuse, such as a burst of ratings from one IP hash.
 - **Same spam defenses as messages** except the honeypot: allowed origins, proof of work, and per-IP limits of 5 an hour and 10 a day per site.
-- Ratings aren't emailed. Check them with the admin endpoint.
+- Ratings aren't emailed. See them on the [admin page](#admin-page).
 
 ## Adding a website
 
@@ -127,16 +127,22 @@ Optional settings:
 - `TRUST_PROXY` (default true, for running behind Traefik)
 - `CLIENT_IP_HEADER` (header holding the visitor's IP, e.g. `cf-connecting-ip`)
 
-## Reading the archive
-```bash
-curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/submissions?site=tidycode&limit=20"
-```
-Each entry shows its email status (`sent`, `failed` with `last_error`, or `pending`).
+## Admin page
 
-Ratings, and removing one:
+Open **https://forms.tidycode.ai/admin** and paste `ADMIN_TOKEN`. The token stays in that browser tab only and is cleared when the tab closes. The page covers every site in `sites.yaml`; pick one at the top or leave it on "All sites".
+
+- **Overview:** messages per site in the last 7 and 30 days and all time, unhandled messages, failed emails, and each site's rating with its star breakdown.
+- **Messages:** filter by handled or not, email status, or text in the name, email, message or page. Open one to read it, reply by email, mark it handled, retry its email, or delete it (for example when someone asks for their data to be removed).
+- **Ratings:** the average and breakdown, new ratings per day for 90 days, ratings by page, and IP hashes with 3 or more ratings, which you can list or delete together. Delete only clear abuse, never low ratings.
+- **Health:** when the service started, the last SMTP check (repeated every 6 hours), the last email sent, emails pending, retrying or given up per site, and how many messages and ratings were blocked since the service started, by reason.
+- **Export CSV** on Messages and Ratings downloads everything for the chosen site. Cells that a spreadsheet would treat as a formula start with `'`.
+
+Messages are written by the public, so the page shows them only as text, and it's served with a strict Content-Security-Policy.
+
+With `curl`:
 ```bash
-curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/ratings?site=tidycode"
-curl -X DELETE -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/ratings/42"
+curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://forms.tidycode.ai/admin/api/messages?site=tidycode&handled=false"
+curl -H "Authorization: Bearer $ADMIN_TOKEN" -o tidycode-ratings.csv "https://forms.tidycode.ai/admin/api/export?site=tidycode&type=ratings"
 ```
 
 ## Development
@@ -149,6 +155,8 @@ PORT=8787 DB_PATH=./dev.db SMTP_HOST=127.0.0.1 SMTP_PORT=2599 \
   TRUST_PROXY=false npm start
 ```
 With no SMTP server on that port, messages are saved with status `failed`, which is useful for testing.
+
+The admin page is then at http://localhost:8787/admin with the token `dev`.
 
 To use the local server from the TidyCode app, run the app with `VITE_FORMS_URL=http://localhost:8787 npm run dev`. `http://localhost:5173` is already an allowed origin.
 

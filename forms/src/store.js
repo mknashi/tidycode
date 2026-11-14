@@ -46,7 +46,11 @@ export class Store {
         updated_at TEXT NOT NULL,
         UNIQUE (site, client_hash)
       );
+      CREATE INDEX IF NOT EXISTS ratings_site_created ON ratings (site, created_at);
     `);
+    // Added after the first release; existing databases get the column on start
+    const columns = this.db.prepare('PRAGMA table_info(submissions)').all().map(column => column.name);
+    if (!columns.includes('handled_at')) this.db.exec('ALTER TABLE submissions ADD COLUMN handled_at TEXT');
   }
 
   /**
@@ -105,14 +109,66 @@ export class Store {
     return row ? parseRow(row) : null;
   }
 
-  /** Newest first; `beforeId` pages backwards */
-  listSubmissions({ site, limit = 50, beforeId } = {}) {
+  /**
+   * Newest first; `beforeId` pages backwards.
+   * @param {Object} [filters]
+   * @param {string} [filters.status] - pending, sent or failed
+   * @param {boolean} [filters.handled]
+   * @param {string} [filters.q] - Text in the name, email, message or page
+   * @param {number|null} [filters.limit] - null for all (exports)
+   */
+  listSubmissions({ site, limit = 50, beforeId, status, handled, q } = {}) {
     const where = [];
     const params = [];
     if (site) { where.push('site = ?'); params.push(site); }
     if (beforeId) { where.push('id < ?'); params.push(beforeId); }
-    const sql = `SELECT * FROM submissions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`;
-    return this.db.prepare(sql).all(...params, Math.min(limit, 200)).map(parseRow);
+    if (status) { where.push('status = ?'); params.push(status); }
+    if (handled === true) where.push('handled_at IS NOT NULL');
+    if (handled === false) where.push('handled_at IS NULL');
+    if (q) {
+      const like = `%${q.replace(/[\\%_]/g, char => `\\${char}`)}%`;
+      where.push(`(name LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\' OR message LIKE ? ESCAPE '\\' OR page LIKE ? ESCAPE '\\')`);
+      params.push(like, like, like, like);
+    }
+    const sql = `SELECT * FROM submissions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC`;
+    if (limit === null) return this.db.prepare(sql).all(...params).map(parseRow);
+    return this.db.prepare(`${sql} LIMIT ?`).all(...params, Math.min(limit, 200)).map(parseRow);
+  }
+
+  /** @returns {boolean} false if there was no such submission */
+  setHandled(id, handled, now = new Date()) {
+    return this.db
+      .prepare('UPDATE submissions SET handled_at = ? WHERE id = ?')
+      .run(handled ? now.toISOString() : null, id).changes === 1;
+  }
+
+  /** @returns {boolean} false if there was no such submission */
+  deleteSubmission(id) {
+    return this.db.prepare('DELETE FROM submissions WHERE id = ?').run(id).changes === 1;
+  }
+
+  /** Message counts per site */
+  messageStats(now = Date.now()) {
+    const since = days => new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+    return this.db
+      .prepare(`SELECT site,
+                  COUNT(*) AS total,
+                  SUM(created_at >= ?) AS last7,
+                  SUM(created_at >= ?) AS last30,
+                  SUM(handled_at IS NULL) AS unhandled,
+                  SUM(status = 'pending') AS pending,
+                  SUM(status = 'failed' AND attempts < ?) AS retrying,
+                  SUM(status = 'failed' AND attempts >= ?) AS failed
+                FROM submissions GROUP BY site`)
+      .all(since(7), since(30), MAX_DELIVERY_ATTEMPTS, MAX_DELIVERY_ATTEMPTS);
+  }
+
+  /** Ratings first given in the last 7 days, per site */
+  recentRatingCounts(now = Date.now()) {
+    const since = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    return this.db
+      .prepare('SELECT site, COUNT(*) AS last7 FROM ratings WHERE created_at >= ? GROUP BY site')
+      .all(since);
   }
 
   /**
@@ -148,15 +204,51 @@ export class Store {
     return { count, average: count ? Math.round((total / count) * 100) / 100 : null, distribution };
   }
 
-  /** Newest first; `beforeId` pages backwards. Client ids stay hidden. */
-  listRatings({ site, limit = 50, beforeId } = {}) {
+  /** Newest first; `beforeId` pages backwards; `limit: null` for all. Client ids stay hidden. */
+  listRatings({ site, limit = 50, beforeId, ipHash } = {}) {
     const where = [];
     const params = [];
     if (site) { where.push('site = ?'); params.push(site); }
     if (beforeId) { where.push('id < ?'); params.push(beforeId); }
+    if (ipHash) { where.push('ip_hash = ?'); params.push(ipHash); }
     const sql = `SELECT id, site, stars, page, ip_hash, created_at, updated_at FROM ratings
-                 ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`;
-    return this.db.prepare(sql).all(...params, Math.min(limit, 200));
+                 ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC`;
+    if (limit === null) return this.db.prepare(sql).all(...params);
+    return this.db.prepare(`${sql} LIMIT ?`).all(...params, Math.min(limit, 200));
+  }
+
+  /** New ratings per day (by when first given) over the last `days` days */
+  ratingsByDay(site, days = 90, now = Date.now()) {
+    const since = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+    return this.db
+      .prepare(`SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS count, ROUND(AVG(stars), 2) AS average
+                FROM ratings WHERE site = ? AND created_at >= ? GROUP BY day ORDER BY day`)
+      .all(site, since);
+  }
+
+  ratingsByPage(site) {
+    return this.db
+      .prepare(`SELECT COALESCE(page, '') AS page, COUNT(*) AS count, ROUND(AVG(stars), 2) AS average
+                FROM ratings WHERE site = ? GROUP BY page ORDER BY count DESC LIMIT 50`)
+      .all(site);
+  }
+
+  /**
+   * IP hashes with several ratings: possibly one person rating from many
+   * browsers, possibly an office or school sharing an address.
+   */
+  ratingBursts(site, minCount = 3) {
+    return this.db
+      .prepare(`SELECT ip_hash, COUNT(*) AS count, ROUND(AVG(stars), 2) AS average,
+                       MIN(created_at) AS first_at, MAX(updated_at) AS last_at
+                FROM ratings WHERE site = ? AND ip_hash IS NOT NULL
+                GROUP BY ip_hash HAVING COUNT(*) >= ? ORDER BY count DESC LIMIT 20`)
+      .all(site, minCount);
+  }
+
+  /** @returns {number} How many were deleted */
+  deleteRatingsByIp(site, ipHash) {
+    return Number(this.db.prepare('DELETE FROM ratings WHERE site = ? AND ip_hash = ?').run(site, ipHash).changes);
   }
 
   /** @returns {boolean} false if there was no such rating */

@@ -374,3 +374,154 @@ test('admin can list and delete ratings', async () => {
   assert.equal((await fetch(`${baseUrl}/admin/ratings/${list.ratings[0].id}`, { method: 'DELETE', headers: auth })).status, 404);
   assert.equal((await (await summary()).json()).average, 1);
 });
+
+// ---------- admin page and API ----------
+
+const ADMIN = { Authorization: 'Bearer admin-secret' };
+
+async function adminApi(path, { method = 'GET', body } = {}) {
+  const headers = { ...ADMIN };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  return fetch(`${baseUrl}/admin/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+}
+
+test('serves the admin page without a token, with a strict CSP', async () => {
+  const response = await fetch(`${baseUrl}/admin`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  assert.match(response.headers.get('content-security-policy'), /script-src 'self'/);
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.match(await response.text(), /Forms admin/);
+  assert.equal((await fetch(`${baseUrl}/admin/app.js`)).status, 200);
+  assert.equal((await fetch(`${baseUrl}/admin/app.css`)).status, 200);
+});
+
+test('every admin API route needs the token', async () => {
+  for (const [method, path] of [
+    ['GET', '/overview'], ['GET', '/messages'], ['POST', '/messages/1/retry'], ['DELETE', '/messages/1'],
+    ['GET', '/ratings'], ['GET', '/ratings/insights?site=example'], ['DELETE', '/ratings/1'], ['GET', '/export?type=messages'],
+  ]) {
+    const response = await fetch(`${baseUrl}/admin/api${path}`, { method });
+    assert.equal(response.status, 401, `${method} ${path}`);
+  }
+});
+
+test('overview counts messages and ratings per site and blocked requests', async () => {
+  await submit(await validSubmission());
+  mailerFails = true;
+  await submit(await validSubmission({ message: 'Second one' }));
+  await submit(await validSubmission({ website: 'bot' })); // honeypot
+  await rate(await validRating({ stars: 4 }));
+
+  const body = await (await adminApi('/overview')).json();
+  const example = body.sites.find(site => site.id === 'example');
+  assert.deepEqual(example.messages, { total: 2, last7: 2, last30: 2, unhandled: 2, pending: 0, retrying: 1, failed: 0 });
+  assert.equal(example.ratings.count, 1);
+  assert.equal(example.ratings.last7, 1);
+  assert.equal(body.sites.find(site => site.id === 'plain').ratings, null);
+  assert.equal(body.health.blocked.honeypot, 1);
+  assert.equal(body.health.lastDelivery.ok, false);
+});
+
+test('counts blocked messages and ratings by reason, but not challenge retries', async () => {
+  await submit(await validSubmission(), 'https://evil.example');
+  await submit({ site: 'example', message: 'No proof of work' });
+  await submit(await validSubmission({ message: '' }));
+  const altcha = await solvedChallenge();
+  await rate(await validRating({ altcha }));
+  await rate(await validRating({ altcha })); // reused challenge: real clients retry these
+
+  const { health } = await (await adminApi('/overview')).json();
+  assert.deepEqual(health.blocked, { honeypot: 0, origin: 1, proofOfWork: 1, rateLimited: 0, invalid: 1 });
+});
+
+test('lists messages with filters and search', async () => {
+  await submit(await validSubmission({ message: 'About 100% coverage' }));
+  mailerFails = true;
+  await submit(await validSubmission({ message: 'Email will fail' }));
+
+  const all = await (await adminApi('/messages?site=example')).json();
+  assert.equal(all.messages.length, 2);
+  const failed = await (await adminApi('/messages?status=failed')).json();
+  assert.deepEqual(failed.messages.map(m => m.message), ['Email will fail']);
+  const search = await (await adminApi(`/messages?q=${encodeURIComponent('100%')}`)).json();
+  assert.deepEqual(search.messages.map(m => m.message), ['About 100% coverage']);
+  const wildcard = await (await adminApi(`/messages?q=${encodeURIComponent('%')}`)).json();
+  assert.equal(wildcard.messages.length, 1, '% is matched literally');
+  assert.equal((await adminApi('/messages?status=bogus')).status, 400);
+  assert.equal((await adminApi('/messages?site=nope')).status, 404);
+});
+
+test('marks messages handled, retries email and deletes', async () => {
+  mailerFails = true;
+  await submit(await validSubmission());
+  const [message] = (await (await adminApi('/messages')).json()).messages;
+  assert.equal(message.status, 'failed');
+
+  const handled = await (await adminApi(`/messages/${message.id}/handled`, { method: 'POST', body: { handled: true } })).json();
+  assert.equal(handled.message.handled_at, new Date(clock).toISOString());
+  assert.equal((await (await adminApi('/messages?handled=false')).json()).messages.length, 0);
+  const unhandled = await (await adminApi(`/messages/${message.id}/handled`, { method: 'POST', body: { handled: false } })).json();
+  assert.equal(unhandled.message.handled_at, null);
+  assert.equal((await adminApi(`/messages/${message.id}/handled`, { method: 'POST', body: {} })).status, 400);
+
+  mailerFails = false;
+  const retried = await (await adminApi(`/messages/${message.id}/retry`, { method: 'POST' })).json();
+  assert.equal(retried.message.status, 'sent');
+  assert.equal(sent.length, 1);
+
+  assert.equal((await adminApi(`/messages/${message.id}`, { method: 'DELETE' })).status, 200);
+  assert.equal((await adminApi(`/messages/${message.id}`, { method: 'DELETE' })).status, 404);
+  assert.equal((await adminApi('/messages/abc/retry', { method: 'POST' })).status, 404);
+});
+
+test('rating insights, and deleting every rating from one IP hash', async () => {
+  for (let i = 0; i < 3; i++) {
+    await rate(await validRating({ clientId: `client-${String(i).repeat(16)}`, stars: 5 }), ORIGIN, { 'X-Forwarded-For': '203.0.113.9' });
+  }
+  await rate(await validRating({ stars: 2, page: '/' }), ORIGIN, { 'X-Forwarded-For': '203.0.113.10' });
+
+  const insights = await (await adminApi('/ratings/insights?site=example')).json();
+  assert.equal(insights.summary.count, 4);
+  assert.deepEqual(insights.byDay, [{ day: '2026-10-27', count: 4, average: 4.25 }]);
+  assert.deepEqual(insights.byPage.map(row => [row.page, row.count]), [['/json-editor/', 3], ['/', 1]]);
+  assert.equal(insights.bursts.length, 1);
+  assert.equal(insights.bursts[0].count, 3);
+  assert.equal((await adminApi('/ratings/insights')).status, 400);
+  assert.equal((await adminApi('/ratings/insights?site=plain')).status, 404);
+
+  const ipHash = insights.bursts[0].ip_hash;
+  const fromIp = await (await adminApi(`/ratings?site=example&ip_hash=${ipHash}`)).json();
+  assert.equal(fromIp.ratings.length, 3);
+  const deleted = await (await adminApi(`/ratings?site=example&ip_hash=${ipHash}`, { method: 'DELETE' })).json();
+  assert.equal(deleted.deleted, 3);
+  assert.equal((await (await summary()).json()).count, 1);
+  assert.equal((await adminApi('/ratings?site=example', { method: 'DELETE' })).status, 400);
+});
+
+test('exports CSV with formula-looking cells neutralised', async () => {
+  await submit(await validSubmission({ name: '=HYPERLINK("http://x")', message: 'Line one\nsaid "hi", then left' }));
+  await rate(await validRating({ stars: 3 }));
+
+  const response = await adminApi('/export?site=example&type=messages');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/csv/);
+  assert.match(response.headers.get('content-disposition'), /example-messages-2026-10-27\.csv/);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], 'UTF-8 BOM for Excel');
+  const csv = bytes.subarray(3).toString('utf8');
+  assert.ok(csv.startsWith('id,site,created_at,name,email,message'));
+  assert.ok(csv.includes(`"'=HYPERLINK(""http://x"")"`), 'formula gets a leading quote');
+  assert.ok(csv.includes('"Line one\nsaid ""hi"", then left"'));
+
+  const ratings = await (await adminApi('/export?type=ratings')).text();
+  assert.equal(ratings.trim().split('\r\n').length, 2);
+  assert.equal((await adminApi('/export?type=other')).status, 400);
+});
+
+test('old admin URLs still work', async () => {
+  await rate(await validRating());
+  const list = await (await fetch(`${baseUrl}/admin/ratings`, { headers: ADMIN })).json();
+  assert.equal(list.ratings.length, 1);
+  assert.equal((await fetch(`${baseUrl}/admin/ratings/${list.ratings[0].id}`, { method: 'DELETE', headers: ADMIN })).status, 200);
+});

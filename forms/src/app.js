@@ -7,9 +7,7 @@
  *   POST /v1/rate                1-5 star rating (JSON), for sites with `ratings: true`
  *   GET  /v1/ratings/summary?site=ID   public count, average and distribution
  *   GET  /v1/widget.js           embeddable form for any configured site
- *   GET  /admin/submissions      archive (Authorization: Bearer ADMIN_TOKEN)
- *   GET  /admin/ratings          ratings, newest first (same token)
- *   DELETE /admin/ratings/ID     remove a rating, e.g. one of a spam burst (same token)
+ *   /admin...                    admin page and API, see admin.js
  *
  * Spam defenses on submit, cheapest first: allowed origin, honeypot field,
  * proof of work (also enforces a minimum time on the form and is single
@@ -17,12 +15,13 @@
  * defenses except the honeypot, and count once per client id.
  */
 
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createChallenge, verifySolution } from './pow.js';
 import { validateRating, validateSubmission } from './validate.js';
+import { HttpError, readJson, sendJson } from './http.js';
+import { createAdmin } from './admin.js';
 
-const MAX_BODY_BYTES = 32 * 1024;
 const CHALLENGE_LIMITS = [{ windowMs: 60 * 60 * 1000, max: 60 }];
 // Per IP and site. Changing your rating counts too.
 const RATING_LIMITS = [
@@ -32,42 +31,15 @@ const RATING_LIMITS = [
 const SUMMARY_CACHE_SECONDS = 300;
 const WIDGET_SOURCE = readFileSync(new URL('../public/widget.js', import.meta.url), 'utf8');
 
-class HttpError extends Error {
-  constructor(status, code) {
-    super(code);
-    this.status = status;
-    this.code = code;
-  }
-}
-
-function sendJson(res, status, body, headers = {}) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
-  res.end(JSON.stringify(body));
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let size = 0;
-    const chunks = [];
-    req.on('data', chunk => {
-      size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
-        reject(new HttpError(413, 'body_too_large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
-function safeEqual(a, b) {
-  const left = Buffer.from(String(a));
-  const right = Buffer.from(String(b));
-  return left.length === right.length && timingSafeEqual(left, right);
-}
+// Why a message or rating was turned away, for the admin page's health view.
+// Expired, reused and too-fast challenges aren't counted: real clients get
+// those too and retry.
+const BLOCK_REASONS = {
+  origin_not_allowed: 'origin',
+  challenge_failed: 'proofOfWork',
+  rate_limited: 'rateLimited',
+  invalid_fields: 'invalid',
+};
 
 /**
  * @param {Object} deps
@@ -80,6 +52,19 @@ function safeEqual(a, b) {
  */
 export function createApp({ config, store, mailer, rateLimiter, options, now = Date.now }) {
   const allOrigins = new Set([...config.sites.values()].flatMap(site => site.origins));
+
+  // In memory, so it resets on restart; the admin page says "since <startedAt>"
+  const activity = {
+    startedAt: new Date(now()).toISOString(),
+    blocked: { honeypot: 0, origin: 0, proofOfWork: 0, rateLimited: 0, invalid: 0 },
+    smtp: null,          // { ok, checkedAt, error? } from the last SMTP check
+    lastDelivery: null,  // { ok, at, submissionId, error? }
+  };
+
+  function countBlocked(code) {
+    const reason = BLOCK_REASONS[code];
+    if (reason) activity.blocked[reason] += 1;
+  }
 
   function clientIp(req) {
     // Behind Cloudflare, Traefik sees Cloudflare's address; the visitor's is in CF-Connecting-IP
@@ -117,25 +102,12 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     try {
       await mailer.send(site, submission);
       store.markSent(submissionId);
+      activity.lastDelivery = { ok: true, at: new Date(now()).toISOString(), submissionId };
     } catch (error) {
       store.markFailed(submissionId, error.message || error);
+      activity.lastDelivery = { ok: false, at: new Date(now()).toISOString(), submissionId, error: String(error.message || error).slice(0, 300) };
       console.error(`[forms] Email for submission #${submissionId} failed:`, error.message || error);
     }
-  }
-
-  async function readJson(req) {
-    if (!String(req.headers['content-type'] || '').includes('application/json')) {
-      throw new HttpError(415, 'json_required');
-    }
-    let body;
-    try {
-      body = JSON.parse(await readBody(req));
-    } catch (error) {
-      if (error instanceof HttpError) throw error;
-      throw new HttpError(400, 'invalid_json');
-    }
-    if (!body || typeof body !== 'object') throw new HttpError(400, 'invalid_json');
-    return body;
   }
 
   /** @returns {number} When the challenge expires, for marking it used */
@@ -153,25 +125,22 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     return pow.expiresAt;
   }
 
-  function requireAdmin(req) {
-    const auth = String(req.headers.authorization || '');
-    if (!options.adminToken || !safeEqual(auth, `Bearer ${options.adminToken}`)) {
-      throw new HttpError(401, 'unauthorized');
-    }
-  }
-
   async function handleSubmit(req, res, origin) {
     const body = await readJson(req);
     const site = siteForRequest(body.site, origin);
     const cors = corsHeaders(origin);
 
     // Honeypot: people never see this field. Pretend success so bots learn nothing.
-    if (body.website) return sendJson(res, 200, { ok: true }, cors);
+    if (body.website) {
+      activity.blocked.honeypot += 1;
+      return sendJson(res, 200, { ok: true }, cors);
+    }
 
     const expiresAt = checkProofOfWork(body.altcha);
 
     const validation = validateSubmission(body, site);
     if (!validation.ok) {
+      countBlocked('invalid_fields');
       return sendJson(res, 400, { ok: false, error: 'invalid_fields', fields: validation.errors }, cors);
     }
 
@@ -198,6 +167,7 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
 
     const validation = validateRating(body);
     if (!validation.ok) {
+      countBlocked('invalid_fields');
       return sendJson(res, 400, { ok: false, error: 'invalid_fields', fields: validation.errors }, cors);
     }
 
@@ -225,31 +195,7 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     });
   }
 
-  function handleAdminRatings(req, res, url) {
-    requireAdmin(req);
-    if (req.method === 'DELETE') {
-      const id = Number(url.pathname.slice('/admin/ratings/'.length));
-      if (!Number.isInteger(id) || id < 1) throw new HttpError(404, 'not_found');
-      if (!store.deleteRating(id)) throw new HttpError(404, 'not_found');
-      return sendJson(res, 200, { ok: true });
-    }
-    const ratings = store.listRatings({
-      site: url.searchParams.get('site') || undefined,
-      limit: Number(url.searchParams.get('limit')) || 50,
-      beforeId: Number(url.searchParams.get('before')) || undefined,
-    });
-    return sendJson(res, 200, { ok: true, ratings });
-  }
-
-  function handleAdmin(req, res, url) {
-    requireAdmin(req);
-    const submissions = store.listSubmissions({
-      site: url.searchParams.get('site') || undefined,
-      limit: Number(url.searchParams.get('limit')) || 50,
-      beforeId: Number(url.searchParams.get('before')) || undefined,
-    });
-    return sendJson(res, 200, { ok: true, submissions });
-  }
+  const admin = createAdmin({ config, store, options, activity, deliver, now });
 
   const handler = async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -298,11 +244,6 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
         return handleRatingSummary(res, url);
       }
 
-      if ((req.method === 'GET' && url.pathname === '/admin/ratings')
-        || (req.method === 'DELETE' && url.pathname.startsWith('/admin/ratings/'))) {
-        return handleAdminRatings(req, res, url);
-      }
-
       if (req.method === 'GET' && url.pathname === '/v1/widget.js') {
         res.writeHead(200, {
           'Content-Type': 'text/javascript; charset=utf-8',
@@ -312,13 +253,14 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
         return res.end(WIDGET_SOURCE);
       }
 
-      if (req.method === 'GET' && url.pathname === '/admin/submissions') {
-        return handleAdmin(req, res, url);
+      if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
+        return await admin.handle(req, res, url);
       }
 
       throw new HttpError(404, 'not_found');
     } catch (error) {
       if (error instanceof HttpError) {
+        if (url.pathname === '/v1/submit' || url.pathname === '/v1/rate') countBlocked(error.code);
         return sendJson(res, error.status, { ok: false, error: error.code }, corsHeaders(allowedOrigin));
       }
       console.error('[forms] Unexpected error:', error);
@@ -333,5 +275,10 @@ export function createApp({ config, store, mailer, rateLimiter, options, now = D
     }
   }
 
-  return { handler, retryPendingDeliveries };
+  /** Result of mailer.verify(), shown on the admin page */
+  function recordSmtpCheck(ok, error) {
+    activity.smtp = { ok, checkedAt: new Date(now()).toISOString(), ...(error ? { error: String(error).slice(0, 300) } : {}) };
+  }
+
+  return { handler, retryPendingDeliveries, recordSmtpCheck };
 }

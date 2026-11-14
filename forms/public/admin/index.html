@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Forms Admin</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/admin/app.css">
+  <script src="/admin/app.js" defer></script>
+</head>
+<body>
+  <div id="login" class="login" hidden>
+    <form id="login-form" class="login-card">
+      <h1>Forms admin</h1>
+      <label for="token">Admin token</label>
+      <input id="token" type="password" autocomplete="current-password" required>
+      <p class="hint">The <code>ADMIN_TOKEN</code> set for the forms service. It's kept in this tab only and cleared when you close it.</p>
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+  </div>
+
+  <div id="app" hidden>
+    <header class="topbar">
+      <h1>Forms admin</h1>
+      <label class="site-picker">
+        <span class="visually-hidden">Site</span>
+        <select id="site"></select>
+      </label>
+      <nav class="tabs" aria-label="Sections">
+        <button type="button" data-tab="overview">Overview</button>
+        <button type="button" data-tab="messages">Messages</button>
+        <button type="button" data-tab="ratings">Ratings</button>
+        <button type="button" data-tab="health">Health</button>
+      </nav>
+      <div class="topbar-actions">
+        <button type="button" id="refresh">Refresh</button>
+        <button type="button" id="signout">Sign out</button>
+      </div>
+    </header>
+    <p id="app-error" class="banner error" role="alert" hidden></p>
+    <main>
+      <section id="tab-overview" class="tab" aria-label="Overview"></section>
+      <section id="tab-messages" class="tab" aria-label="Messages"></section>
+      <section id="tab-ratings" class="tab" aria-label="Ratings"></section>
+      <section id="tab-health" class="tab" aria-label="Health"></section>
+    </main>
+  </div>
+</body>
+</html>
