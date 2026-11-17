@@ -114,11 +114,14 @@ export async function explainAction(context, options = {}) {
   }
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
+      sourceContent: content,
       language: context.language,
       task: 'explain',
       options: {
+        signal: options.signal,
+        onMetadata: options.onMetadata,
         maxTokens: detail === 'detailed' ? 2048 : 1024,
         temperature: 0.3,
       },
@@ -130,6 +133,7 @@ export async function explainAction(context, options = {}) {
       detail,
       audience,
       usage: result.usage,
+      ...result.metadata,
     });
   } catch (error) {
     return ActionResult.failure('explain', error.message);
@@ -153,12 +157,15 @@ export async function explainActionStream(context, onChunk, options = {}) {
   const prompt = buildExplainPrompt(content, context);
 
   try {
-    const result = await providerManager.streamComplete(
+    const result = await (options.providerManager || providerManager).streamComplete(
       {
         prompt,
+        sourceContent: content,
         language: context.language,
         task: 'explain',
         options: {
+          signal: options.signal,
+          onMetadata: options.onMetadata,
           maxTokens: 1024,
           temperature: 0.3,
         },
@@ -169,6 +176,7 @@ export async function explainActionStream(context, onChunk, options = {}) {
     return ActionResult.success('explain', result.text, {
       language: context.language,
       streamed: true,
+      ...result.metadata,
     });
   } catch (error) {
     return ActionResult.failure('explain', error.message);

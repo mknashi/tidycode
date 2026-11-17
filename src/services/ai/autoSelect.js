@@ -1,3 +1,4 @@
+import { isLocalProvider } from './privacyGuard.js';
 /**
  * Auto-Select Provider/Model
  *
@@ -13,6 +14,7 @@ const SPEED_TIERS = {
   cerebras: 1,
   sambanova: 1,
   ollama: 2,
+  'chrome-nano': 2,
   gemini: 3,
   openai: 3,
   claude: 3,
@@ -33,7 +35,8 @@ const CHARS_PER_TOKEN = 4;
  * @param {Array} context.availableProviders - From providerManager.getAvailableProviders(), already filtered to isReady
  * @returns {{ providerId: string, modelId: string, reason: string } | null}
  */
-export function autoSelectProvider({ contentLength = 0, actionId, availableProviders }) {
+export function autoSelectProvider({ contentLength = 0, actionId, availableProviders, localOnly = false }) {
+  availableProviders = availableProviders?.filter(p => (!localOnly || isLocalProvider(p.id)) && (!actionId || p.capabilities?.includes(actionId)));
   if (!availableProviders || availableProviders.length === 0) return null;
 
   if (availableProviders.length === 1) {
@@ -54,6 +57,7 @@ export function autoSelectProvider({ contentLength = 0, actionId, availableProvi
   let bestScore = -Infinity;
 
   for (const provider of availableProviders) {
+    const requiredWindow = Math.ceil(contentLength / (provider.id === 'chrome-nano' ? 1.5 : CHARS_PER_TOKEN)) + 2000;
     if (!provider.models || provider.models.length === 0) continue;
 
     // Find the best model for this provider:

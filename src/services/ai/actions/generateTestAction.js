@@ -268,11 +268,12 @@ export async function generateTestAction(context, options = {}) {
   const frameworkConfig = TEST_FRAMEWORKS[framework];
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
       language: frameworkConfig.languages[0],
       task: 'generate-tests',
       options: {
+        signal: options.signal,
         maxTokens: 4096,
         temperature: 0.3,
       },
@@ -349,12 +350,13 @@ export async function generateTestActionStream(context, onChunk, options = {}) {
   const frameworkConfig = TEST_FRAMEWORKS[framework];
 
   try {
-    const result = await providerManager.streamComplete(
+    const result = await (options.providerManager || providerManager).streamComplete(
       {
         prompt,
         language: frameworkConfig.languages[0],
         task: 'generate-tests',
         options: {
+          signal: options.signal,
           maxTokens: 4096,
           temperature: 0.3,
         },

@@ -1,3 +1,5 @@
+import { repairPreference } from '../services/ai/documentRepair.js';
+import PrivateAIStatus from './PrivateAIStatus.jsx';
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Cloud, Check, AlertCircle, Monitor, ExternalLink, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS, DEFAULT_MODELS } from '../services/AIService';
@@ -40,7 +42,9 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
   const [localSettings, setLocalSettings] = useState({
     enableLSP: settings.enableLSP ?? false,
     lspConfig: { ...DEFAULT_LSP_CONFIG, ...(settings?.lspConfig || {}) },
-    ...settings
+    ...settings,
+    provider: settings.provider === 'none' ? AI_PROVIDERS.TINYLLM : settings.provider,
+    repairFallback: repairPreference(settings),
   });
   const [showGroqApiKey, setShowGroqApiKey] = useState(false);
   const [showOpenAIApiKey, setShowOpenAIApiKey] = useState(false);
@@ -1024,66 +1028,59 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                   }`}>
                     {isDesktop
                       ? 'For maximum privacy, use Ollama — your data never leaves your device. Cloud providers send your content to external APIs for processing.'
-                      : 'For maximum privacy, use the desktop app with Ollama — your data never leaves your device. Cloud providers send your content to external APIs for processing.'}
+                      : 'Use Private AI in supported Chrome browsers for on-device explanations and summaries. Cloud providers send your content to external APIs for processing.'}
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
-              {/* TinyLLM Mode */}
-              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                localSettings.provider === AI_PROVIDERS.TINYLLM
-                  ? theme === 'dark'
-                    ? 'border-purple-500 bg-purple-900/20'
-                    : 'border-purple-500 bg-purple-50'
-                  : theme === 'dark'
-                    ? 'border-gray-700 hover:border-gray-600'
-                    : 'border-gray-200 hover:border-gray-300'
+              <div className={`p-4 rounded-lg border-2 transition-all ${
+                theme === 'dark' ? 'border-purple-500 bg-purple-900/20' : 'border-purple-500 bg-purple-50'
               }`}>
-                <input
-                  type="radio"
-                  name="provider"
-                  value={AI_PROVIDERS.TINYLLM}
-                  checked={localSettings.provider === AI_PROVIDERS.TINYLLM}
-                  onChange={(e) => setLocalSettings({ ...localSettings, provider: e.target.value })}
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Sparkles className="w-5 h-5" />
-                    <span className={`font-semibold ${
-                      theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
-                    }`}>
-                      TinyLLM
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
-                      Free
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                      No API Key
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">
-                      Always first for JSON/XML Fix
-                    </span>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" name="autoFixEnabled" checked disabled
+                    aria-label="Auto Fix is always enabled"
+                    className="mt-1 accent-purple-500" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Sparkles className="w-5 h-5" />
+                      <span className={`font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>Auto Fix</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">Free</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">No API Key</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">Always first for JSON/XML Fix</span>
+                    </div>
+                    <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Rule-based JSON &amp; XML fixing • Runs in your browser</p>
+                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-green-500' : 'text-green-600'}`}>Data: Stays in your browser. No external requests during rule-based fixing.</p>
+                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>Always attempted first when fixing JSON/XML errors, regardless of the selected provider.</p>
                   </div>
-                  <p className={`text-sm mt-1 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Browser-based AI • JSON & XML fixing • 50-100ms processing
-                  </p>
-                  <p className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-green-500' : 'text-green-600'
-                  }`}>
-                    Data: Stays in your browser. No external requests.
-                  </p>
-                  <p className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                  }`}>
-                    Always attempted first when fixing JSON/XML errors, regardless of selected provider. Falls back to your configured provider if it fails.
-                  </p>
+                </label>
+                <div className={`mt-3 pt-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" name="useAIForRepair" checked={localSettings.repairFallback === 'offer'}
+                      onChange={event => setLocalSettings({ ...localSettings, repairFallback: event.target.checked ? 'offer' : 'stop' })}
+                      className="mt-1" />
+                    <span className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Use AI if rule-based fixing fails</span>
+                  </label>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Uncheck to use local rules only. When Private AI is selected, small JSON documents can use experimental on-device repair after local rules fail. Cloud repair still requires clicking a named provider.</p>
                 </div>
-              </label>
+              </div>
+
+              {!isDesktop && <div className="p-4 rounded-lg border space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="provider" value={AI_PROVIDERS.CHROME_NANO}
+                    checked={localSettings.provider === AI_PROVIDERS.CHROME_NANO}
+                    onChange={e => setLocalSettings({ ...localSettings, provider: e.target.value })} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Shield className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+                    <span className={`font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>Private AI (on-device)</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">Free</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">No API Key</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">Local</span>
+                  </div>
+                </label>
+                <PrivateAIStatus />
+              </div>}
 
               {/* Groq Mode */}
               <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${

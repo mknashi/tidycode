@@ -159,11 +159,12 @@ export async function convertAction(context, options = {}) {
   const prompt = buildConvertPrompt(content, sourceFormat, targetFormat);
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
       language: targetFormat,
       task: 'convert',
       options: {
+        signal: options.signal,
         maxTokens: 8192,
         temperature: 0.1, // Low temperature for accurate conversion
         extractFormat: targetFormat === 'json' ? 'json' : targetFormat === 'xml' ? 'xml' : null,

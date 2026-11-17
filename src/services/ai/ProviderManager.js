@@ -5,6 +5,8 @@
  * and provides a unified interface for AI operations.
  */
 
+import { chromeNanoProvider } from './providers/ChromeBuiltInProvider.js';
+import { isDesktop } from '../../utils/platform.js';
 import { AI_CAPABILITIES } from './ProviderInterface.js';
 import { ClaudeProvider } from './providers/ClaudeProvider.js';
 import { OpenAIProvider } from './providers/OpenAIProvider.js';
@@ -162,7 +164,9 @@ export class ProviderManager {
    * @returns {Promise<void>}
    */
   async initialize(config = {}) {
+    const revision = this._initRevision = (this._initRevision || 0) + 1;
     this.config = config;
+    this.localOnly = config.activeProvider === 'chrome-nano';
 
     // Register all available providers
     for (const [id, ProviderClass] of Object.entries(PROVIDER_REGISTRY)) {
@@ -180,9 +184,17 @@ export class ProviderManager {
         });
       }
 
+      if (revision !== this._initRevision) return;
       this.providers.set(id, provider);
     }
 
+    if (!isDesktop()) {
+      this.providers.set('chrome-nano', chromeNanoProvider);
+      // Availability/session setup updates its own observable state; never block other providers.
+      void chromeNanoProvider.initialize();
+    }
+
+    if (revision !== this._initRevision) return;
     // Set active provider
     if (config.activeProvider && this.providers.has(config.activeProvider)) {
       this.setActiveProvider(config.activeProvider, config.activeModel);
@@ -251,6 +263,10 @@ export class ProviderManager {
       throw new Error(`Provider "${providerId}" not found`);
     }
 
+    if (this.localOnly && !isLocalProvider(providerId)) {
+      throw new Error('Private AI is selected. Choose a cloud provider explicitly in AI Settings before sending content.');
+    }
+    if (providerId === 'chrome-nano') this.localOnly = true;
     this.activeProvider = provider;
     this.activeModel = modelId || provider.getDefaultModel()?.id || null;
 
@@ -342,7 +358,7 @@ export class ProviderManager {
    * @throws {Error} If no active provider
    */
   async complete(params) {
-    this._ensureActiveProvider();
+    this._ensureActiveProvider(params.task || 'completion');
     const processed = this._processParams(params);
     return this.activeProvider.complete({
       ...processed,
@@ -357,7 +373,7 @@ export class ProviderManager {
    * @returns {Promise<import('./ProviderInterface.js').CompletionResult>}
    */
   async streamComplete(params, onChunk) {
-    this._ensureActiveProvider();
+    this._ensureActiveProvider(params.task || 'completion');
     const processed = this._processParams(params);
     return this.activeProvider.streamComplete({
       ...processed,
@@ -372,7 +388,7 @@ export class ProviderManager {
    * @returns {Promise<import('./ProviderInterface.js').CompletionResult>}
    */
   async chat(messages, options = {}) {
-    this._ensureActiveProvider();
+    this._ensureActiveProvider('chat');
     const processed = this._processMessages(messages);
     return this.activeProvider.chat(processed, {
       ...options,
@@ -388,12 +404,33 @@ export class ProviderManager {
    * @returns {Promise<import('./ProviderInterface.js').CompletionResult>}
    */
   async streamChat(messages, onChunk, options = {}) {
-    this._ensureActiveProvider();
+    this._ensureActiveProvider('chat');
     const processed = this._processMessages(messages);
     return this.activeProvider.streamChat(processed, onChunk, {
       ...options,
       model: options.model || this.activeModel,
     });
+  }
+
+  /** Create a one-request dispatcher only after the user clicks a named cloud retry. */
+  createCloudRetry(providerId, task) {
+    const provider = this.getProvider(providerId);
+    if (!provider || isLocalProvider(providerId) || !provider.isReady() || !provider.hasCapability(task)) {
+      throw new Error('This cloud provider is not ready for this action.');
+    }
+    // Isolate routing and privacy checks; never mutate the active local provider.
+    const scoped = new ProviderManager();
+    scoped.registerProvider(providerId, provider);
+    scoped.setActiveProvider(providerId);
+    scoped.setPrivacyConfig({ ...this.privacyConfig });
+    let used = false;
+    const dispatch = async (params, onChunk) => {
+      if (used || params.task !== task) throw new Error('This cloud retry is limited to one request for the selected action.');
+      used = true;
+      const result = onChunk ? await scoped.streamComplete(params, onChunk) : await scoped.complete(params);
+      return { ...result, metadata: { ...result.metadata, providerId, providerName: provider.name, cloudRetry: true } };
+    };
+    return { complete: params => dispatch(params), streamComplete: (params, onChunk) => dispatch(params, onChunk) };
   }
 
   /**
@@ -485,12 +522,16 @@ export class ProviderManager {
    * @throws {Error} If no active provider
    * @private
    */
-  _ensureActiveProvider() {
+  _ensureActiveProvider(task) {
     if (!this.activeProvider) {
       throw new Error('No active AI provider configured. Please select a provider in settings.');
     }
+    if (this.localOnly && !isLocalProvider(this.activeProvider.id)) throw new Error('Cloud processing is blocked while Private AI is selected.');
+    if (task && !this.activeProvider.hasCapability(task)) {
+      throw Object.assign(new Error(`${this.activeProvider.name} does not support ${task}. Choose another provider explicitly in AI Settings.`), { code: 'UNSUPPORTED_TASK' });
+    }
     if (!this.activeProvider.isReady()) {
-      throw new Error(`Provider "${this.activeProvider.name}" is not ready. Please check your API key.`);
+      throw new Error(`Provider "${this.activeProvider.name}" is not ready. Open AI Settings to configure or prepare it.`);
     }
   }
 

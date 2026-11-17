@@ -58,6 +58,8 @@ export default function AIResultsPanel({
   onCopy,
   onOpenInNewTab,
   onRegenerate,
+  onCloudRetry,
+  cloudRetryProviders = [],
   onAccept,
   showDiff = false,
   onToggleDiff,
@@ -79,8 +81,8 @@ export default function AIResultsPanel({
   const actionId = result?.actionId || '';
   const title = ACTION_TITLES[actionId] || 'AI Result';
   const canDiff = DIFF_ACTIONS.includes(actionId);
-  const canApply = APPLY_ACTIONS.includes(actionId);
-  const isNewTab = NEW_TAB_ACTIONS.includes(actionId);
+  const canApply = APPLY_ACTIONS.includes(actionId) && !result?.metadata?.cloudRetry;
+  const isNewTab = NEW_TAB_ACTIONS.includes(actionId) || (result?.metadata?.cloudRetry && APPLY_ACTIONS.includes(actionId));
 
   // Handle copy to clipboard
   const handleCopy = useCallback(async () => {
@@ -281,6 +283,16 @@ export default function AIResultsPanel({
           </div>
         )}
 
+        {error && !isLoading && cloudRetryProviders.length > 0 && (
+          <div className={`px-3 py-2 text-xs space-y-2 ${mutedColor}`}>
+            <p>Retry sends the original request content to the selected cloud provider. Private AI remains your saved preference.</p>
+            {cloudRetryProviders.map(provider => <button key={provider.id} className="underline mr-3" onClick={() => onCloudRetry?.(provider.id)}>
+              Try with {provider.name} (cloud)
+            </button>)}
+          </div>
+        )}
+        {result?.metadata?.cloudRetry && <p className={`px-3 py-2 text-xs ${mutedColor}`}>Processed by {result.metadata.providerName} (cloud) for this request.</p>}
+
         {/* Loading State */}
         {isLoading && !result && (
           <div className="flex items-center justify-center gap-2 p-8">
@@ -302,6 +314,9 @@ export default function AIResultsPanel({
         )}
 
         {/* Result View */}
+        {result?.metadata?.wasCut && <p className="px-3 py-2 text-xs text-amber-500" role="status">
+          Analyzed {result.metadata.samplingStrategy === 'structure-and-prefix' ? 'a partial structure summary and prefix sample' : 'a prefix sample'}: {result.metadata.analyzedChars.toLocaleString()} of {result.metadata.originalChars.toLocaleString()} characters. Findings apply only to this sample.
+        </p>}
         {!showDiff && result?.text && (
           <pre className={`p-3 text-xs leading-5 font-mono whitespace-pre-wrap break-words ${codeBg} ${textColor}`}>
             {result.text}

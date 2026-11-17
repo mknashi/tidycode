@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-16T19:09:18.009Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "contextWindow": 9216,
+  "hardware": "Apple M1 Pro, 16 GiB RAM, 10 physical cores",
+  "rulesBaseline": [],
+  "results": [],
+  "integration": [
+    {
+      "name": "Oversized varied chat rejected",
+      "passed": true,
+      "error": "This content exceeds the on-device context limit. Shorten the input, start a new chat, or explicitly choose a cloud provider.",
+      "readyAfter": true,
+      "inputChars": 1174853
+    }
+  ]
+}

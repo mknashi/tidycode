@@ -140,7 +140,7 @@ export function truncateContent(text, maxChars) {
 /**
  * Providers that run locally and never send data externally.
  */
-export const LOCAL_PROVIDERS = ['ollama', 'tinyllm'];
+export const LOCAL_PROVIDERS = ['ollama', 'tinyllm', 'chrome-nano'];
 
 /**
  * Check if a provider is local (no external data transmission).

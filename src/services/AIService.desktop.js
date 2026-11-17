@@ -342,8 +342,6 @@ Fixed ${errorDetails.type}:`;
         });
       }
 
-      console.log('[TinyLLM Desktop] Input content:', content);
-      console.log('[TinyLLM Desktop] Error details:', errorDetails);
 
       let result;
       if (errorDetails.type === 'JSON') {
@@ -351,7 +349,7 @@ Fixed ${errorDetails.type}:`;
       } else if (errorDetails.type === 'XML') {
         result = await this.tinyLLMEngine.fixXML(content);
       } else {
-        throw new Error(`TinyLLM only supports JSON and XML files. Current type: ${errorDetails.type}`);
+        throw new Error(`Auto-fix only supports JSON and XML files. Current type: ${errorDetails.type}`);
       }
 
       console.log('[TinyLLM Desktop] Result:', {
@@ -361,9 +359,6 @@ Fixed ${errorDetails.type}:`;
         canTryAI: result?.canTryAI || false
       });
 
-      if (result?.fixes?.length > 0) {
-        console.log('[TinyLLM Desktop] Fixes applied:', result.fixes);
-      }
 
       if (result && result.success && result.fixed) {
         console.log(`[TinyLLM Desktop] ✓ Successfully fixed using ${result.method || 'rule-based'} approach`);
@@ -379,11 +374,11 @@ Fixed ${errorDetails.type}:`;
           console.warn('[TinyLLM Desktop] Tip: Consider using Groq, OpenAI, Claude, or Ollama providers for complex fixes.');
         }
 
-        throw new Error(`TinyLLM could not fix the content: ${errorMsg}`);
+        throw new Error(`Auto-fix could not fix the content: ${errorMsg}`);
       }
     } catch (error) {
       console.error('[TinyLLM Desktop] Exception:', error);
-      throw new Error(`TinyLLM error: ${error.message}`);
+      throw new Error(`Auto-fix error: ${error.message}`);
     }
   }
 
@@ -422,7 +417,7 @@ Fixed ${errorDetails.type}:`;
       }
 
       // For non-JSON/XML files, other providers are not supported for fixing
-      throw new Error(`${provider} is not supported for fixing ${errorDetails.type} files. Please use OpenAI or TinyLLM.`);
+      throw new Error(`${provider} is not supported for fixing ${errorDetails.type} files. Please use OpenAI or Auto-fix.`);
     } catch (error) {
       throw error;
     }

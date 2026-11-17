@@ -1,0 +1,461 @@
+{
+  "date": "2026-11-16T19:07:59.985Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "contextWindow": 9216,
+  "hardware": "Apple M1 Pro, 16 GiB RAM, 10 physical cores",
+  "rulesBaseline": [
+    {
+      "name": "JSON missing comma between records",
+      "text": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}"
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "text": "{\"name\":\"Ravi\",\"city\": \"Chicago\",\"age\":32}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"name\":\"Ravi\",\"city\": \"Chicago\",\"age\":32}"
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "error": "Auto-fix error: Auto-fix could not fix the content: Expected double-quoted property name in JSON at position 22 (line 1 column 23)",
+      "parses": false,
+      "preservesExpectedData": false
+    },
+    {
+      "name": "JSON missing final brace",
+      "text": "{\"items\":[1,2,3],\"active\":true}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[1,2,3],\"active\":true}"
+    },
+    {
+      "name": "XML mismatched closing order",
+      "error": "Auto-fix error: Auto-fix could not fix the content: This page contains the following errors:error on line 3 at column 15: Opening and ending tag mismatch: root line 2 and name\nBelow is a rendering of the page up to the first error.",
+      "parses": false,
+      "preservesExpectedData": false
+    },
+    {
+      "name": "XML bare ampersand in text",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><name>Ravi &amp; Maya</name><count>2</count></root>",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><name>Ravi &amp; Maya</name><count>2</count></root>"
+    },
+    {
+      "name": "XML unquoted attribute",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>"
+    },
+    {
+      "name": "XML missing root close",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><item id=\"1\">A</item><item id=\"2\">B</item></root>",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root><item id=\"1\">A</item><item id=\"2\">B</item></root>"
+    }
+  ],
+  "results": [
+    {
+      "name": "JSON missing comma between records",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"items\":[{\"id\":1,\"name\":\"A\"} {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "expected": {
+        "items": [
+          {
+            "id": 1,
+            "name": "A"
+          },
+          {
+            "id": 2,
+            "name": "B"
+          }
+        ],
+        "count": 2
+      },
+      "text": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "latencyMs": 1057
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"name\":\"Ravi\",\"city:\"Chicago\",\"age\":32}",
+      "expected": {
+        "name": "Ravi",
+        "city": "Chicago",
+        "age": 32
+      },
+      "text": "{\"name\": \"Ravi\", \"city\": \"Chicago\", \"age\": 32}\n",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"name\": \"Ravi\", \"city\": \"Chicago\", \"age\": 32}",
+      "latencyMs": 860
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"message\":\"He said \"hello\".\",\"id\":7}",
+      "expected": {
+        "message": "He said \"hello\".",
+        "id": 7
+      },
+      "text": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "latencyMs": 545
+    },
+    {
+      "name": "JSON missing final brace",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"items\":[1,2,3],\"active\":true",
+      "expected": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "active": true
+      },
+      "text": "{\"items\":[1,2,3],\"active\":true}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[1,2,3],\"active\":true}",
+      "latencyMs": 557
+    },
+    {
+      "name": "XML mismatched closing order",
+      "type": "XML",
+      "repetition": 1,
+      "input": "<root><item id=\"1\"><name>Ravi</item></name></root>",
+      "expected": "<root><item id=\"1\"><name>Ravi</name></item></root>",
+      "text": "```xml\n<root>\n  <item id=\"1\">\n    <name>Ravi</name>\n  </item>\n</root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root>\n  <item id=\"1\">\n    <name>Ravi</name>\n  </item>\n</root>",
+      "latencyMs": 1371
+    },
+    {
+      "name": "XML bare ampersand in text",
+      "type": "XML",
+      "repetition": 1,
+      "input": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "expected": "<root><name>Ravi &amp; Maya</name><count>2</count></root>",
+      "text": "```xml\n<root><name>Ravi & Maya</name><count>2</count></root>\n```",
+      "parses": false,
+      "preservesExpectedData": false,
+      "error": "Invalid XML",
+      "cleanedOutput": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "latencyMs": 1053
+    },
+    {
+      "name": "XML unquoted attribute",
+      "type": "XML",
+      "repetition": 1,
+      "input": "<root><item id=42 status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "expected": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "text": "```xml\n<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "latencyMs": 1382
+    },
+    {
+      "name": "XML missing root close",
+      "type": "XML",
+      "repetition": 1,
+      "input": "<root><item id=\"1\">A</item><item id=\"2\">B</item>",
+      "expected": "<root><item id=\"1\">A</item><item id=\"2\">B</item></root>",
+      "text": "```xml\n<root><item id=\"1\">A</item><item id=\"2\">B</item></root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root><item id=\"1\">A</item><item id=\"2\">B</item></root>",
+      "latencyMs": 1186
+    },
+    {
+      "name": "JSON missing comma between records",
+      "type": "JSON",
+      "repetition": 2,
+      "input": "{\"items\":[{\"id\":1,\"name\":\"A\"} {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "expected": {
+        "items": [
+          {
+            "id": 1,
+            "name": "A"
+          },
+          {
+            "id": 2,
+            "name": "B"
+          }
+        ],
+        "count": 2
+      },
+      "text": "{\"items\":[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}],\"count\":2}\n",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "latencyMs": 935
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "type": "JSON",
+      "repetition": 2,
+      "input": "{\"name\":\"Ravi\",\"city:\"Chicago\",\"age\":32}",
+      "expected": {
+        "name": "Ravi",
+        "city": "Chicago",
+        "age": 32
+      },
+      "text": "{\"name\":\"Ravi\",\"city\":\"Chicago\",\"age\":32}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"name\":\"Ravi\",\"city\":\"Chicago\",\"age\":32}",
+      "latencyMs": 679
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "type": "JSON",
+      "repetition": 2,
+      "input": "{\"message\":\"He said \"hello\".\",\"id\":7}",
+      "expected": {
+        "message": "He said \"hello\".",
+        "id": 7
+      },
+      "text": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "latencyMs": 555
+    },
+    {
+      "name": "JSON missing final brace",
+      "type": "JSON",
+      "repetition": 2,
+      "input": "{\"items\":[1,2,3],\"active\":true",
+      "expected": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "active": true
+      },
+      "text": "{\"items\":[1,2,3],\"active\":true}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[1,2,3],\"active\":true}",
+      "latencyMs": 556
+    },
+    {
+      "name": "XML mismatched closing order",
+      "type": "XML",
+      "repetition": 2,
+      "input": "<root><item id=\"1\"><name>Ravi</item></name></root>",
+      "expected": "<root><item id=\"1\"><name>Ravi</name></item></root>",
+      "text": "```xml\n<root><item id=\"1\"><name>Ravi</name></item></root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root><item id=\"1\"><name>Ravi</name></item></root>",
+      "latencyMs": 1012
+    },
+    {
+      "name": "XML bare ampersand in text",
+      "type": "XML",
+      "repetition": 2,
+      "input": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "expected": "<root><name>Ravi &amp; Maya</name><count>2</count></root>",
+      "text": "```xml\n<root><name>Ravi & Maya</name><count>2</count></root>\n```",
+      "parses": false,
+      "preservesExpectedData": false,
+      "error": "Invalid XML",
+      "cleanedOutput": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "latencyMs": 1054
+    },
+    {
+      "name": "XML unquoted attribute",
+      "type": "XML",
+      "repetition": 2,
+      "input": "<root><item id=42 status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "expected": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "text": "```xml\n<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "latencyMs": 1398
+    },
+    {
+      "name": "XML missing root close",
+      "type": "XML",
+      "repetition": 2,
+      "input": "<root><item id=\"1\">A</item><item id=\"2\">B</item>",
+      "expected": "<root><item id=\"1\">A</item><item id=\"2\">B</item></root>",
+      "text": "```xml\n<root>\n  <item id=\"1\">A</item>\n  <item id=\"2\">B</item>\n</root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root>\n  <item id=\"1\">A</item>\n  <item id=\"2\">B</item>\n</root>",
+      "latencyMs": 1454
+    },
+    {
+      "name": "JSON missing comma between records",
+      "type": "JSON",
+      "repetition": 3,
+      "input": "{\"items\":[{\"id\":1,\"name\":\"A\"} {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "expected": {
+        "items": [
+          {
+            "id": 1,
+            "name": "A"
+          },
+          {
+            "id": 2,
+            "name": "B"
+          }
+        ],
+        "count": 2
+      },
+      "text": "{\"items\":[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}],\"count\":2}\n",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[{\"id\":1,\"name\":\"A\"},{\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "latencyMs": 902
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "type": "JSON",
+      "repetition": 3,
+      "input": "{\"name\":\"Ravi\",\"city:\"Chicago\",\"age\":32}",
+      "expected": {
+        "name": "Ravi",
+        "city": "Chicago",
+        "age": 32
+      },
+      "text": "{\"name\": \"Ravi\", \"city\": \"Chicago\", \"age\": 32}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"name\": \"Ravi\", \"city\": \"Chicago\", \"age\": 32}",
+      "latencyMs": 835
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "type": "JSON",
+      "repetition": 3,
+      "input": "{\"message\":\"He said \"hello\".\",\"id\":7}",
+      "expected": {
+        "message": "He said \"hello\".",
+        "id": 7
+      },
+      "text": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"message\":\"He said \\\"hello\\\".\",\"id\":7}",
+      "latencyMs": 552
+    },
+    {
+      "name": "JSON missing final brace",
+      "type": "JSON",
+      "repetition": 3,
+      "input": "{\"items\":[1,2,3],\"active\":true",
+      "expected": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "active": true
+      },
+      "text": "{\"items\":[1,2,3],\"active\":true}\n",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[1,2,3],\"active\":true}",
+      "latencyMs": 584
+    },
+    {
+      "name": "XML mismatched closing order",
+      "type": "XML",
+      "repetition": 3,
+      "input": "<root><item id=\"1\"><name>Ravi</item></name></root>",
+      "expected": "<root><item id=\"1\"><name>Ravi</name></item></root>",
+      "text": "```xml\n<root>\n  <item id=\"1\">\n    <name>Ravi</name>\n  </item>\n</root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root>\n  <item id=\"1\">\n    <name>Ravi</name>\n  </item>\n</root>",
+      "latencyMs": 1381
+    },
+    {
+      "name": "XML bare ampersand in text",
+      "type": "XML",
+      "repetition": 3,
+      "input": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "expected": "<root><name>Ravi &amp; Maya</name><count>2</count></root>",
+      "text": "```xml\n<root><name>Ravi & Maya</name><count>2</count></root>\n```",
+      "parses": false,
+      "preservesExpectedData": false,
+      "error": "Invalid XML",
+      "cleanedOutput": "<root><name>Ravi & Maya</name><count>2</count></root>",
+      "latencyMs": 1047
+    },
+    {
+      "name": "XML unquoted attribute",
+      "type": "XML",
+      "repetition": 3,
+      "input": "<root><item id=42 status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "expected": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "text": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root><item id=\"42\" status=\"active\">A</item><item id=\"43\">B</item></root>",
+      "latencyMs": 1185
+    },
+    {
+      "name": "XML missing root close",
+      "type": "XML",
+      "repetition": 3,
+      "input": "<root><item id=\"1\">A</item><item id=\"2\">B</item>",
+      "expected": "<root><item id=\"1\">A</item><item id=\"2\">B</item></root>",
+      "text": "```xml\n<root>\n  <item id=\"1\">A</item>\n  <item id=\"2\">B</item>\n</root>\n```",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "<root>\n  <item id=\"1\">A</item>\n  <item id=\"2\">B</item>\n</root>",
+      "latencyMs": 1405
+    }
+  ],
+  "integration": [
+    {
+      "name": "Streaming grammar correction",
+      "text": "I have a book.",
+      "matchesChunks": true
+    },
+    {
+      "name": "Oversized chat rejected",
+      "passed": false
+    },
+    {
+      "name": "Large input sampling",
+      "text": "The provided data describes a collection of 4000 records, each with an ID, status (active), and amount (12).  All records currently have an \"active\" status and an amount of 12. The dataset appears to contain a large number of identical records.",
+      "metadata": {
+        "wasCut": true,
+        "originalChars": 166903,
+        "analyzedChars": 16690,
+        "samplingStrategy": "structure-and-prefix",
+        "providerId": "chrome-nano"
+      }
+    },
+    {
+      "name": "Cancel stream",
+      "passed": true,
+      "error": "signal is aborted without reason",
+      "readyAfter": true
+    }
+  ]
+}

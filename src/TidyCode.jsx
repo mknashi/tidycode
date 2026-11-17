@@ -1,3 +1,9 @@
+import WelcomeUpdates from './components/WelcomeUpdates';
+import { formatPastedDocument } from './utils/codemirror/formatOnPaste';
+import { isolateHistory } from '@codemirror/commands';
+import { getEditorTypography } from './utils/editorTypography';
+import { repairWithRules, repairWithNano, repairWithProvider, repairOffers, repairPreference } from './services/ai/documentRepair.js';
+import PrivateAIStatus from './components/PrivateAIStatus.jsx';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { X, Plus, Minus, Save, Upload, ChevronLeft, ChevronRight, Search, Replace, Code2, StickyNote, CheckSquare, ChevronsLeft, ChevronsRight, GripVertical, Bold, Italic, Underline, Sun, Moon, Settings, ChevronDown, ChevronUp, Info, FileText, Braces, FileCode, Folder, FolderOpen, FolderPlus, Edit2, Trash2, Image as ImageIcon, Sparkles, Loader2, Maximize2, Minimize2, PanelLeft, Check, XCircle, CaseSensitive, GitCompare, Layers, Terminal, HelpCircle, ArrowRightLeft, MessageSquare, Columns, Pin, Archive as ArchiveIcon, LogIn, LogOut, CloudOff, Cloud, MessageCircle, AlignJustify, FileDown, Printer, Network } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -1194,7 +1200,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
       notifyUser('AI service not initialized. Please configure an AI provider in AI Settings.', 'error');
       return;
     }
-    if (!aiSettings?.provider || aiSettings.provider === 'tinyllm') {
+    if (!aiSettings?.provider || ['tinyllm', 'none'].includes(aiSettings.provider)) {
       notifyUser('Text transformation requires a cloud AI provider. Please select one in AI Settings.', 'error');
       return;
     }
@@ -1267,7 +1273,7 @@ const RichTextEditor = ({ value, onChange, aiService, aiSettings, notify }) => {
           <button type="button" onClick={() => exec('italic')} className="p-1 hover:text-white" title="Italic"><Italic className="w-4 h-4" /></button>
           <button type="button" onClick={() => exec('underline')} className="p-1 hover:text-white" title="Underline"><Underline className="w-4 h-4" /></button>
         </div>
-        {aiService && aiSettings?.provider !== 'tinyllm' && (
+        {aiService && !['tinyllm', 'none'].includes(aiSettings?.provider) && (
           <div className="relative">
             <button
               type="button"
@@ -1442,8 +1448,8 @@ const TidyCode = () => {
   const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const fileDropdownRef = useRef(null);
-  const [showFormatConvertDropdown, setShowFormatConvertDropdown] = useState(false);
-  const formatConvertDropdownRef = useRef(null);
+  const [showDataConvertDropdown, setShowDataConvertDropdown] = useState(false);
+  const dataConvertDropdownRef = useRef(null);
   const [showAIDropdown, setShowAIDropdown] = useState(false);
   const aiDropdownRef = useRef(null);
   const [infoPanelHeight, setInfoPanelHeight] = useState(150);
@@ -1558,6 +1564,7 @@ const TidyCode = () => {
     error: null,
     progress: null
   });
+  const repairBusyRef = useRef(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showOllamaSetup, setShowOllamaSetup] = useState(false);
   const [showDiffViewer, setShowDiffViewer] = useState(false);
@@ -1594,9 +1601,10 @@ const TidyCode = () => {
   const [vimWasEnabledBeforeQuickOpen, setVimWasEnabledBeforeQuickOpen] = useState(false);
 
   const [aiSettings, setAISettings] = useState(() => {
-    // Default settings - use TinyLLM (free, browser-based, no API key needed)
+    // Local rules are always available; AI processing is an independent choice.
     return {
       provider: AI_PROVIDERS.TINYLLM,
+      repairFallback: 'offer',
       groqApiKey: '',
       groqModel: DEFAULT_MODELS.groq,
       openaiApiKey: '',
@@ -1663,9 +1671,11 @@ const TidyCode = () => {
   const providerModelInfo = MODEL_MAP[aiSettings.provider] || null;
   const chatCurrentModel = providerModelInfo
     ? aiSettings[providerModelInfo.key]
-    : aiSettings.provider === 'ollama'
-      ? aiSettings.ollamaModel || ''
-      : '';
+    : aiSettings.provider === 'chrome-nano'
+      ? 'gemini-nano'
+      : aiSettings.provider === 'ollama'
+        ? aiSettings.ollamaModel || ''
+        : '';
   const chatAvailableModels = providerModelInfo
     ? mergeModelLists(
         Object.values(providerModelInfo.models).map((m) => ({ id: m.id, name: m.name })),
@@ -2316,22 +2326,22 @@ const TidyCode = () => {
       if (fileDropdownRef.current && !fileDropdownRef.current.contains(e.target)) {
         setShowFileDropdown(false);
       }
-      if (formatConvertDropdownRef.current && !formatConvertDropdownRef.current.contains(e.target)) {
-        setShowFormatConvertDropdown(false);
+      if (dataConvertDropdownRef.current && !dataConvertDropdownRef.current.contains(e.target)) {
+        setShowDataConvertDropdown(false);
       }
       if (aiDropdownRef.current && !aiDropdownRef.current.contains(e.target)) {
         setShowAIDropdown(false);
       }
     };
 
-    if (showConvertDropdown || showFileDropdown || showFormatConvertDropdown || showAIDropdown) {
+    if (showConvertDropdown || showFileDropdown || showDataConvertDropdown || showAIDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showConvertDropdown, showFileDropdown, showFormatConvertDropdown, showAIDropdown]);
+  }, [showConvertDropdown, showFileDropdown, showDataConvertDropdown, showAIDropdown]);
 
   // Keyboard shortcuts for Save and Save As
   useEffect(() => {
@@ -2719,7 +2729,7 @@ const TidyCode = () => {
 
           // Saved settings may name models the provider has since retired
           const { settings: current, migrated } = migrateRetiredModels(settings);
-          setAISettings(prev => ({ ...prev, ...current }));
+          setAISettings(prev => ({ ...prev, ...current, repairFallback: repairPreference(current) }));
           if (migrated.length > 0) {
             const names = migrated.map(m => `${m.from} → ${m.to}`).join(', ');
             showTransientMessage(`Updated retired AI model${migrated.length > 1 ? 's' : ''}: ${names}`, 'info');
@@ -4681,7 +4691,7 @@ const TidyCode = () => {
   };
 
   const buildJSONErrorDetails = (content, error) => {
-    const multipleErrors = findMultipleJSONErrors(content);
+    const multipleErrors = content.length <= 100000 ? findMultipleJSONErrors(content) : [];
     const positionMatch = error.message.match(/position (\d+)/);
     const position = positionMatch ? parseInt(positionMatch[1], 10) : null;
 
@@ -5218,45 +5228,8 @@ const TidyCode = () => {
       braceMatchCacheRef.current = { contentHash: null, pos: null, result: null };
     }
 
-    // Update error message with current errors
-    if (errorMessage && errorMessage.type === 'JSON') {
-      try {
-        const trimmed = String(content).trim();
-        if (trimmed && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
-          JSON.parse(content);
-          // Content is valid JSON, clear the error
-          setErrorMessage(null);
-        }
-      } catch (e) {
-        // Re-validate and update error list
-        const updatedErrorDetails = buildJSONErrorDetails(content, e);
-        setErrorMessage(updatedErrorDetails);
-      }
-    } else if (errorMessage && errorMessage.type === 'XML') {
-      try {
-        const trimmed = String(content).trim();
-        if (trimmed && trimmed.startsWith('<')) {
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(content, 'text/xml');
-          const parserError = xmlDoc.getElementsByTagName('parsererror');
-          if (parserError.length === 0) {
-            // Content is valid XML, clear the error
-            setErrorMessage(null);
-          } else {
-            // Re-validate and update error message
-            const errorText = parserError[0].textContent;
-            const updatedErrorDetails = buildXMLErrorDetails(content, errorText);
-            setErrorMessage(updatedErrorDetails);
-          }
-        }
-      } catch (e) {
-        // Keep existing error
-      }
-    }
-
-    // Disable auto-formatting - it interferes with editing by reformatting while typing
-    // Users can still manually format using the Format JSON/XML buttons
-    // queueAutoFormat(tabId, content);
+    // Typing never auto-formats. Paste-only formatting is handled atomically
+    // by the editor transaction filter; manual Format remains available.
   };
 
   const formatXMLString = (xml) => {
@@ -5286,119 +5259,95 @@ const TidyCode = () => {
   };
 
   // AI Fix handlers
-  const handleAIFix = async () => {
-    if (!errorMessage || !activeTab) return;
-
-    if (!aiService) {
-      setAIFixState({
-        isLoading: false,
-        fixedContent: null,
-        originalContent: null,
-        showDiff: false,
-        error: 'AI service is still initializing. Please try again.',
-        progress: null
-      });
-      return;
-    }
-
-    setAIFixState({
-      isLoading: true,
-      fixedContent: null,
-      originalContent: activeTab.content,
-      showDiff: false,
-      error: null,
-      progress: null
-    });
-
+  const handleAIFix = async (providerId = null) => {
+    if (!errorMessage || !activeTab || repairBusyRef.current) return;
+    // Cloud retry uses the snapshot from the failed local attempt.
+    const snapshot = providerId ? aiFixState.request : {
+      tabId: activeTab.id, title: activeTab.title, content: activeTab.content,
+      details: { ...errorMessage },
+    };
+    if (!snapshot) return;
+    if (providerId && repairPreference(aiSettings) !== 'offer') return;
+    repairBusyRef.current = true;
+    const localRules = !providerId && ['JSON', 'XML'].includes(snapshot.details.type);
+    setAIFixState({ isLoading: true, fixedContent: null, originalContent: snapshot.content,
+      request: snapshot, showDiff: false, error: null, rulesFailed: false,
+      source: localRules ? 'rules' : providerId || aiSettings.provider,
+      progress: { text: localRules ? 'Trying local rules…' : 'Requesting a repair…' } });
+    let repairSource = localRules ? 'rules' : providerId || aiSettings.provider;
     try {
-      const fixedContent = await aiService.fix(
-        activeTab.content,
-        errorMessage,
-        aiSettings,
-        (progress) => {
-          setAIFixState(prev => ({
-            ...prev,
-            progress: progress
-          }));
+      const onProgress = progress => setAIFixState(prev => ({ ...prev, progress }));
+      let fixedContent;
+      if (localRules) {
+        try { fixedContent = await repairWithRules(snapshot.content, snapshot.details); }
+        catch (rulesError) {
+          if (isDesktop() || snapshot.details.type !== 'JSON' || aiSettings.provider !== 'chrome-nano' || repairPreference(aiSettings) === 'stop') throw rulesError;
+          repairSource = 'chrome-nano';
+          setAIFixState(prev => ({ ...prev, source: repairSource, progress: { text: 'Local rules could not repair this JSON. Trying Private AI (experimental)…' } }));
+          fixedContent = await repairWithNano(snapshot.content, snapshot.details, aiSettings);
         }
-      );
-
-      if (!fixedContent || fixedContent.trim() === activeTab.content.trim()) {
-        throw new Error('The AI returned the content unchanged. Try again, or choose a different provider or model in AI Settings.');
-      }
-
-      setAIFixState({
-        isLoading: false,
-        fixedContent,
-        originalContent: activeTab.content,
-        showDiff: true,
-        error: null,
-        progress: null
-      });
+      } else if (providerId === 'chrome-nano') {
+        fixedContent = await repairWithNano(snapshot.content, snapshot.details, aiSettings);
+      } else if (providerId) {
+        fixedContent = await repairWithProvider(snapshot.content, snapshot.details, aiSettings, providerId, { desktopService: isDesktop() ? aiService : null, onProgress });
+      } else fixedContent = await aiService.fix(snapshot.content, snapshot.details, aiSettings, onProgress);
+      if (!fixedContent || fixedContent.trim() === snapshot.content.trim()) throw new Error('No repair was found. The document is unchanged.');
+      setAIFixState({ isLoading: false, fixedContent, originalContent: snapshot.content,
+        request: snapshot, source: repairSource,
+        showDiff: true, error: null, rulesFailed: false, progress: null });
+      if (repairSource === 'rules') showTransientMessage('Fixed using local rules. Review the changes before accepting.', 'success');
     } catch (error) {
-      setAIFixState({
-        isLoading: false,
-        fixedContent: null,
-        originalContent: null,
-        showDiff: false,
-        error: error.message || 'Failed to fix content',
-        progress: null
-      });
-    }
+      setAIFixState({ isLoading: false, fixedContent: null, originalContent: snapshot.content,
+        request: snapshot, source: repairSource,
+        showDiff: false, error: error.message || 'Failed to repair content',
+        rulesFailed: localRules || Boolean(providerId), progress: null });
+    } finally { repairBusyRef.current = false; }
   };
 
-  const handleAcceptFix = (customContent = null) => {
-    const contentToUse = customContent || aiFixState.fixedContent;
-    if (!contentToUse || !activeTab) return;
-
-    // Capture the error type before clearing it
-    const originalErrorType = errorMessage?.type;
-
-    // Create a new tab with the AI-fixed content
-    const aiFixedTab = {
-      id: nextId,
-      title: `${activeTab.title} (AI Fixed)`,
-      content: String(contentToUse),
-      isModified: true,
-      filePath: null
-    };
-
-    const newTabId = nextId;
-
-    // Update current tab with original content (rename to show it's the original with errors)
-    setTabs(prevTabs => [
-      ...prevTabs.map(tab =>
-        tab.id === activeTabId
-          ? { ...tab, title: `${tab.title} (Original)`, isModified: false }
-          : tab
-      ),
-      aiFixedTab
-    ]);
-
-    // Switch to the new AI-fixed tab
-    setActiveTabId(newTabId);
-    requestEditorFocus(newTabId);
-    setNextId(nextId + 1);
-
-    // Clear error and close diff
-    setErrorMessage(null);
-    setAIFixState({
-      isLoading: false,
-      fixedContent: null,
-      originalContent: null,
-      showDiff: false,
-      error: null,
-      progress: null
-    });
-
-    // Revalidate and format the fixed content in the new tab
-    setTimeout(() => {
-      if (originalErrorType === 'JSON') {
-        formatJSON({ tabId: newTabId, autoTriggered: true });
-      } else if (originalErrorType === 'XML') {
-        formatXML({ tabId: newTabId, autoTriggered: true });
+  const handleAcceptFix = (customContent = null, destination = 'new-tab', { format = false } = {}) => {
+    const contentToUse = customContent ?? aiFixState.fixedContent;
+    if (contentToUse == null) return;
+    const snapshot = aiFixState.request;
+    const source = tabs.find(tab => tab.id === snapshot?.tabId);
+    let content = String(contentToUse);
+    if (format) {
+      if (['JSON', 'XML'].includes(snapshot?.details.type)) {
+        content = formatPastedDocument(content);
+      } else if (['YAML', 'TOML'].includes(snapshot?.details.type)) {
+        const result = formatService.format(content, snapshot.details.type.toLowerCase());
+        if (!result.errors.length && result.formatted != null) content = result.formatted;
       }
-    }, 100);
+    }
+    let targetId;
+    if (destination === 'current-tab') {
+      const view = codeMirrorRef.current?.getView?.();
+      // Recheck at acceptance as well as disabling the UI: never overwrite edits
+      // made since the repair began or a different tab's current editor.
+      if (!source || source.id !== activeTabId || source.content !== snapshot.content || !view || view.state.doc.toString() !== snapshot.content) {
+        showTransientMessage('The source tab changed. Open the result in a new tab or run Fix again.', 'warning');
+        return;
+      }
+      targetId = source.id;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: content },
+        annotations: isolateHistory.of('full'),
+        userEvent: 'input.repair',
+      });
+      setTabs(previous => previous.map(tab => tab.id === targetId ? { ...tab, content, isModified: true } : tab));
+    } else {
+      targetId = nextId;
+      setTabs(previous => [...previous, {
+        id: targetId, title: `${snapshot?.title || 'Document'} (Fixed)`,
+        content, isModified: true, filePath: null,
+      }]);
+      setActiveTabId(targetId);
+      setNextId(nextId + 1);
+    }
+    requestEditorFocus(targetId);
+    setTabErrorMessages(previous => ({ ...previous, [targetId]: null }));
+    setAIFixState({ isLoading: false, fixedContent: null, originalContent: null, showDiff: false, error: null, progress: null });
+    // Accept All formats before the single undoable replacement/new-tab update.
+    // Selected changes stay as reviewed; regular validation checks either result.
   };
 
   const handleRejectFix = () => {
@@ -8056,81 +8005,38 @@ const TidyCode = () => {
     }
   }, [activeStructureId]);
 
-  // Auto-validate JSON/XML files on open/paste (only for small files < 100KB)
-  const prevTabIdRef = useRef(null);
-  const prevContentHashRef = useRef(null);
+  // Validate every edit after a short pause, including short pastes and file loads.
+  // Scope updates to the captured tab and cancel work when its content changes.
   useEffect(() => {
-    if (!activeTab?.content) return;
-
-    const contentLength = activeTab.content.length;
-    const MAX_AUTO_VALIDATE_SIZE = 100000; // 100KB
-
-    // Skip large files to avoid blocking UI
-    if (contentLength > MAX_AUTO_VALIDATE_SIZE) return;
-
-    // Only auto-validate when tab changes or content is significantly different (paste/open)
-    // Use a simple hash to detect major content changes vs typing
-    const contentHash = contentLength + ':' + activeTab.content.slice(0, 100) + activeTab.content.slice(-100);
-    const isNewTab = prevTabIdRef.current !== activeTab.id;
-    const isSignificantChange = prevContentHashRef.current !== contentHash &&
-      Math.abs(contentLength - (prevContentHashRef.current?.split(':')[0] || 0)) > 50;
-
-    prevTabIdRef.current = activeTab.id;
-    prevContentHashRef.current = contentHash;
-
-    // Only run validation on new tab or significant paste/load (not while typing)
-    if (!isNewTab && !isSignificantChange) return;
-
-    const trimmed = String(activeTab.content).trim();
-    if (!trimmed) return;
-
-    const fileName = activeTab?.filePath || activeTab?.title || '';
-    const detection = formatService.detect(trimmed, fileName);
-
-    // Auto-validate JSON files
-    if (detection.format === 'json' || (trimmed.startsWith('{') || trimmed.startsWith('['))) {
-      try {
-        JSON.parse(trimmed);
-        // Valid JSON - clear any existing error
-        if (errorMessage?.type === 'JSON') {
-          setErrorMessage(null);
+    if (!activeTab) return;
+    const { id, content = '', title, filePath } = activeTab;
+    const timer = setTimeout(() => {
+      const trimmed = String(content).trim();
+      let details = null;
+      if (trimmed) {
+        const detection = formatService.detect(trimmed, filePath || title || '');
+        if (detection.format === 'json' || /^[{[]/.test(trimmed)) {
+          try { JSON.parse(content); }
+          catch (error) { details = buildJSONErrorDetails(content, error); }
+        } else if (!looksLikePHP(trimmed) && (detection.format === 'xml' || trimmed.startsWith('<'))) {
+          try {
+            const doc = new DOMParser().parseFromString(content, 'text/xml');
+            const error = doc.getElementsByTagName('parsererror')[0];
+            if (error) details = buildXMLErrorDetails(content, error.textContent);
+          } catch (error) {
+            details = { type: 'XML', message: error.message, allErrors: [], tips: ['Check XML syntax'] };
+          }
         }
-      } catch (e) {
-        // Invalid JSON - show error panel
-        const errorDetails = buildJSONErrorDetails(activeTab.content, e);
-        setErrorMessage(errorDetails);
       }
-    }
-    // Auto-validate XML files
-    else if (!looksLikePHP(trimmed) && (detection.format === 'xml' || trimmed.startsWith('<'))) {
-      try {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(trimmed, 'text/xml');
-        const parserError = xmlDoc.getElementsByTagName('parsererror');
-
-        if (parserError.length > 0) {
-          // Invalid XML - show error panel
-          const errorText = parserError[0].textContent;
-          const errorDetails = buildXMLErrorDetails(activeTab.content, errorText);
-          setErrorMessage(errorDetails);
-        } else if (errorMessage?.type === 'XML') {
-          // Valid XML - clear error
-          setErrorMessage(null);
-        }
-      } catch (e) {
-        // Parsing failed - show generic error
-        setErrorMessage({
-          type: 'XML',
-          message: e.message,
-          line: null,
-          column: null,
-          allErrors: [],
-          context: [],
-          tips: ['Check XML syntax']
-        });
-      }
-    }
-  }, [activeTab?.id, activeTab?.content]);
+      setTabErrorMessages(previous => {
+        if (details) return { ...previous, [id]: { ...details, title: `Invalid ${details.type}` } };
+        // Preserve unrelated conversion/warning messages; clear stale syntax errors.
+        if (['JSON', 'XML'].includes(previous[id]?.type)) return { ...previous, [id]: null };
+        return previous;
+      });
+    }, content.length > 100000 ? 1000 : 400);
+    return () => clearTimeout(timer);
+  }, [activeTab?.id, activeTab?.content, activeTab?.title, activeTab?.filePath]);
 
   useEffect(() => {
     if (!isCSVTab || !activeTab) return;
@@ -8658,7 +8564,7 @@ const TidyCode = () => {
                       className="flex-1 bg-transparent text-sm text-gray-200 focus:outline-none border-b border-gray-700 pb-1"
                       placeholder="Title"
                     />
-                    {aiService && aiSettings?.provider !== 'tinyllm' && (
+                    {aiService && !['tinyllm', 'none'].includes(aiSettings?.provider) && (
                       <div className="relative">
                         <button
                           type="button"
@@ -9331,6 +9237,7 @@ const TidyCode = () => {
         <CodeMirrorEditor
           ref={codeMirrorRef}
           value={activeTab.content}
+          autoFormatOnPaste
           onChange={(newValue) => {
             updateTabContent(activeTab.id, newValue);
           }}
@@ -9642,37 +9549,37 @@ const TidyCode = () => {
 
           <div className={`w-px mx-1 lg:mx-2 self-stretch ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
 
-          {/* Format & Convert Dropdown */}
-          <div className="relative" ref={formatConvertDropdownRef}>
+          {/* Format acts immediately; conversion choices have their own button. */}
+          <button
+            onClick={() => { setShowDataConvertDropdown(false); formatContent(); }}
+            disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF}
+            className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-indigo-500 hover:bg-indigo-600 text-white'}`}
+            title="Format document (auto-detect JSON, XML, YAML or TOML)"
+            aria-label="Format document"
+          >
+            <Code2 className="w-4 h-4" />
+            <span className="hidden lg:inline">Format</span>
+          </button>
+          <div className="relative" ref={dataConvertDropdownRef}>
             <button
-              onClick={() => setShowFormatConvertDropdown(!showFormatConvertDropdown)}
-              disabled={!activeTab}
-              className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${!activeTab ? 'bg-gray-600 cursor-not-allowed opacity-50' : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-              title="Format & Convert"
+              onClick={() => setShowDataConvertDropdown(!showDataConvertDropdown)}
+              disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF}
+              className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+              title="Convert document to another format"
+              aria-label="Convert document"
+              aria-expanded={showDataConvertDropdown}
+              aria-controls="document-conversion-options"
             >
-              <Code2 className="w-4 h-4" />
-              <span className="hidden lg:inline">Format</span>
+              <ArrowRightLeft className="w-4 h-4" />
+              <span className="hidden lg:inline">Convert</span>
               <ChevronDown className="w-3 h-3" />
             </button>
-            {showFormatConvertDropdown && (() => {
+            {showDataConvertDropdown && (() => {
               const currentFormat = structureTree.type?.toLowerCase() || null;
               return (
-                <div className={`absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[180px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                <div id="document-conversion-options" className={`absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[180px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
                   <button
-                    onClick={() => { formatContent(); setShowFormatConvertDropdown(false); }}
-                    disabled={!activeTab}
-                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
-                      !activeTab
-                        ? 'opacity-40 cursor-not-allowed text-gray-500'
-                        : theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <Code2 className="w-4 h-4" />
-                    Format (Auto-detect)
-                  </button>
-                  <div className={`my-1 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}></div>
-                  <button
-                    onClick={() => { convertFormat('json'); setShowFormatConvertDropdown(false); }}
+                    onClick={() => { convertFormat('json'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'json'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                       currentFormat === 'json'
@@ -9684,7 +9591,7 @@ const TidyCode = () => {
                     Convert to JSON {currentFormat === 'json' && '(current)'}
                   </button>
                   <button
-                    onClick={() => { convertFormat('xml'); setShowFormatConvertDropdown(false); }}
+                    onClick={() => { convertFormat('xml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'xml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                       currentFormat === 'xml'
@@ -9696,7 +9603,7 @@ const TidyCode = () => {
                     Convert to XML {currentFormat === 'xml' && '(current)'}
                   </button>
                   <button
-                    onClick={() => { convertFormat('yaml'); setShowFormatConvertDropdown(false); }}
+                    onClick={() => { convertFormat('yaml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'yaml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                       currentFormat === 'yaml'
@@ -9708,7 +9615,7 @@ const TidyCode = () => {
                     Convert to YAML {currentFormat === 'yaml' && '(current)'}
                   </button>
                   <button
-                    onClick={() => { convertFormat('toml'); setShowFormatConvertDropdown(false); }}
+                    onClick={() => { convertFormat('toml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'toml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                       currentFormat === 'toml'
@@ -9721,7 +9628,7 @@ const TidyCode = () => {
                   </button>
                   <div className={`my-1 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}></div>
                   <button
-                    onClick={() => { generateSchema(); setShowFormatConvertDropdown(false); }}
+                    onClick={() => { generateSchema(); setShowDataConvertDropdown(false); }}
                     disabled={!SCHEMA_SOURCE_FORMATS.includes(currentFormat)}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                       !SCHEMA_SOURCE_FORMATS.includes(currentFormat)
@@ -9870,6 +9777,7 @@ const TidyCode = () => {
               </div>
             )}
           </div>
+          {!isDesktop() && <PrivateAIStatus compact />}
         </div>
       </div>
 
@@ -10707,8 +10615,8 @@ const TidyCode = () => {
                     </>
                   )}
                   {activeTab.title === 'Welcome' ? (
-                    <div className={`flex items-center justify-center h-full w-full ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                      <div className="text-center max-w-2xl px-6">
+                    <div className={`h-full w-full overflow-y-auto ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <div className="text-center w-full max-w-3xl mx-auto px-4 sm:px-6 py-6">
                         <img
                           src="/tidycode-logo.svg"
                           className="w-24 h-24 mx-auto mb-4"
@@ -10717,14 +10625,24 @@ const TidyCode = () => {
                         <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
                         <SiteRatingLine dark={theme === 'dark'} className="mb-2" />
                         <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          A powerful code & text editor with PDF viewer, format conversion, syntax highlighting, AI assistance, and more
+                          Edit, format, and repair your files with clear feedback and AI you control.
                         </p>
+
+                        <WelcomeUpdates theme={theme} desktop={isDesktop()} onOpenAISettings={() => setShowAISettings(true)} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-left mb-6">
                           {/* Column 1: File Support & Editing */}
                           <div>
                             <p className={`text-xs font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>📝 File Support & Editing</p>
                             <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-500">★</span>
+                                <span className="font-semibold">Format conversion (JSON/XML/YAML/TOML)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Structure tree for JSON, XML, YAML, TOML</span>
+                              </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-500">★</span>
                                 <span className="font-semibold">PDF viewer with search & focus mode</span>
@@ -10736,14 +10654,6 @@ const TidyCode = () => {
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
                                 <span>VIM mode with keybindings support</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-blue-500">★</span>
-                                <span className="font-semibold">Format conversion (JSON/XML/YAML/TOML)</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
-                                <span>Structure tree for JSON, XML, YAML, TOML</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
@@ -10766,15 +10676,19 @@ const TidyCode = () => {
                             <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-500">★</span>
-                                <span className="font-semibold">Native clipboard (no permission prompts)</span>
+                                <span className="font-semibold">{isDesktop() ? 'Native clipboard (no permission prompts)' : 'Automatic JSON/XML formatting on paste'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Auto Fix first, optional AI repair (JSON/XML)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Side-by-side diff viewer for changes</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
                                 <span>Large file support (100MB+) with WASM</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
-                                <span>AI-assisted error fixing (JSON/XML)</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
@@ -10783,10 +10697,6 @@ const TidyCode = () => {
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
                                 <span>Multiple AI providers (Ollama, Groq, OpenAI)</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-500">✓</span>
-                                <span>Side-by-side diff viewer for changes</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-500">✓</span>
@@ -10825,6 +10735,7 @@ const TidyCode = () => {
                           </button>
                           {' '}to get started
                         </p>
+                        <footer className={`mt-5 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>© 2026 Tidy Code. All rights reserved.</footer>
 
                         {/* Real <a href> links so search engines can reach the tool pages from
                             the homepage. Web only: in the desktop app they would navigate the
@@ -10890,6 +10801,7 @@ const TidyCode = () => {
                             <CodeMirrorEditor
                               ref={(el) => { splitPaneRefs.current[pane.id] = el; }}
                               value={paneTab.content || ''}
+                              autoFormatOnPaste
                               onChange={(val) => updateTabContent(paneTab.id, val)}
                               language={paneLanguage}
                               theme={theme}
@@ -11014,6 +10926,8 @@ const TidyCode = () => {
                 onCopy={() => showTransientMessage('Copied to clipboard', 'info')}
                 onOpenInNewTab={aiActions.openInNewTab}
                 onRegenerate={aiActions.regenerate}
+                onCloudRetry={aiActions.retryWithCloud}
+                cloudRetryProviders={aiActions.cloudRetryProviders}
                 onAccept={aiActions.acceptSuggestion}
                 showDiff={aiActions.showDiff}
                 onToggleDiff={() => aiActions.setShowDiff(d => !d)}
@@ -11030,7 +10944,8 @@ const TidyCode = () => {
             {/* Full-width Error/Warning Panel Below Editor */}
             {errorMessage && (
               <div
-                className={`overflow-hidden border-t-2 flex flex-col ${
+                data-testid="error-panel"
+                className={`editor-typography overflow-hidden border-t-2 flex flex-col ${
                   errorMessage.type === 'Warning'
                     ? theme === 'dark'
                       ? 'bg-gradient-to-b from-amber-900/30 to-gray-800 border-amber-500'
@@ -11044,11 +10959,12 @@ const TidyCode = () => {
                         : 'bg-gray-100 border-gray-300'
                 }`}
                 style={{
+                  ...getEditorTypography(fontSize),
                   height: (errorMessage.type === 'Warning' || errorMessage.type === 'Conversion')
                     ? `${infoPanelHeight}px`
-                    : '50%',
+                    : '32%',
                   minHeight: '80px',
-                  maxHeight: '300px'
+                  maxHeight: '240px'
                 }}
               >
                 {/* Resize handle for Warning/Conversion panels */}
@@ -11085,16 +11001,16 @@ const TidyCode = () => {
                   </div>
                 )}
 
-                <div className={`${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'p-3' : 'p-6'} overflow-y-auto flex-1`}>
+                <div className={`${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'p-3' : 'p-3'} overflow-y-auto flex-1`}>
                   {/* Header */}
-                  <div className={`flex items-center justify-between ${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'mb-2' : 'mb-4'}`}>
+                  <div className={`flex flex-wrap items-center justify-between gap-2 ${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'mb-2' : 'mb-2'}`}>
                     <div className="flex items-center gap-2">
                       {errorMessage.type === 'Warning' && (
                         <div className={`p-1 rounded-full ${theme === 'dark' ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
                           <Info className={`w-4 h-4 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`} />
                         </div>
                       )}
-                      <span className={`font-semibold ${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'text-sm' : 'text-lg font-bold'} ${
+                      <span className={`font-semibold ${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'text-sm' : 'text-sm font-bold'} ${
                         errorMessage.type === 'Warning'
                           ? theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
                           : theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
@@ -11120,16 +11036,16 @@ const TidyCode = () => {
                       {(errorMessage.type === 'JSON' || errorMessage.type === 'XML' || errorMessage.type === 'YAML' || errorMessage.type === 'TOML') && (
                         <>
                           <button
-                            onClick={handleAIFix}
+                            onClick={() => handleAIFix()}
                             disabled={aiFixState.isLoading}
-                            className={`px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-2 ${
+                            className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-2 ${
                               aiFixState.isLoading
                                 ? 'bg-purple-600/50 cursor-not-allowed text-white'
                                 : theme === 'dark'
                                   ? 'bg-purple-600 hover:bg-purple-700 text-white'
                                   : 'bg-purple-500 hover:bg-purple-600 text-white'
                             }`}
-                            title="Use AI to automatically fix errors"
+                            title={['JSON', 'XML'].includes(errorMessage.type) ? 'Try local rules first, then experimental Private AI for small JSON when enabled. Cloud retry requires your click.' : 'Ask the selected AI provider to suggest a fix'}
                           >
                             {aiFixState.isLoading ? (
                               <>
@@ -11138,14 +11054,14 @@ const TidyCode = () => {
                               </>
                             ) : (
                               <>
-                                <Sparkles className="w-4 h-4" />
-                                AI Fix
+                                <Braces className="w-4 h-4" />
+                                {['JSON', 'XML'].includes(errorMessage.type) ? `Fix ${errorMessage.type}` : 'AI Fix'}
                               </>
                             )}
                           </button>
                           <button
                             onClick={() => setShowAISettings(true)}
-                            className={`px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                            className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
                             title="Configure AI settings"
                           >
                             <Settings className="w-4 h-4" />
@@ -11158,7 +11074,7 @@ const TidyCode = () => {
                                 formatXML({ autoTriggered: false });
                               }
                             }}
-                            className={`px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                            className={`px-2 py-1 rounded text-xs transition-colors flex items-center gap-2 ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
                             title="Retry formatting after fixing errors"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -11170,7 +11086,7 @@ const TidyCode = () => {
                       )}
                       <button
                         onClick={() => setErrorMessage(null)}
-                        className={`${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded transition-colors flex items-center gap-1 ${
+                        className={`${(errorMessage.type === 'Warning' || errorMessage.type === 'Conversion') ? 'px-2 py-1 text-xs' : 'px-2 py-1 text-xs'} rounded transition-colors flex items-center gap-1 ${
                           errorMessage.type === 'Warning'
                             ? theme === 'dark'
                               ? 'bg-amber-600 hover:bg-amber-700 text-white'
@@ -11250,7 +11166,7 @@ const TidyCode = () => {
                     </div>
                   ) : (
                   /* Errors Grid */
-                  <div className="grid grid-cols-1 gap-3 mb-4">
+                  <div className="grid grid-cols-1 gap-1.5 mb-2">
                     {errorMessage.allErrors && errorMessage.allErrors.length > 0 ? (
                       errorMessage.allErrors.map((error, idx) => (
                         <div 
@@ -11264,28 +11180,28 @@ const TidyCode = () => {
                               goToPosition(error.line, error.column);
                             }
                           }}
-                          className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 border-l-4 ${error.isPrimary ? 'border-orange-400' : 'border-yellow-400'} ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} pl-4 pr-4 py-3 rounded-r-lg`}
+                          className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 border-l-4 ${error.isPrimary ? 'border-orange-400' : 'border-yellow-400'} ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} pl-2 pr-2 py-1.5 rounded-r`}
                           title="Jump to this error location"
                         >
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                               Error #{idx + 1}
                             </span>
                             {error.isPrimary && (
-                              <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                              <span className="bg-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
                                 PRIMARY ERROR
                               </span>
                             )}
                             {error.severity === 'warning' && (
-                              <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                              <span className="bg-orange-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
                                 WARNING
                               </span>
                             )}
-                            <span className={`font-mono text-base font-bold ml-auto ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                            <span className={`font-mono text-xs font-medium ml-auto ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
                               📍 Line {error.line}, Column {error.column}
                             </span>
                           </div>
-                          <div className={`text-base leading-relaxed ${theme === 'dark' ? 'text-red-100' : 'text-red-900'}`}>
+                          <div className={`text-xs leading-4 ${theme === 'dark' ? 'text-red-100' : 'text-red-900'}`}>
                             {error.message}
                           </div>
                         </div>
@@ -11301,19 +11217,19 @@ const TidyCode = () => {
                             goToPosition(errorMessage.line, errorMessage.column);
                           }
                         }}
-                        className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 border-l-4 border-yellow-400 pl-4 pr-4 py-3 rounded-r-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}
+                        className={`cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 border-l-4 border-yellow-400 pl-2 pr-2 py-1.5 rounded-r ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}
                       >
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                             Error #1
                           </span>
                           {errorMessage.line && (
-                            <span className={`font-mono text-base font-bold ml-auto ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                            <span className={`font-mono text-xs font-medium ml-auto ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
                               📍 Line {errorMessage.line}, Column {errorMessage.column}
                             </span>
                           )}
                         </div>
-                        <div className={`text-base leading-relaxed ${theme === 'dark' ? 'text-red-100' : 'text-red-900'}`}>
+                        <div className={`text-xs leading-4 ${theme === 'dark' ? 'text-red-100' : 'text-red-900'}`}>
                           {errorMessage.message}
                         </div>
                       </div>
@@ -11323,7 +11239,7 @@ const TidyCode = () => {
 
                   {/* AI Fix Error Display */}
                   {aiFixState.error && (
-                    <div className={`mb-4 p-4 rounded-lg border ${
+                    <div className={`mb-2 p-2 rounded-lg border ${
                       theme === 'dark'
                         ? 'bg-red-900/20 border-red-800'
                         : 'bg-red-50 border-red-200'
@@ -11336,13 +11252,33 @@ const TidyCode = () => {
                           <p className={`text-sm font-semibold ${
                             theme === 'dark' ? 'text-red-300' : 'text-red-900'
                           }`}>
-                            AI Fix Failed
+                            {aiFixState.source === 'rules' ? 'Auto-fix couldn’t repair this document' : 'Repair failed'}
                           </p>
                           <p className={`text-xs mt-1 ${
                             theme === 'dark' ? 'text-red-400' : 'text-red-700'
                           }`}>
                             {aiFixState.error}
                           </p>
+                          {aiFixState.rulesFailed && (
+                            <div className="mt-3 space-y-2 text-xs">
+                              {repairPreference(aiSettings) === 'stop' ? <p>Repair is set to local rules only. The document is unchanged.</p> : <>
+                                {aiSettings.provider === 'chrome-nano' && (aiFixState.request?.details.type === 'JSON' && !isDesktop() ? <>
+                                  <p>Private AI JSON repair is experimental. It accepts only small documents and changes it can check for data preservation.</p>
+                                  <button disabled={aiFixState.isLoading} onClick={() => handleAIFix('chrome-nano')} className="px-3 py-1.5 rounded border border-current disabled:opacity-50">Retry with Private AI (local)</button>
+                                </> : <p>On-device XML repair isn’t available yet.</p>)}
+                                {repairOffers(aiSettings, isDesktop()).length > 0 ? <>
+                                  <p>Cloud repair sends the original document to the provider you click. You’ll review suggested changes before accepting.</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {repairOffers(aiSettings, isDesktop()).map(provider => <button key={provider.id}
+                                      disabled={aiFixState.isLoading} onClick={() => handleAIFix(provider.id)}
+                                      className="px-3 py-1.5 rounded border border-current disabled:opacity-50">
+                                      Try with {provider.name} ({provider.local ? 'local' : 'cloud'})
+                                    </button>)}
+                                  </div>
+                                </> : <p>No cloud repair provider is configured. You can configure one in AI Settings.</p>}
+                              </>}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -11350,10 +11286,10 @@ const TidyCode = () => {
 
                   {/* Common JSON Issues Section */}
                   {errorMessage.type === 'JSON' && errorMessage.tips && errorMessage.tips.length > 0 && (
-                    <div className={`rounded-lg p-4 ${theme === 'dark' ? 'bg-black bg-opacity-40' : 'bg-gray-200'}`}>
+                    <div className={`rounded p-2 ${theme === 'dark' ? 'bg-black bg-opacity-40' : 'bg-gray-200'}`}>
                       <button
                         onClick={() => setTipsCollapsed(prev => !prev)}
-                        className={`w-full flex items-center justify-between font-bold text-base mb-3 ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}
+                        className={`w-full flex items-center justify-between font-semibold text-xs mb-1 ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}
                       >
                         <span>💡 Common JSON Issues to Check</span>
                         <span className="text-xs uppercase tracking-wide">
@@ -11361,9 +11297,9 @@ const TidyCode = () => {
                         </span>
                       </button>
                       {!tipsCollapsed && (
-                        <ul className={`text-sm space-y-2 list-disc list-inside ${theme === 'dark' ? 'text-red-100' : 'text-gray-800'}`}>
+                        <ul className={`text-xs space-y-1 list-disc list-inside ${theme === 'dark' ? 'text-red-100' : 'text-gray-800'}`}>
                           {errorMessage.tips.map((tip, idx) => (
-                            <li key={idx} className="leading-relaxed">{tip}</li>
+                            <li key={idx} className="leading-4">{tip}</li>
                           ))}
                         </ul>
                       )}
@@ -11374,8 +11310,8 @@ const TidyCode = () => {
             )}
           </>
         ) : (
-          <div className={`flex items-center justify-center h-full w-full ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-            <div className="text-center max-w-2xl px-6">
+          <div className={`h-full w-full overflow-y-auto ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+            <div className="text-center w-full max-w-3xl mx-auto px-4 sm:px-6 py-6">
               <img
                 src="/tidycode-logo.svg"
                 className="w-24 h-24 mx-auto mb-4"
@@ -11384,8 +11320,10 @@ const TidyCode = () => {
               <p className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>Welcome to Tidy Code <span className={`text-lg font-normal ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>v{appVersion}</span></p>
               <SiteRatingLine dark={theme === 'dark'} className="mb-2" />
               <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                A powerful code & text editor with syntax highlighting, AI-assisted error fixing, and more
+                Edit, format, and repair your files with clear feedback and AI you control.
               </p>
+
+              <WelcomeUpdates theme={theme} desktop={isDesktop()} onOpenAISettings={() => setShowAISettings(true)} />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-left mb-6">
                 {/* Column 1: File Support & Editing */}
@@ -11394,19 +11332,19 @@ const TidyCode = () => {
                   <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>40+ file types with syntax highlighting</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>VIM mode with keybindings support</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
                       <span>JSON/XML formatter & validator</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
                       <span>Structure tree for JSON, XML, YAML</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>40+ file types with syntax highlighting</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>VIM mode with keybindings support</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -11433,11 +11371,15 @@ const TidyCode = () => {
                   <div className={`text-xs space-y-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>Large file support (20MB+) with WASM</span>
+                      <span>Auto Fix first, optional AI repair (JSON/XML)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>AI-assisted error fixing (JSON/XML)</span>
+                      <span>Side-by-side diff viewer for changes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>Large file support (20MB+) with WASM</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -11450,10 +11392,6 @@ const TidyCode = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
                       <span>Multiple AI providers (Ollama, Groq, OpenAI)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Side-by-side diff viewer for changes</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -11492,6 +11430,7 @@ const TidyCode = () => {
                 </button>
                 {' '}to get started
               </p>
+              <footer className={`mt-5 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>© 2026 Tidy Code. All rights reserved.</footer>
             </div>
           </div>
         )}
@@ -12451,8 +12390,11 @@ const TidyCode = () => {
       {/* AI Fix Diff Viewer Modal */}
       {aiFixState.showDiff && aiFixState.fixedContent && aiFixState.originalContent && (
         <DiffViewerModal
+          fontSize={fontSize}
           original={aiFixState.originalContent}
           fixed={aiFixState.fixedContent}
+          repairLabel={aiFixState.source === 'rules' ? 'Fixed using local rules' : aiFixState.source === 'chrome-nano' ? 'Private AI repair (experimental) — review every change' : 'AI-suggested repair'}
+          canReplaceCurrent={Boolean(aiFixState.request && activeTab?.id === aiFixState.request.tabId && activeTab.content === aiFixState.request.content)}
           onAccept={handleAcceptFix}
           onReject={handleRejectFix}
           theme={theme}
@@ -12522,6 +12464,8 @@ const TidyCode = () => {
             }}
             onEdit={(editedCode) => aiActions.acceptSuggestion(editedCode)}
             onRegenerate={aiActions.regenerate}
+                onCloudRetry={aiActions.retryWithCloud}
+                cloudRetryProviders={aiActions.cloudRetryProviders}
           />
         </div>
       )}

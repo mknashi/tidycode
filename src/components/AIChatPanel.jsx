@@ -1,3 +1,4 @@
+import { isLocalProvider } from '../services/ai/privacyGuard.js';
 /**
  * AIChatPanel Component
  *
@@ -667,7 +668,7 @@ export default function AIChatPanel({
             onClick={() => {
               if (!includeFileContent) {
                 // Turning ON — check privacy consent for non-local providers
-                const isLocal = ['ollama', 'tinyllm'].includes(providerName);
+                const isLocal = isLocalProvider(currentProvider || providerName);
                 const acknowledged = localStorage.getItem('tidycode-ai-privacy-acknowledged');
                 if (!isLocal && !acknowledged) {
                   setShowPrivacyConsent(true);
@@ -751,7 +752,7 @@ export default function AIChatPanel({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             disabled={isStreaming}
-            placeholder={isStreaming ? 'Waiting for response...' : 'Ask something... (Enter to send, Shift+Enter for newline, paste images)'}
+            placeholder={isStreaming ? 'Waiting for response...' : currentProvider === 'chrome-nano' ? 'Ask a short question or request a grammar correction…' : 'Ask something... (Enter to send, Shift+Enter for newline, paste images)'}
             rows={3}
             className={`flex-1 resize-none rounded px-3 py-1.5 text-xs ${textColor} ${inputBg} border ${inputBorder} focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDark ? 'placeholder:text-gray-400' : 'placeholder:text-gray-500'}`}
             style={{ maxHeight: '180px', minHeight: '60px' }}
@@ -806,7 +807,7 @@ export default function AIChatPanel({
             </p>
             <p className={`text-xs mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Sensitive data (API keys, tokens, passwords) is automatically detected and blocked before sending.
-              For fully private AI, use Ollama (local) in AI Settings.
+              For on-device AI, choose Private AI in a supported Chrome browser or local Ollama in the desktop app.
             </p>
             <label className={`flex items-center gap-2 mb-4 text-xs cursor-pointer ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <input

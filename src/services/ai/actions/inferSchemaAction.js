@@ -159,11 +159,12 @@ export async function inferSchemaAction(context, options = {}) {
   const formatConfig = SCHEMA_FORMATS[format];
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
       language: formatConfig.language,
       task: 'infer-schema',
       options: {
+        signal: options.signal,
         maxTokens: 4096,
         temperature: 0.2,
       },

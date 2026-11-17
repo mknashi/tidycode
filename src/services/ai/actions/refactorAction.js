@@ -131,11 +131,12 @@ export async function refactorAction(context, options = {}) {
   }
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
       language: context.language,
       task: 'refactor',
       options: {
+        signal: options.signal,
         maxTokens: 4096,
         temperature: 0.2,
         extractFormat: context.language === 'json' ? 'json' : null,
@@ -181,12 +182,13 @@ export async function refactorActionStream(context, onChunk, options = {}) {
   const prompt = buildRefactorPrompt(content, context, type);
 
   try {
-    const result = await providerManager.streamComplete(
+    const result = await (options.providerManager || providerManager).streamComplete(
       {
         prompt,
         language: context.language,
         task: 'refactor',
         options: {
+          signal: options.signal,
           maxTokens: 4096,
           temperature: 0.2,
         },

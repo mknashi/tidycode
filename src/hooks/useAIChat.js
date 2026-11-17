@@ -71,7 +71,7 @@ function compactConversation(messages) {
  * @param {boolean} includeFileContent - Whether to include full file content
  * @returns {{ prompt: string, fileContextInfo: { included: boolean, truncated: boolean, originalSize: number, includedSize: number } }}
  */
-function buildSystemPrompt(activeTab, selectedText, includeFileContent) {
+function buildSystemPrompt(activeTab, selectedText, includeFileContent, allowTruncation = true) {
   let prompt = 'You are a helpful coding assistant integrated into the TidyCode editor.';
   const fileContextInfo = { included: false, truncated: false, originalSize: 0, includedSize: 0 };
 
@@ -88,7 +88,7 @@ function buildSystemPrompt(activeTab, selectedText, includeFileContent) {
     fileContextInfo.included = true;
     fileContextInfo.originalSize = fileContent.length;
 
-    if (fileContent.length > MAX_FILE_CONTEXT_CHARS) {
+    if (allowTruncation && fileContent.length > MAX_FILE_CONTEXT_CHARS) {
       fileContent = fileContent.slice(0, MAX_FILE_CONTEXT_CHARS);
       fileContextInfo.truncated = true;
     }
@@ -237,6 +237,12 @@ export function useAIChat({
         return;
       }
 
+      const privateChat = aiSettings?.provider === 'chrome-nano';
+      if (privateChat) {
+        try { providerManager.setActiveProvider('chrome-nano'); } catch (error) { setError(error.message); return; }
+        if (images.length) { setError('Private AI chat supports text only. Remove image attachments and try again.'); return; }
+      }
+
       // Auto-create a session if none is active
       if (!activeSessionId) {
         const newId = `session-${Date.now()}`;
@@ -264,7 +270,7 @@ export function useAIChat({
       // Store for retry
       lastSentRef.current = { userText: userText.trim(), includeFileContent, images };
 
-      const { prompt: systemPrompt, fileContextInfo } = buildSystemPrompt(activeTab, selectedText, includeFileContent);
+      const { prompt: systemPrompt, fileContextInfo } = buildSystemPrompt(activeTab, selectedText, includeFileContent, !privateChat);
 
       // Warn about large file context
       if (fileContextInfo.included) {
@@ -296,7 +302,9 @@ export function useAIChat({
       const currentMessages = messagesRef.current;
 
       // Compact older messages if conversation is getting long
-      const { compacted, wasCompacted } = compactConversation([...currentMessages, userMsg]);
+      const { compacted, wasCompacted } = privateChat
+        ? { compacted: [...currentMessages, userMsg], wasCompacted: false }
+        : compactConversation([...currentMessages, userMsg]);
       if (wasCompacted) {
         showTransientMessage?.('Context compacted to fit within model limits.', 'info');
       }

@@ -2,6 +2,7 @@ import { ANTHROPIC_API_URL, anthropicHeaders, claudeMaxTokens, extractClaudeText
 
 // AI Provider types
 export const AI_PROVIDERS = {
+  CHROME_NANO: 'chrome-nano',
   TINYLLM: 'tinyllm', // Lightweight browser-based model for JSON/XML only
   GROQ: 'groq',
   OPENAI: 'openai',
@@ -493,8 +494,6 @@ Fixed ${errorDetails.type}:`;
         });
       }
 
-      console.log('[TinyLLM] Input content:', content);
-      console.log('[TinyLLM] Error details:', errorDetails);
 
       let result;
       if (errorDetails.type === 'JSON') {
@@ -504,7 +503,7 @@ Fixed ${errorDetails.type}:`;
         // Call fixXML without useAI parameter (uses config default)
         result = await this.tinyLLMEngine.fixXML(content);
       } else {
-        throw new Error(`TinyLLM only supports JSON and XML files. Current type: ${errorDetails.type}`);
+        throw new Error(`Auto-fix only supports JSON and XML files. Current type: ${errorDetails.type}`);
       }
 
       console.log('[TinyLLM] Result:', {
@@ -514,25 +513,13 @@ Fixed ${errorDetails.type}:`;
         canTryAI: result?.canTryAI || false
       });
 
-      if (result?.fixes?.length > 0) {
-        console.log('[TinyLLM] Fixes applied:', result.fixes);
-      }
-
       // TinyLLM returns: { success, fixed, original, fixes, data, errors, method, canTryAI }
       const isValid = Boolean(result?.fixed) && this.isValidContent(result.fixed, errorDetails.type);
       if (result && result.success && isValid) {
-        console.log(`[TinyLLM] ✓ Successfully fixed using ${result.method || 'rule-based'} approach`);
-        console.log('[TinyLLM] FULL FIXED CONTENT:', result.fixed);
-        console.log('[TinyLLM] First 500 chars:', result.fixed.substring(0, 500));
-        console.log('[TinyLLM] Contains \\b character codes:', result.fixed.includes('\\b'));
-        console.log('[TinyLLM] Sample quotes check:', result.fixed.match(/"[^"]*"/g)?.slice(0, 5));
         return result.fixed.trim();
       } else if (allowPartial && result?.fixed && result.fixed.trim() !== content.trim()) {
         // Return the fixed version even if not fully successful (best effort)
         console.log('[TinyLLM] ⚠ Partial fix applied (validation may still fail)');
-        console.log('[TinyLLM] PARTIAL FIXED CONTENT:', result.fixed);
-        console.log('[TinyLLM] First 500 chars:', result.fixed.substring(0, 500));
-        console.log('[TinyLLM] Contains \\b character codes:', result.fixed.includes('\\b'));
         return result.fixed.trim();
       } else {
         // Fixing failed completely
@@ -543,11 +530,11 @@ Fixed ${errorDetails.type}:`;
           console.warn('[TinyLLM] Tip: Consider using Groq, OpenAI, or Claude providers for complex fixes.');
         }
 
-        throw new Error(`TinyLLM could not fix the content: ${errorMsg}`);
+        throw new Error(`Auto-fix could not fix the content: ${errorMsg}`);
       }
     } catch (error) {
       console.error('[TinyLLM] Exception:', error);
-      throw new Error(`TinyLLM error: ${error.message}`);
+      throw new Error(`Auto-fix error: ${error.message}`);
     }
   }
 
@@ -633,7 +620,7 @@ Fixed ${errorDetails.type}:`;
   }
 
   // Main fix function
-  async fix(content, errorDetails, settings, onProgress) {
+  async fix(content, errorDetails, settings, onProgress, { skipAutoFix = false } = {}) {
     const { provider, groqApiKey, groqModel, openaiApiKey, openaiModel, claudeApiKey, claudeModel,
             geminiApiKey, geminiModel, mistralApiKey, mistralModel,
             cerebrasApiKey, cerebrasModel, sambanovaApiKey, sambanovaModel } = settings;
@@ -649,7 +636,7 @@ Fixed ${errorDetails.type}:`;
     try {
       // Always try TinyLLM first for JSON/XML — it's fast, browser-based, and requires no API key.
       // Fall back to the configured provider only if TinyLLM fails.
-      if (errorDetails.type === 'JSON' || errorDetails.type === 'XML') {
+      if (!skipAutoFix && (errorDetails.type === 'JSON' || errorDetails.type === 'XML')) {
         try {
           // Partial fixes only when TinyLLM is the chosen provider; otherwise the provider gets a turn
           return await this.fixWithTinyLLM(content, errorDetails, { allowPartial: provider === AI_PROVIDERS.TINYLLM });
@@ -660,7 +647,7 @@ Fixed ${errorDetails.type}:`;
             throw tinyErr;
           }
           if (onProgress) {
-            onProgress({ progress: 65, text: `TinyLLM failed, trying ${provider}...`, timeElapsed: 0 });
+            onProgress({ progress: 65, text: `Auto-fix failed, trying ${provider}...`, timeElapsed: 0 });
           }
           // Otherwise fall through to the configured provider below.
         }
@@ -669,6 +656,10 @@ Fixed ${errorDetails.type}:`;
       // TinyLLM selected but type is not JSON/XML — let fixWithTinyLLM throw the descriptive error.
       if (provider === AI_PROVIDERS.TINYLLM) {
         return await this.fixWithTinyLLM(content, errorDetails);
+      }
+
+      if (provider === AI_PROVIDERS.CHROME_NANO) {
+        throw new Error('Auto-fix could not repair this document. Private AI document repair is not enabled yet. Choose a cloud provider explicitly to try another repair.');
       }
 
       // Groq mode
@@ -752,9 +743,11 @@ Fixed ${errorDetails.type}:`;
             geminiApiKey, geminiModel, mistralApiKey, mistralModel,
             cerebrasApiKey, cerebrasModel, sambanovaApiKey, sambanovaModel } = settings;
 
+    if (provider === AI_PROVIDERS.CHROME_NANO) throw new Error('Private AI currently supports Explain and Summarize Logs. Choose another provider explicitly for text transformations.');
+
     // TinyLLM doesn't support text transformation (JSON/XML only)
     if (provider === AI_PROVIDERS.TINYLLM) {
-      throw new Error('TinyLLM only supports fixing JSON and XML files. Text transformation is not available. Please select a different AI provider for notes features.');
+      throw new Error('Auto-fix only supports fixing JSON and XML files. Text transformation is not available. Please select a different AI provider for notes features.');
     }
 
     const prompts = {

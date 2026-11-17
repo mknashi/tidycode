@@ -1,3 +1,4 @@
+import { isDesktop } from '../../../utils/platform.js';
 /**
  * AI Providers
  *
@@ -15,6 +16,7 @@ export { OllamaProvider } from './OllamaProvider.js';
  * Provider map for dynamic instantiation
  */
 export const providers = {
+  ...(!isDesktop() ? { 'chrome-nano': () => import('./ChromeBuiltInProvider.js').then(m => m.ChromeBuiltInProvider) } : {}),
   claude: () => import('./ClaudeProvider.js').then(m => m.ClaudeProvider),
   openai: () => import('./OpenAIProvider.js').then(m => m.OpenAIProvider),
   gemini: () => import('./GeminiProvider.js').then(m => m.GeminiProvider),

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { allSuites as chromeNanoSuites } from './chromeNano.test.js';
 
 /**
  * AI Provider Test Runner
@@ -66,6 +67,7 @@ ${colors.bright}${colors.cyan}╚═══════════════�
 
   // Collect all unit test suites
   const unitSuites = [
+    ...chromeNanoSuites,
     ...providerInterfaceSuites,
     ...providersSuites,
     ...providerManagerSuites,

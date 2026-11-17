@@ -109,8 +109,11 @@ function buildProviderConfig(aiSettings) {
     };
   }
 
+  if (aiSettings.provider === 'chrome-nano') providers['chrome-nano'] = { defaultModel: 'gemini-nano' };
+
   // Map old provider name to new provider ID
   const providerMap = {
+    'chrome-nano': 'chrome-nano',
     groq: 'groq',
     openai: 'openai',
     claude: 'claude',
@@ -150,7 +153,6 @@ export function useAIActions({
   const activeTab = tabs?.find(t => t.id === activeTabId) || null;
   // Provider initialization state
   const [providerInitialized, setProviderInitialized] = useState(false);
-  const initializingRef = useRef(false);
 
   // AI actions menu state
   const [actionsMenuPos, setActionsMenuPos] = useState(null);
@@ -162,10 +164,14 @@ export function useAIActions({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [lastAction, setLastAction] = useState(null);
+  const lastRequestRef = useRef(null);
+  const cloudRetryBusyRef = useRef(false);
 
   // Streaming state
+  const actionAbortRef = useRef(null);
   const streamingTextRef = useRef('');
   const streamThrottleRef = useRef(null);
+  useEffect(() => () => { actionAbortRef.current?.abort(); clearTimeout(streamThrottleRef.current); }, []);
 
   // Results panel state
   const [showResultsPanel, setShowResultsPanel] = useState(false);
@@ -179,32 +185,33 @@ export function useAIActions({
    * Initialize provider manager from aiSettings
    */
   useEffect(() => {
+    let cancelled = false;
+    setProviderInitialized(false);
     const initProvider = async () => {
-      if (initializingRef.current) return;
+
       if (!aiSettings || !aiSettings.provider) return;
 
-      initializingRef.current = true;
       try {
         const config = buildProviderConfig(aiSettings);
 
         // Only initialize if we have an active provider with credentials
         if (config.activeProvider && Object.keys(config.providers).length > 0) {
           await providerManager.initialize(config);
+          if (cancelled) return;
           providerManager.setPrivacyConfig({
             maxContextChars: aiSettings.maxContextChars || 0,
           });
           registerActions();
-          setProviderInitialized(true);
+          if (!cancelled) setProviderInitialized(true);
         }
       } catch (error) {
         console.error('Failed to initialize AI provider:', error);
-        setProviderInitialized(false);
-      } finally {
-        initializingRef.current = false;
+        if (!cancelled) setProviderInitialized(false);
       }
     };
 
     initProvider();
+    return () => { cancelled = true; };
   }, [
     aiSettings?.provider,
     aiSettings?.groqApiKey,
@@ -235,16 +242,20 @@ export function useAIActions({
         showTransientMessage?.(`Content will be sent to ${aiSettings.provider} for processing. Sensitive data (API keys, tokens, passwords) will be detected and blocked automatically.`, 'warn');
       }
 
+      if (actionLoading) return null;
       const selection = selectionOverride !== undefined ? selectionOverride : selectedText;
 
       // Auto-select best provider/model when multiple are available
       try {
-        const readyProviders = providerManager.getAvailableProviders().filter(p => p.isReady);
-        if (readyProviders.length > 1) {
+        const readyProviders = providerManager.getAvailableProviders().filter(p => p.isReady && (p.id !== 'chrome-nano' || aiSettings?.provider === 'chrome-nano'));
+        if (aiSettings?.provider === 'chrome-nano') {
+          providerManager.setActiveProvider('chrome-nano');
+        } else if (readyProviders.length > 1) {
           const contentLength = (activeTab?.content || '').length + (selection || '').length;
           const best = autoSelectProvider({
             contentLength,
             actionId,
+            localOnly: providerManager.localOnly,
             availableProviders: readyProviders,
           });
           if (best && best.providerId !== providerManager.activeProvider?.id) {
@@ -267,6 +278,8 @@ export function useAIActions({
         language: activeTab?.language || '',
         fileName: activeTab?.title || '',
       });
+
+      lastRequestRef.current = { actionId, context, options, selection };
 
       // Try streaming variant first
       const streamFn = STREAM_ACTIONS[actionId];
@@ -301,7 +314,7 @@ export function useAIActions({
         setActionLoading(false);
       }
     },
-    [providerInitialized, activeTab, selectedText, selectionRange, showTransientMessage, aiSettings]
+    [actionLoading, providerInitialized, activeTab, selectedText, selectionRange, showTransientMessage, aiSettings]
   );
 
   /**
@@ -310,6 +323,10 @@ export function useAIActions({
   const executeWithStreaming = useCallback(
     async (streamFn, actionId, context, options, selection) => {
       streamingTextRef.current = '';
+      let metadata = {};
+      const controller = new AbortController();
+      actionAbortRef.current = controller;
+      const streamOptions = { ...options, signal: controller.signal, onMetadata: value => { metadata = value; } };
 
       const onChunk = (text, isDone) => {
         if (isDone) return;
@@ -324,13 +341,14 @@ export function useAIActions({
               text: streamingTextRef.current,
               success: true,
               streaming: true,
+              metadata,
             });
           }, 60);
         }
       };
 
       try {
-        const result = await streamFn(context, onChunk, options);
+        const result = await streamFn(context, onChunk, streamOptions);
 
         // Clear any pending throttle and set final result
         if (streamThrottleRef.current) {
@@ -377,10 +395,52 @@ export function useAIActions({
       } finally {
         setActionLoading(false);
         streamingTextRef.current = '';
+        actionAbortRef.current = null;
       }
     },
     [activeTab, selectionRange]
   );
+
+  const cloudRetryProviders = aiSettings?.provider === 'chrome-nano' && actionError && lastRequestRef.current
+    ? providerManager.getAvailableProviders().filter(provider => provider.isReady && !isLocalProvider(provider.id) && provider.capabilities.includes(lastRequestRef.current.actionId))
+    : [];
+
+  const retryWithCloud = useCallback(async providerId => {
+    const request = lastRequestRef.current;
+    if (!request || actionLoading || cloudRetryBusyRef.current) return;
+    cloudRetryBusyRef.current = true;
+    const controller = new AbortController();
+    actionAbortRef.current = controller;
+    setActionLoading(true);
+    setActionError(null);
+    setActionResult(null);
+    try {
+      const dispatcher = providerManager.createCloudRetry(providerId, request.actionId);
+      const handlers = {
+        [ACTION_IDS.EXPLAIN]: explainAction,
+        [ACTION_IDS.REFACTOR]: refactorAction,
+        [ACTION_IDS.CONVERT]: convertAction,
+        [ACTION_IDS.INFER_SCHEMA]: inferSchemaAction,
+        [ACTION_IDS.SUMMARIZE_LOGS]: summarizeLogsAction,
+        [ACTION_IDS.GENERATE_TESTS]: generateTestAction,
+      };
+      const handler = handlers[request.actionId];
+      if (!handler) throw new Error('Cloud retry is unavailable for this action.');
+      // Use the original request snapshot, even if the editor has since changed.
+      const result = await handler(request.context, { ...request.options, providerManager: dispatcher, signal: controller.signal });
+      result.metadata = { ...result.metadata, providerName: providerManager.getProvider(providerId)?.name, cloudRetry: true };
+      if (!controller.signal.aborted) {
+        setActionResult(result);
+        if (!result.success) setActionError(result.error);
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) setActionError(error.message);
+    } finally {
+      cloudRetryBusyRef.current = false;
+      actionAbortRef.current = null;
+      setActionLoading(false);
+    }
+  }, [actionLoading]);
 
   /**
    * Regenerate the last action
@@ -465,6 +525,7 @@ export function useAIActions({
    * Close results panel and clear state
    */
   const closeResults = useCallback(() => {
+    actionAbortRef.current?.abort();
     setShowResultsPanel(false);
     setActionResult(null);
     setActionError(null);
@@ -501,6 +562,8 @@ export function useAIActions({
     // Action execution
     executeAction,
     regenerate,
+    retryWithCloud,
+    cloudRetryProviders,
     actionResult,
     actionLoading,
     actionError,

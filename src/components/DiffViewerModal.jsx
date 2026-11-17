@@ -1,8 +1,11 @@
+import { getEditorTypography } from '../utils/editorTypography';
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { X, Check, XCircle } from 'lucide-react';
 import { generateDiff, getDiffStats, getInlineDiff } from '../utils/DiffUtils';
 
-const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
+const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme, fontSize = 'xs', canReplaceCurrent = true, repairLabel = 'Suggested repair' }) => {
+  const [destination, setDestination] = useState(() => canReplaceCurrent ? 'current-tab' : 'new-tab');
+  useEffect(() => { if (!canReplaceCurrent) setDestination('new-tab'); }, [canReplaceCurrent]);
   const [ignoreBlankLines, setIgnoreBlankLines] = useState(false);
   const [acceptedChanges, setAcceptedChanges] = useState(new Set());
 
@@ -51,7 +54,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
   }, [syncScroll]);
 
   const getDiffLineClass = (type, theme, side) => {
-    const baseClass = 'font-mono text-sm leading-6 px-2 py-1 whitespace-pre-wrap break-all min-h-[28px] flex items-start border-l-2';
+    const baseClass = 'repair-diff-line px-2 whitespace-pre-wrap break-all  flex items-start border-l-2';
 
     if (theme === 'dark') {
       switch (type) {
@@ -181,7 +184,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
       diffIdx++;
     }
 
-    onAccept(resultLines.join('\n'));
+    onAccept(resultLines.join('\n'), destination);
   };
 
   // Scroll to a specific diff line
@@ -215,7 +218,9 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div
-        className={`w-full max-w-[95vw] h-[90vh] rounded-lg shadow-2xl flex flex-col ${
+        data-testid="repair-diff"
+        style={getEditorTypography(fontSize)}
+        className={`editor-typography w-full max-w-[95vw] h-[90vh] rounded-lg shadow-2xl flex flex-col ${
           theme === 'dark' ? 'bg-gray-800' : 'bg-white'
         }`}
       >
@@ -227,7 +232,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
             <h2 className={`text-xl font-bold flex items-center gap-3 ${
               theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
             }`}>
-              <span>AI-Suggested Fix</span>
+              <span>{repairLabel}</span>
               <span className={`text-xs font-normal px-3 py-1 rounded-full ${
                 theme === 'dark'
                   ? 'bg-purple-900/40 text-purple-300'
@@ -330,7 +335,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
                   return (
                     <div
                       key={idx}
-                      className={`font-mono text-sm leading-6 px-2 py-1 min-h-[28px] ${
+                      className={`repair-diff-line px-2  ${
                         theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100/50'
                       }`}
                     >
@@ -386,7 +391,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
                 ? 'bg-gray-900 text-gray-400 border-gray-700'
                 : 'bg-gray-100 text-gray-600 border-gray-200'
             }`}>
-              <span>AI-Fixed Version</span>
+              <span>Proposed version</span>
               <span className={`px-2 py-0.5 rounded text-[10px] ${
                 theme === 'dark' ? 'bg-green-900/40 text-green-300' : 'bg-green-100 text-green-700'
               }`}>
@@ -406,7 +411,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
                   return (
                     <div
                       key={idx}
-                      className={`font-mono text-sm leading-6 px-2 py-1 min-h-[28px] ${
+                      className={`repair-diff-line px-2  ${
                         theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-100/50'
                       }`}
                     >
@@ -482,7 +487,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between px-6 py-4 border-t ${
+        <div className={`flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t ${
           theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'
         }`}>
           <div className={`flex items-start gap-2 text-sm ${
@@ -492,7 +497,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
             <div>
               <p className="font-medium">Review changes before accepting</p>
               <p className="text-xs mt-1">
-                Original content will be preserved in a new tab •
+                {destination === 'new-tab' ? 'Opens the result in a new tab; the original stays unchanged.' : 'Replaces this tab’s content; use Undo to restore it.'} •
                 <span className={theme === 'dark' ? 'text-green-400' : 'text-green-600'}> Green</span> = Added,
                 <span className={theme === 'dark' ? 'text-red-400' : 'text-red-600'}> Red</span> = Removed,
                 <span className={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}> Blue</span> = Modified
@@ -500,7 +505,19 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col items-end gap-2">
+            <fieldset className="flex flex-wrap gap-3" aria-label="Apply repaired content to">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="repair-destination" value="new-tab" checked={destination === 'new-tab'} onChange={() => setDestination('new-tab')} />
+                Open in new tab
+              </label>
+              <label className={`flex items-center gap-1.5 ${canReplaceCurrent ? 'cursor-pointer' : 'opacity-50'}`}>
+                <input type="radio" name="repair-destination" value="current-tab" checked={destination === 'current-tab'} disabled={!canReplaceCurrent} onChange={() => setDestination('current-tab')} />
+                Replace current tab
+              </label>
+            </fieldset>
+            {!canReplaceCurrent && <p role="status">The source tab changed or is no longer active. Open the result in a new tab.</p>}
+            <div className="flex flex-wrap gap-3">
             <button
               onClick={onReject}
               className={`flex items-center gap-2 px-5 py-2.5 rounded transition-colors font-medium ${
@@ -528,7 +545,8 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
             )}
 
             <button
-              onClick={() => onAccept(fixed)}
+              title="Accept all changes and format the document"
+              onClick={() => onAccept(fixed, destination, { format: true })}
               className={`flex items-center gap-2 px-5 py-2.5 rounded transition-colors font-medium ${
                 theme === 'dark'
                   ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -538,6 +556,7 @@ const DiffViewerModal = ({ original, fixed, onAccept, onReject, theme }) => {
               <Check className="w-4 h-4" />
               Accept All Changes
             </button>
+            </div>
           </div>
         </div>
       </div>

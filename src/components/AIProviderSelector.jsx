@@ -1,3 +1,4 @@
+import { chromeNanoProvider } from '../services/ai/providers/ChromeBuiltInProvider.js';
 /**
  * AIProviderSelector Component
  *
@@ -31,12 +32,16 @@ export default function AIProviderSelector({
 
   // Load available providers (re-fetch when refreshKey changes)
   useEffect(() => {
-    try {
-      const available = providerManager.getAvailableProviders();
-      setProviders((available || []).filter((p) => p.isReady));
-    } catch {
-      setProviders([]);
-    }
+    const refresh = () => {
+      try {
+        const available = providerManager.getAvailableProviders();
+        setProviders((available || []).filter(p => p.isReady || p.id === 'chrome-nano'));
+      } catch {
+        setProviders([]);
+      }
+    };
+    refresh();
+    return chromeNanoProvider.status.subscribe(refresh);
   }, [refreshKey]);
 
   // Load models when provider changes
@@ -150,10 +155,12 @@ export default function AIProviderSelector({
             {providers.map((provider) => (
               <button
                 key={provider.id}
+                disabled={!provider.isReady}
+                title={!provider.isReady ? 'Open AI Settings to prepare Private AI' : undefined}
                 onClick={() => handleProviderSelect(provider.id)}
                 className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between ${itemHoverClasses}`}
               >
-                <span>{provider.name}</span>
+                <span>{provider.name}{provider.id === 'chrome-nano' ? ' · local' : ''}{!provider.isReady ? ' · not ready' : ''}</span>
                 {provider.id === currentProvider && (
                   <Check className="w-3 h-3 text-blue-400" />
                 )}
@@ -168,8 +175,17 @@ export default function AIProviderSelector({
         )}
       </div>
 
+      {/* Chrome manages the sole Private AI model; there is nothing to choose. */}
+      {!compact && currentProvider === 'chrome-nano' && (
+        <span
+          className={`px-2 py-1 text-xs rounded border ${isDark ? 'border-gray-600 text-gray-200' : 'border-gray-300 text-gray-800'}`}
+          title="Gemini Nano is selected automatically and managed by Chrome."
+        >
+          Gemini Nano · Auto
+        </span>
+      )}
       {/* Model Dropdown */}
-      {!compact && currentProvider && (
+      {!compact && currentProvider && currentProvider !== 'chrome-nano' && (
         <div className="relative" ref={modelRef}>
           <button
             onClick={() => !disabled && setModelOpen(!modelOpen)}

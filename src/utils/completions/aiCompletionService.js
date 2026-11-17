@@ -29,7 +29,7 @@ class AICompletionService {
    * Check if AI completions are enabled and configured
    */
   isEnabled() {
-    if (!this.enabled || !this.settings) return false;
+    if (!this.enabled || !this.settings || [AI_PROVIDERS.CHROME_NANO, AI_PROVIDERS.TINYLLM, 'none'].includes(this.settings.provider)) return false;
 
     const { provider, groqApiKey, openaiApiKey, claudeApiKey } = this.settings;
 

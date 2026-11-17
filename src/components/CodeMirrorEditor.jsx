@@ -1,3 +1,5 @@
+import { formatOnPaste } from '../utils/codemirror/formatOnPaste';
+import { EDITOR_FONT_FAMILY, getFontSizePixels, getLineHeightValue } from '../utils/editorTypography';
 import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { vim, Vim, getCM } from '@replit/codemirror-vim';
@@ -40,27 +42,6 @@ import { lspService } from '../services/LSPService';
 
 // Clipboard extension for Tauri
 import { clipboardExtension } from '../utils/codemirror/clipboardExtension';
-
-// Font size mapping
-const getFontSizePixels = (size) => {
-  const sizeMap = {
-    '2xs': '10px',
-    'xs': '12px',
-    'sm': '14px',
-    'base': '16px'
-  };
-  return sizeMap[size] || '12px';
-};
-
-const getLineHeightValue = (size) => {
-  const lineHeightMap = {
-    '2xs': '1.2',
-    'xs': '1.3',
-    'sm': '1.4',
-    'base': '1.5'
-  };
-  return lineHeightMap[size] || '1.3';
-};
 
 // Custom syntax highlighting for dark mode
 const darkHighlighting = HighlightStyle.define([
@@ -112,6 +93,7 @@ const CodeMirrorEditor = forwardRef(({
   onVimModeChange,
   onCursorChange,
   readOnly = false,
+  autoFormatOnPaste = false,
   placeholder = '',
   className = '',
   style = {},
@@ -202,6 +184,8 @@ const CodeMirrorEditor = forwardRef(({
       exts.push(vim());
     }
 
+    if (autoFormatOnPaste) exts.push(formatOnPaste);
+
     // Add language support
     exts.push(getLanguageExtension(language));
 
@@ -224,17 +208,39 @@ const CodeMirrorEditor = forwardRef(({
       '&': {
         height: '100%',
         overflow: 'auto',
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        fontFamily: EDITOR_FONT_FAMILY,
       },
       '.cm-scroller': {
         overflow: 'auto'
       },
       '.cm-content': {
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        fontFamily: EDITOR_FONT_FAMILY,
       },
       '.cm-gutters': {
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        fontFamily: EDITOR_FONT_FAMILY,
       }
+    }));
+
+    // Keep the glyph readable and leave its edges free for the insertion cursor.
+    // A bottom accent identifies the pair without boxing in the character.
+    exts.push(EditorView.theme({
+      '&.cm-focused .cm-content .cm-matchingBracket, .cm-content .cm-matchingBracket': {
+        backgroundColor: theme === 'dark' ? '#713f12' : '#fef3c7',
+        color: theme === 'dark' ? '#fef3c7' : '#78350f',
+        outline: 'none',
+        borderRadius: '0',
+        boxShadow: `inset 0 -2px ${theme === 'dark' ? '#fbbf24' : '#b45309'}`,
+      },
+      '&.cm-focused .cm-content .cm-nonmatchingBracket, .cm-content .cm-nonmatchingBracket': {
+        backgroundColor: theme === 'dark' ? '#fda4af' : '#be123c',
+        color: theme === 'dark' ? '#450a0a' : '#ffffff',
+        outline: 'none',
+        borderRadius: '0',
+        boxShadow: `inset 0 -2px ${theme === 'dark' ? '#fb7185' : '#881337'}`,
+      },
+      '.cm-content .cm-matchingBracket span, .cm-content .cm-nonmatchingBracket span': {
+        color: 'inherit',
+      },
     }));
 
     // Add font size theme
@@ -438,7 +444,7 @@ const CodeMirrorEditor = forwardRef(({
     exts.push(clipboardExtension());
 
     return exts;
-  }, [vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, aiSettings, lspSettings, searchTerm, caseSensitive]);
+  }, [autoFormatOnPaste, vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, aiSettings, lspSettings, searchTerm, caseSensitive]);
 
   // Prevent browser from intercepting VIM Ctrl keys (MUST use capture phase)
   useEffect(() => {
@@ -539,10 +545,11 @@ const CodeMirrorEditor = forwardRef(({
           color: '#e5e7eb', // text-gray-200
         },
         '.cm-content': {
-          caretColor: '#e5e7eb',
+          caretColor: '#67e8f9',
         },
         '.cm-cursor, .cm-dropCursor': {
-          borderLeftColor: '#e5e7eb',
+          borderLeftColor: '#67e8f9',
+          borderLeftWidth: '2px',
         },
         '.cm-activeLine': {
           backgroundColor: '#374151', // Light gray for active line in dark mode
@@ -575,10 +582,11 @@ const CodeMirrorEditor = forwardRef(({
           color: '#24292e',
         },
         '.cm-content': {
-          caretColor: '#24292e',
+          caretColor: '#0369a1',
         },
         '.cm-cursor, .cm-dropCursor': {
-          borderLeftColor: '#24292e',
+          borderLeftColor: '#0369a1',
+          borderLeftWidth: '2px',
         },
         '.cm-activeLine': {
           backgroundColor: '#e5e7eb', // Light gray (bg-gray-200) for active line in light mode

@@ -29,7 +29,7 @@ export function clipboardExtension() {
 
           if (text) {
             // Insert the clipboard text at the current selection
-            const transaction = view.state.update(view.state.replaceSelection(text));
+            const transaction = view.state.update(view.state.replaceSelection(text), { userEvent: 'input.paste' });
             view.dispatch(transaction);
             return true;
           }

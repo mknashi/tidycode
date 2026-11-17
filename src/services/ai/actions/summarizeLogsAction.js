@@ -130,11 +130,14 @@ export async function summarizeLogsAction(context, options = {}) {
   const prompt = buildSummarizePrompt(logContent, type);
 
   try {
-    const result = await providerManager.complete({
+    const result = await (options.providerManager || providerManager).complete({
       prompt,
+      sourceContent: logContent,
       language: 'markdown',
       task: 'summarize-logs',
       options: {
+        signal: options.signal,
+        onMetadata: options.onMetadata,
         maxTokens: 2048,
         temperature: 0.3,
       },
@@ -155,6 +158,7 @@ export async function summarizeLogsAction(context, options = {}) {
       warningCount,
       truncated,
       usage: result.usage,
+      ...result.metadata,
     });
   } catch (error) {
     return ActionResult.failure('summarize-logs', error.message);
@@ -179,12 +183,15 @@ export async function summarizeLogsActionStream(context, onChunk, options = {}) 
   const prompt = buildSummarizePrompt(content, type);
 
   try {
-    const result = await providerManager.streamComplete(
+    const result = await (options.providerManager || providerManager).streamComplete(
       {
         prompt,
+        sourceContent: content,
         language: 'markdown',
         task: 'summarize-logs',
         options: {
+          signal: options.signal,
+          onMetadata: options.onMetadata,
           maxTokens: 2048,
           temperature: 0.3,
         },
@@ -195,6 +202,7 @@ export async function summarizeLogsActionStream(context, onChunk, options = {}) 
     return ActionResult.success('summarize-logs', result.text, {
       analysisType: type,
       streamed: true,
+      ...result.metadata,
     });
   } catch (error) {
     return ActionResult.failure('summarize-logs', error.message);

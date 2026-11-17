@@ -1,0 +1,112 @@
+{
+  "date": "2026-11-17T04:06:21.083Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "contextWindow": 9216,
+  "hardware": "Apple M1 Pro, 16 GiB RAM, 10 physical cores",
+  "rulesBaseline": [
+    {
+      "name": "JSON missing comma between records",
+      "text": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[{\"id\":1,\"name\":\"A\"}, {\"id\":2,\"name\":\"B\"}],\"count\":2}"
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "text": "{\"name\":\"Ravi\",\"city\": \"Chicago\",\"age\":32}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"name\":\"Ravi\",\"city\": \"Chicago\",\"age\":32}"
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "error": "Auto-fix error: Auto-fix could not fix the content: Expected double-quoted property name in JSON at position 22 (line 1 column 23)",
+      "parses": false,
+      "preservesExpectedData": false
+    },
+    {
+      "name": "JSON missing final brace",
+      "text": "{\"items\":[1,2,3],\"active\":true}",
+      "parses": true,
+      "preservesExpectedData": true,
+      "cleanedOutput": "{\"items\":[1,2,3],\"active\":true}"
+    }
+  ],
+  "results": [
+    {
+      "name": "JSON missing comma between records",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"items\":[{\"id\":1,\"name\":\"A\"} {\"id\":2,\"name\":\"B\"}],\"count\":2}",
+      "expected": {
+        "items": [
+          {
+            "id": 1,
+            "name": "A"
+          },
+          {
+            "id": 2,
+            "name": "B"
+          }
+        ],
+        "count": 2
+      },
+      "error": "Private AI could not verify that this repair preserves your data. The document is unchanged.",
+      "rawOutput": "{\"document\":\"{\\\"items\\\":[{\\\"id\\\":1,\\\"name\\\":\\\"A\\\"},{\\\"id\\\":2,\\\"name\\\":\\\"B\\\"}],\\\"count\\\":2}\"}",
+      "parses": false,
+      "preservesExpectedData": false,
+      "latencyMs": 1418
+    },
+    {
+      "name": "JSON missing closing quote in property name",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"name\":\"Ravi\",\"city:\"Chicago\",\"age\":32}",
+      "expected": {
+        "name": "Ravi",
+        "city": "Chicago",
+        "age": 32
+      },
+      "error": "Private AI could not verify that this repair preserves your data. The document is unchanged.",
+      "rawOutput": "{\"document\":\"{\\\"name\\\":\\\"Ravi\\\",\\\"city\\\":\\\"Chicago\\\",\\\"age\\\":32}\"}",
+      "parses": false,
+      "preservesExpectedData": false,
+      "latencyMs": 897
+    },
+    {
+      "name": "JSON unescaped quotes inside a value",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"message\":\"He said \"hello\".\",\"id\":7}",
+      "expected": {
+        "message": "He said \"hello\".",
+        "id": 7
+      },
+      "error": "Private AI could not verify that this repair preserves your data. The document is unchanged.",
+      "rawOutput": "{\"document\":\"{\\\"message\\\":\\\"He said \\\\\\\"hello\\\\\\\".\\\",\\\"id\\\":7}\"}",
+      "parses": false,
+      "preservesExpectedData": false,
+      "latencyMs": 896
+    },
+    {
+      "name": "JSON missing final brace",
+      "type": "JSON",
+      "repetition": 1,
+      "input": "{\"items\":[1,2,3],\"active\":true",
+      "expected": {
+        "items": [
+          1,
+          2,
+          3
+        ],
+        "active": true
+      },
+      "error": "Private AI could not verify that this repair preserves your data. The document is unchanged.",
+      "rawOutput": "{\"document\":\"{\\\"items\\\":[1,2,3],\\\"active\\\":true}\"}",
+      "parses": false,
+      "preservesExpectedData": false,
+      "latencyMs": 894
+    }
+  ],
+  "integration": []
+}

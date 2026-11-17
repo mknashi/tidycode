@@ -571,3 +571,20 @@ body.theme-light .cm-line span::selection {
   .markdown-print-root img { max-width: 100%; break-inside: avoid; }
   .markdown-print-root hr { border: 0; border-top: 1px solid #d1d5db; margin: 1.5em 0; }
 }
+
+/* Diagnostic and repair surfaces follow the selected editor typography. */
+.editor-typography.editor-typography * {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+.editor-typography .repair-diff-line {
+  min-height: 1lh;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.editor-typography .repair-diff-line input[type="checkbox"] {
+  width: 1em;
+  height: 1em;
+  margin-top: 0.1em;
+}
