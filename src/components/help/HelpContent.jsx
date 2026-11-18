@@ -197,9 +197,9 @@ export const HelpContent = {
             <h3 className="text-lg font-semibold mb-3">Getting Started</h3>
             <div className="space-y-2">
               <div className={`p-3 rounded cursor-pointer hover:bg-opacity-80 ${theme === 'dark' ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                <h4 className="font-medium">Installation & Setup</h4>
+                <h4 className="font-medium">Open the Editor</h4>
                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Download and install Tidy Code on your system
+                  Open Tidy Code in your browser; no installation required
                 </p>
               </div>
               <div className={`p-3 rounded cursor-pointer hover:bg-opacity-80 ${theme === 'dark' ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}>
@@ -292,7 +292,7 @@ export const HelpContent = {
               <div className={`p-3 rounded cursor-pointer hover:bg-opacity-80 ${theme === 'dark' ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}>
                 <h4 className="font-medium">AI Integration</h4>
                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Use OpenAI, Claude, or Ollama for assistance
+                  Use Private AI or a configured cloud provider for assistance
                 </p>
               </div>
               <div className={`p-3 rounded cursor-pointer hover:bg-opacity-80 ${theme === 'dark' ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}>
@@ -307,12 +307,7 @@ export const HelpContent = {
                   Language server protocol for code intelligence
                 </p>
               </div>
-              <div className={`p-3 rounded cursor-pointer hover:bg-opacity-80 ${theme === 'dark' ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                <h4 className="font-medium">Terminal Integration</h4>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Built-in terminal panel for command execution
-                </p>
-              </div>
+
             </div>
           </div>
 
@@ -394,15 +389,7 @@ export const HelpContent = {
           </div>
 
           {/* Version 0.2.2 */}
-          <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <h4 className="font-medium mb-2">Version 0.2.2 - Native PDF Printing</h4>
-            <ul className={`space-y-1 ml-5 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>• Native PDF printing pipeline via Tauri plugin</li>
-              <li>• Cross-platform support for macOS and Windows</li>
-              <li>• Print options: page ranges, copies, and duplex</li>
-              <li>• Two-panel print dialog with preview thumbnails</li>
-            </ul>
-          </div>
+
 
           {/* Version 0.2.0 */}
           <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -411,7 +398,6 @@ export const HelpContent = {
               <li>• Full PDF viewing with search, zoom, and page navigation</li>
               <li>• Thumbnail sidebar and document outline support</li>
               <li>• Focus mode for distraction-free reading</li>
-              <li>• Native clipboard integration (desktop)</li>
             </ul>
           </div>
 
@@ -419,15 +405,7 @@ export const HelpContent = {
           <div>
             <h3 className="text-lg font-semibold mb-3">Previous Releases</h3>
             <div className="space-y-4">
-              <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <h4 className="font-medium mb-2">Desktop App & Multi-Platform Support</h4>
-                <ul className={`space-y-1 ml-5 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <li>• Tauri-based desktop application for macOS, Windows, Linux</li>
-                  <li>• Native file dialogs and system integration</li>
-                  <li>• Optimized tab and file handling across platforms</li>
-                  <li>• Platform-specific menu bars and shortcuts</li>
-                </ul>
-              </div>
+
 
               <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <h4 className="font-medium mb-2">Core Editor Features</h4>
@@ -444,7 +422,7 @@ export const HelpContent = {
               <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <h4 className="font-medium mb-2">Advanced Features</h4>
                 <ul className={`space-y-1 ml-5 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <li>• AI integration (OpenAI, Claude, Ollama)</li>
+                  <li>• AI integration with Private AI and cloud providers</li>
                   <li>• LSP support for code intelligence</li>
                   <li>• VIM mode for modal editing</li>
                   <li>• Structure view for JSON and XML</li>

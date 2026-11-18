@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tidy Code Release Notes - Version History & Updates</title>
-    <meta name="description" content="See what's new in Tidy Code. Latest: native PDF printing, thumbnails, WASM large file support, and desktop apps for macOS, Windows, Linux.">
+    <meta name="description" content="See what's new in Tidy Code. PDF viewing, thumbnails, and WebAssembly-powered file handling.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://www.tidycode.ai/docs/release-notes">
 
@@ -12,7 +12,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.tidycode.ai/docs/release-notes">
     <meta property="og:title" content="Tidy Code Release Notes - Version History & Updates">
-    <meta property="og:description" content="See what's new in Tidy Code. Latest: native PDF printing, thumbnails, WASM large file support, and desktop apps for macOS, Windows, Linux.">
+    <meta property="og:description" content="See what's new in Tidy Code. PDF viewing, thumbnails, and WebAssembly-powered file handling.">
     <meta property="og:image" content="https://www.tidycode.ai/tidycode-logo.svg">
     <meta property="og:site_name" content="Tidy Code">
 
@@ -20,7 +20,7 @@
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://www.tidycode.ai/docs/release-notes">
     <meta property="twitter:title" content="Tidy Code Release Notes - Version History & Updates">
-    <meta property="twitter:description" content="See what's new in Tidy Code. Native PDF printing, WASM large file support, and desktop apps.">
+    <meta property="twitter:description" content="See what's new in Tidy Code. PDF viewing and WebAssembly-powered file handling.">
     <meta property="twitter:image" content="https://www.tidycode.ai/tidycode-logo.svg">
 
     <!-- Breadcrumb Schema -->
@@ -431,7 +431,7 @@
             development progress including Ollama AI Chat improvements, file context safeguards,
             YAML/TOML format support, format conversion between JSON, XML, YAML, and TOML,
             PDF viewer capabilities, SVG support, WASM-powered large file handling, AI integrations,
-            and cross-platform desktop app releases for macOS, Windows, and Linux.
+            and browser editing improvements.
         </p>
 
         <div class="section">
@@ -442,16 +442,7 @@
                     <span class="badge badge-current">Current</span>
                 </div>
 
-                <div class="release-section">
-                    <h3>🔌 Ollama Desktop CORS Fix</h3>
-                    <ul class="feature-list">
-                        <li><strong>Tauri backend proxy for Ollama</strong> — all Ollama HTTP requests routed through Rust backend, eliminating CORS errors</li>
-                        <li>New Tauri commands: <code>ollama_api_get</code>, <code>ollama_chat</code>, <code>ollama_chat_stream</code></li>
-                        <li>Streaming chat via Tauri events with async Rust tasks</li>
-                        <li>Web mode retains direct fetch as fallback</li>
-                        <li>End users no longer need to manually configure OLLAMA_ORIGINS</li>
-                    </ul>
-                </div>
+
 
                 <div class="release-section">
                     <h3>🤖 AI Chat File Context Improvements</h3>
@@ -467,7 +458,6 @@
                     <h3>🐛 Bug Fixes</h3>
                     <ul class="feature-list">
                         <li><strong>Large file performance</strong> — auto-format and structure tree skip files over 100KB, preventing UI blocking</li>
-                        <li>Fixed Ollama CORS error ("Cannot connect to Ollama") in desktop app</li>
                         <li>Fixed Ollama ignoring file context for larger files due to small default context window</li>
                         <li>Fixed session restore causing slowdown when restoring large file tabs</li>
                     </ul>
@@ -537,16 +527,7 @@
                     <span class="badge badge-previous">Previous</span>
                 </div>
 
-                <div class="release-section">
-                    <h3>🖨️ Native PDF Printing (Desktop)</h3>
-                    <ul class="feature-list">
-                        <li><strong>New native PDF printing pipeline</strong> via a dedicated Tauri plugin</li>
-                        <li>Cross-platform support for macOS and Windows with Linux groundwork in place</li>
-                        <li>Printer discovery with default printer selection</li>
-                        <li>Paper size selection with default media preselected</li>
-                        <li>Print options: page ranges, manual page selection, copies, and duplex</li>
-                    </ul>
-                </div>
+
 
                 <div class="release-section">
                     <h3>🪟 Print Dialog UI & Preview</h3>
@@ -564,7 +545,6 @@
                         <li>Non-blocking print dispatch to keep the UI responsive</li>
                         <li>Path-first loading strategy for stable preview loading</li>
                         <li>Expanded logging and timing metrics for print and preview workflows</li>
-                        <li>Permission and ACL updates for native print commands</li>
                     </ul>
                 </div>
             </div>
@@ -603,23 +583,13 @@
                     </ul>
                 </div>
 
-                <div class="release-section">
-                    <h3>📋 Enhanced Clipboard Integration (Desktop)</h3>
-                    <ul class="feature-list">
-                        <li><strong>Native clipboard API</strong> using Tauri plugin - no permission prompts</li>
-                        <li>Seamless copy/cut/paste operations with Ctrl/Cmd+C/X/V</li>
-                        <li>Custom CodeMirror extension intercepts clipboard keypresses</li>
-                        <li>Automatic fallback to browser API in web mode</li>
-                        <li>Cross-platform utilities for clipboard read/write operations</li>
-                    </ul>
-                </div>
+
 
                 <div class="release-section">
                     <h3>🔧 Technical Improvements</h3>
                     <ul class="feature-list">
                         <li><strong>Code splitting:</strong> PDF and SVG viewers lazy-loaded for better performance</li>
                         <li>PDF.js worker (1.0MB) and 170+ CMap files bundled locally (no CDN dependencies)</li>
-                        <li>Fixed Windows build issues with cross-platform dependency resolution</li>
                         <li>Added pdfjs-dist as direct dependency for reliable builds</li>
                         <li>Multi-retry text layer rendering for reliable PDF search highlighting</li>
                         <li>Panel state restoration when exiting focus mode</li>
@@ -630,7 +600,6 @@
                     <h3>📚 Documentation</h3>
                     <ul class="feature-list">
                         <li>Added comprehensive PDF_TROUBLESHOOTING.md guide</li>
-                        <li>Created WINDOWS_BUILD_GUIDE.md for Windows-specific build instructions</li>
                         <li>Added LICENSES.md for PDF.js and react-pdf third-party licenses</li>
                         <li>Updated CHANGELOG.md with detailed v0.2.0 release notes</li>
                         <li>Enhanced help pages with PDF and SVG viewer documentation</li>
@@ -654,9 +623,7 @@
                         <li>Efficient virtual scrolling for optimal memory usage</li>
                         <li>Automatic syntax highlighting control for performance optimization</li>
                         <li>Memory-efficient content storage and retrieval with Rust backend</li>
-                        <li><strong>Fixed:</strong> WASM now works in production desktop builds (DMG, MSI, AppImage)</li>
                         <li><strong>Fixed:</strong> Build configuration ensures WASM compilation before bundling</li>
-                        <li>3-tier initialization strategy for universal compatibility (web + desktop)</li>
                     </ul>
                 </div>
 
@@ -699,7 +666,6 @@
                     <h3>Help System</h3>
                     <ul class="feature-list">
                         <li>Comprehensive Help menu with Welcome, Tips & Tricks, Documentation, and Release Notes</li>
-                        <li>Platform-specific behavior: external links on desktop, modals on web</li>
                         <li>Professional help pages with detailed guides and tutorials</li>
                     </ul>
                 </div>
@@ -708,20 +674,11 @@
             <!-- Previous Releases -->
             <div class="release">
                 <div class="release-header">
-                    <h2>Desktop App & Multi-Platform Support</h2>
+                    <h2>Performance Improvements</h2>
                     <span class="badge badge-previous">Previous</span>
                 </div>
 
-                <div class="release-section">
-                    <h3>Desktop Application</h3>
-                    <ul class="feature-list">
-                        <li>Tauri-based desktop application for macOS, Windows, and Linux</li>
-                        <li>Native file dialogs and system integration</li>
-                        <li>Optimized tab and file handling across platforms</li>
-                        <li>Platform-specific menu bars with native shortcuts</li>
-                        <li>Offline support and faster performance</li>
-                    </ul>
-                </div>
+
 
                 <div class="release-section">
                     <h3>Performance Improvements</h3>
@@ -768,7 +725,6 @@
                         <li>AI integration with OpenAI, Claude (Anthropic), and Ollama</li>
                         <li>Language Server Protocol (LSP) support for code intelligence</li>
                         <li>VIM mode for modal editing with standard keybindings</li>
-                        <li>Built-in terminal panel (desktop only)</li>
                         <li>Diff Viewer for comparing files side-by-side</li>
                         <li>Save confirmation dialog for unsaved files</li>
                     </ul>
@@ -780,7 +736,6 @@
                         <li>React 18 with Vite for fast development and builds</li>
                         <li>Tailwind CSS for responsive, modern styling</li>
                         <li>CodeMirror 6 for powerful code editing capabilities</li>
-                        <li>Tauri for cross-platform desktop application</li>
                         <li>Lucide React for beautiful, consistent icons</li>
                     </ul>
                 </div>

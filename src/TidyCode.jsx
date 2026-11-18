@@ -3336,7 +3336,7 @@ const TidyCode = () => {
             if (isTauriDesktop) {
               displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for desktop mode.\n\nPlease use a specialized tool for files of this size.`;
             } else {
-              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for web mode.\n\n💡 The Tidy Code desktop app supports files up to ${formatFileSize(1024 * 1024 * 1024)}!\n\n📥 Download the desktop app:\nhttps://www.tidycode.ai/download-alpha`;
+              displayContent = `File too large (${formatFileSize(fileSize)})\n\nThis file exceeds the ${formatFileSize(WASM_STORAGE_LIMIT)} limit for web mode.\n\nTry splitting the document into smaller files before opening it.`;
             }
             showTransientMessage(`File too large: ${formatFileSize(fileSize)}`, 'error');
           }
@@ -11358,10 +11358,7 @@ const TidyCode = () => {
                       <span className="text-green-500">✓</span>
                       <span>Multi-tab editing with auto-save</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Desktop app with file associations</span>
-                    </div>
+
                   </div>
                 </div>
 

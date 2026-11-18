@@ -331,11 +331,6 @@
             color: #eff6ff;
         }
 
-        .badge-desktop {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: #d1fae5;
-        }
-
         .badge-both {
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
             color: #ede9fe;
@@ -410,12 +405,11 @@
 
             <h3>File Management</h3>
             <ul class="feature-list">
-                <li><strong>New File:</strong> Click "New" button (web) or <span class="kbd">Cmd/Ctrl + N</span> (desktop)</li>
-                <li><strong>Open File:</strong> Click "Open File" button (web) or <span class="kbd">Cmd/Ctrl + O</span> (desktop)</li>
-                <li><strong>Save:</strong> Save current file with <span class="kbd">Cmd/Ctrl + S</span> (both platforms)</li>
-                <li><strong>Save As:</strong> Save with new name using <span class="kbd">Cmd/Ctrl + Shift + S</span> (both platforms)</li>
-                <li><strong>Close Tab:</strong> Click X on tab (web) or right-click context menu (both platforms)</li>
-                <li><strong>Recent Files:</strong> Access recently opened files via menu (desktop only)</li>
+                <li><strong>New File:</strong> Click the "New" button</li>
+                <li><strong>Open File:</strong> Click the "Open" button</li>
+                <li><strong>Save:</strong> Save current file with <span class="kbd">Cmd/Ctrl + S</span></li>
+                <li><strong>Save As:</strong> Save with new name using <span class="kbd">Cmd/Ctrl + Shift + S</span></li>
+                <li><strong>Close Tab:</strong> Click X on tab or right-click context menu</li>
                 <li><strong>File Explorer:</strong> Click "Explorer" button to view all open tabs in tree structure</li>
             </ul>
 
@@ -431,7 +425,7 @@
 
             <h3>Search & Replace</h3>
             <ul class="feature-list">
-                <li><strong>Open Panel:</strong> Click "Find/Replace" button in toolbar (both platforms)</li>
+                <li><strong>Open Panel:</strong> Click "Find/Replace" button in toolbar</li>
                 <li><strong>Search:</strong> Enter text in search field to find matches</li>
                 <li><strong>Replace:</strong> Use replace field to substitute text</li>
                 <li><strong>Regex Support:</strong> Toggle regex mode for pattern matching</li>
@@ -554,13 +548,12 @@
                 <li><strong>Auto-Optimization:</strong> Syntax highlighting disabled for files >10MB</li>
             </ul>
 
-            <h3>AI Integration<span class="platform-badge badge-both">Web + Desktop</span></h3>
+            <h3>AI Integration<span class="platform-badge badge-both">Web</span></h3>
             <ul class="feature-list">
                 <li><strong>Private AI:</strong> Gemini Nano runs on your device in supported desktop Chrome installations. Free, with no API key. Availability depends on Chrome's Prompt API and device support; unsupported browsers show a disabled option.</li>
                 <li><strong>Model Setup:</strong> Prepare the model before using Private AI. Chrome manages the initial model download, which can be several gigabytes; Gemini Nano is selected automatically.</li>
                 <li><strong>Private AI Tasks:</strong> Short chat, grammar correction, brief explanations, and log summaries. Experimental JSON repair accepts documents up to 8,192 characters; Nano XML repair is not available.</li>
                 <li><strong>Cloud Providers:</strong> Configure a provider such as OpenAI, Claude, Groq, or Gemini. Cloud requests send submitted content to the selected provider.</li>
-                <li><strong>Ollama:</strong> Use locally hosted models in the desktop app.</li>
             </ul>
 
             <h3>JSON and XML Error Recovery</h3>
@@ -593,18 +586,11 @@
                 <li><strong>Language Support:</strong> JavaScript, TypeScript, Python, and more</li>
             </ul>
 
-            <h3>Terminal Integration<span class="platform-badge badge-desktop">Desktop Only</span></h3>
-            <ul class="feature-list">
-                <li><strong>Built-in Terminal:</strong> Integrated terminal panel</li>
-                <li><strong>Toggle Panel:</strong> Click the Terminal icon button in toolbar</li>
-                <li><strong>Multiple Terminals:</strong> Create multiple terminal instances</li>
-                <li><strong>Full Shell:</strong> Access to complete shell environment</li>
-                <li><strong>Working Directory:</strong> Terminal opens in your current project folder</li>
-            </ul>
+
         </div>
 
         <div class="section">
-            <h2>Platform-Specific Features</h2>
+            <h2>Browser Features</h2>
 
             <h3>Web Version Features<span class="platform-badge badge-web">Web</span></h3>
             <ul class="feature-list">
@@ -616,26 +602,14 @@
                 <li><strong>Share via URL:</strong> Easy sharing and collaboration</li>
             </ul>
 
-            <h3>Desktop App Features<span class="platform-badge badge-desktop">Desktop</span></h3>
-            <ul class="feature-list">
-                <li><strong>Native File System:</strong> Direct access to local files and folders</li>
-                <li><strong>Integrated Terminal:</strong> Full shell environment within the app</li>
-                <li><strong>Ollama Support:</strong> Run AI requests with locally hosted models</li>
-                <li><strong>System Tray:</strong> Quick access from system menu</li>
-                <li><strong>Native Dialogs:</strong> Platform-native file dialogs</li>
-                <li><strong>Offline Mode:</strong> Full functionality without internet</li>
-                <li><strong>Better Performance:</strong> Optimized for desktop with lower memory usage</li>
-                <li><strong>System Integration:</strong> File type associations and context menus</li>
-            </ul>
+
         </div>
 
         <div class="section">
             <div class="highlight-box">
                 <h3>Keyboard Shortcuts</h3>
-                <p style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.938rem;">
-                    <strong>Note:</strong> Desktop app supports additional native shortcuts. Web version relies on toolbar buttons for most actions.
-                </p>
-                <h4 style="color: #10b981; margin-bottom: 0.75rem;">Available on Both Platforms:</h4>
+
+                <h4 style="color: #10b981; margin-bottom: 0.75rem;">Editor Shortcuts:</h4>
                 <div class="shortcut-grid">
                     <div class="shortcut-item">
                         <span>Save File</span>
@@ -668,17 +642,6 @@
                     <div class="shortcut-item">
                         <span>Paste</span>
                         <span class="kbd">Cmd/Ctrl + V</span>
-                    </div>
-                </div>
-                <h4 style="color: #10b981; margin: 1.5rem 0 0.75rem;">Desktop Only:</h4>
-                <div class="shortcut-grid">
-                    <div class="shortcut-item">
-                        <span>New File</span>
-                        <span class="kbd">Cmd/Ctrl + N</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Open File</span>
-                        <span class="kbd">Cmd/Ctrl + O</span>
                     </div>
                 </div>
             </div>
