@@ -1,4 +1,4 @@
-import { formatOnPaste } from '../utils/codemirror/formatOnPaste';
+import { createFormatOnPaste } from '../utils/codemirror/formatOnPaste';
 import { EDITOR_FONT_FAMILY, getFontSizePixels, getLineHeightValue } from '../utils/editorTypography';
 import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
@@ -94,6 +94,7 @@ const CodeMirrorEditor = forwardRef(({
   onCursorChange,
   readOnly = false,
   autoFormatOnPaste = false,
+  starterContent = null,
   placeholder = '',
   className = '',
   style = {},
@@ -107,6 +108,8 @@ const CodeMirrorEditor = forwardRef(({
   onGeometryChange = null, // Fires (once per frame) when line heights, folds or the editor size change
 }, ref) => {
   const editorRef = useRef(null);
+  const starterContentRef = useRef(starterContent);
+  starterContentRef.current = starterContent;
   const vimModeRef = useRef('normal');
   const viewRef = useRef(null);
   const [viewReady, setViewReady] = React.useState(false);
@@ -184,7 +187,7 @@ const CodeMirrorEditor = forwardRef(({
       exts.push(vim());
     }
 
-    if (autoFormatOnPaste) exts.push(formatOnPaste);
+    if (autoFormatOnPaste) exts.push(createFormatOnPaste(() => starterContentRef.current));
 
     // Add language support
     exts.push(getLanguageExtension(language));

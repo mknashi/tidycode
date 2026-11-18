@@ -2471,8 +2471,13 @@ const TidyCode = () => {
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [activeTabId, tabs, vimEnabled, aiActions.openActionsMenu, aiActions.executeAction, aiChat.setShowChatPanel]); // Dependencies to ensure we have latest data
 
+  // Restore once, including React StrictMode effect replay, so restoration
+  // cannot overwrite a tab opened by the landing-page launch effect.
+  const tabsRestoredRef = useRef(false);
   // Load tabs from localStorage on mount
   useEffect(() => {
+    if (tabsRestoredRef.current) return;
+    tabsRestoredRef.current = true;
     const loadTabs = () => {
       const savedTabs = localStorage.getItem('notepad-tabs');
       const savedActiveId = localStorage.getItem('notepad-active-tab');
@@ -2574,10 +2579,12 @@ const TidyCode = () => {
     const newTabId = nextIdRef.current;
     nextIdRef.current += 1;
 
+    const starterContent = ext === '.json' ? '{\n  \n}' : ext === '.xml' ? '<root>\n  \n</root>' : null;
     const newTab = {
       id: newTabId,
       title: ext ? `Untitled-${newTabId}${ext}` : `Untitled-${newTabId}`,
-      content: '',
+      content: starterContent || '',
+      starterContent,
       isModified: false,
       filePath: null
     };
@@ -2585,6 +2592,13 @@ const TidyCode = () => {
     setTabs(currentTabs => [...currentTabs, newTab]);
     setActiveTabId(newTab.id);
     setNextId(nextIdRef.current);
+    if (starterContent) {
+      setStructurePanelVisible(true);
+      tabCursorPositionsRef.current.set(newTabId, {
+        pos: starterContent.indexOf('\n') + 3, line: 2, column: 3
+      });
+    }
+    requestEditorFocus(newTabId);
     setTimeout(() => scrollTabIntoView(newTabId), 0);
 
     // Clean the URL parameter without triggering a page reload
@@ -5219,7 +5233,7 @@ const TidyCode = () => {
   const updateTabContent = (tabId, content) => {
     setTabs(prevTabs => prevTabs.map(tab =>
       tab.id === tabId
-        ? { ...tab, content, isModified: true }
+        ? { ...tab, content, isModified: true, starterContent: null }
         : tab
     ));
 
@@ -9237,6 +9251,7 @@ const TidyCode = () => {
         <CodeMirrorEditor
           ref={codeMirrorRef}
           value={activeTab.content}
+          starterContent={!activeTab.isModified ? activeTab.starterContent : null}
           autoFormatOnPaste
           onChange={(newValue) => {
             updateTabContent(activeTab.id, newValue);
@@ -10801,6 +10816,7 @@ const TidyCode = () => {
                             <CodeMirrorEditor
                               ref={(el) => { splitPaneRefs.current[pane.id] = el; }}
                               value={paneTab.content || ''}
+                              starterContent={!paneTab.isModified ? paneTab.starterContent : null}
                               autoFormatOnPaste
                               onChange={(val) => updateTabContent(paneTab.id, val)}
                               language={paneLanguage}

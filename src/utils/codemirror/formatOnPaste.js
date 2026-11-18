@@ -55,11 +55,28 @@ export function formatPastedDocument(content) {
   } catch { return content; } // Invalid paste stays intact for normal validation.
 }
 
-export const formatOnPaste = EditorState.transactionFilter.of(transaction => {
+export const createFormatOnPaste = (getStarter = () => null) => EditorState.transactionFilter.of(transaction => {
   if (!transaction.docChanged || !transaction.isUserEvent('input.paste')) return transaction;
-  const content = transaction.newDoc.toString();
+  let content = transaction.newDoc.toString();
+  const starter = getStarter();
+  if (starter && transaction.startState.doc.toString() === starter) {
+    const insertions = [];
+    transaction.changes.iterChanges((_from, _to, _fromNew, _toNew, inserted) => {
+      insertions.push(inserted.toString());
+    });
+    const pasted = insertions.length === 1 ? insertions[0].trim() : '';
+    // Replace the untouched scaffold only for a whole document, not a property
+    // pasted inside it. XML must parse as a document with its own root.
+    const jsonDocument = /^[{[]/.test(pasted) && /[}\]]$/.test(pasted);
+    let xmlDocument = false;
+    if (pasted.startsWith('<') && typeof DOMParser !== 'undefined') {
+      const parsed = new DOMParser().parseFromString(pasted, 'application/xml');
+      xmlDocument = !parsed.getElementsByTagName('parsererror').length;
+    }
+    if (jsonDocument || xmlDocument) content = insertions[0];
+  }
   const formatted = formatPastedDocument(content);
-  if (formatted === content) return transaction;
+  if (formatted === transaction.newDoc.toString()) return transaction;
   // Both changes are one transaction: one Undo removes the paste and formatting.
   return [transaction, {
     changes: { from: 0, to: transaction.newDoc.length, insert: formatted },
@@ -67,3 +84,5 @@ export const formatOnPaste = EditorState.transactionFilter.of(transaction => {
     sequential: true,
   }];
 });
+
+export const formatOnPaste = createFormatOnPaste();
