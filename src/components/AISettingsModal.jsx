@@ -1,6 +1,7 @@
+import { chromeNanoProvider } from '../services/ai/providers/ChromeBuiltInProvider.js';
 import { repairPreference } from '../services/ai/documentRepair.js';
 import PrivateAIStatus from './PrivateAIStatus.jsx';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { X, Sparkles, Cloud, Check, AlertCircle, Monitor, ExternalLink, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { AI_PROVIDERS, GROQ_MODELS, OPENAI_MODELS, CLAUDE_MODELS, GEMINI_MODELS, MISTRAL_MODELS, CEREBRAS_MODELS, SAMBANOVA_MODELS, DEFAULT_MODELS } from '../services/AIService';
 import { LSP_SERVERS } from '../services/LSPService';
@@ -39,6 +40,8 @@ const DEFAULT_LSP_CONFIG = Object.keys(LSP_SERVERS).reduce((acc, lang) => {
 }, {});
 
 const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopAIService, onTriggerSetupWizard }) => {
+  const nanoStatus = useSyncExternalStore(chromeNanoProvider.status.subscribe, chromeNanoProvider.status.getSnapshot);
+  const nanoUnavailable = ['checking', 'unsupported'].includes(nanoStatus.state);
   const [localSettings, setLocalSettings] = useState({
     enableLSP: settings.enableLSP ?? false,
     lspConfig: { ...DEFAULT_LSP_CONFIG, ...(settings?.lspConfig || {}) },
@@ -1066,11 +1069,13 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 </div>
               </div>
 
-              {!isDesktop && <div className="p-4 rounded-lg border space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {!isDesktop && <div aria-disabled={nanoUnavailable} className={`p-4 rounded-lg border space-y-2 ${nanoUnavailable ? 'opacity-60 grayscale' : ''}`}>
+                <label className={`flex items-center gap-2 ${nanoUnavailable ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                   <input type="radio" name="provider" value={AI_PROVIDERS.CHROME_NANO}
+                    disabled={nanoUnavailable}
+                    aria-describedby="private-ai-availability"
                     checked={localSettings.provider === AI_PROVIDERS.CHROME_NANO}
-                    onChange={e => setLocalSettings({ ...localSettings, provider: e.target.value })} />
+                    onChange={e => { if (!nanoUnavailable) setLocalSettings({ ...localSettings, provider: e.target.value }); }} />
                   <div className="flex items-center gap-2 flex-wrap">
                     <Shield className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
                     <span className={`font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>Private AI (on-device)</span>
@@ -1079,7 +1084,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">Local</span>
                   </div>
                 </label>
-                <PrivateAIStatus />
+                <div id="private-ai-availability"><PrivateAIStatus /></div>
               </div>}
 
               {/* Groq Mode */}

@@ -18,6 +18,6 @@ export default function PrivateAIStatus({ compact = false }) {
       <button type="button" className="underline ml-2" onClick={() => navigator.clipboard.writeText('chrome://on-device-internals').catch(() => {})}>Copy diagnostics address</button>
       <p>For Chrome diagnostics, paste <code>chrome://on-device-internals</code> into the address bar.</p>
     </>}
-    {!compact && <p>Supports brief explanations, log summaries and short text chat, including grammar correction. AI document repair is not enabled yet. Cloud processing requires choosing a cloud provider explicitly.</p>}
+    {!compact && <p>Supports brief explanations, log summaries and short text chat, including grammar correction. Small-JSON repair is experimental; XML repair is not enabled. Cloud processing requires choosing a cloud provider explicitly.</p>}
   </div>;
 }
