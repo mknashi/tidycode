@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Primary Meta Tags -->
-    <title>JSON Formatter Online - Free JSON Beautifier & Validator | Tidy Code</title>
-    <meta name="title" content="JSON Formatter Online - Free JSON Beautifier & Validator | Tidy Code">
-    <meta name="description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. Syntax highlighting, error detection, tree view, and minify support. No signup required.">
+    <title>JSON Formatter &amp; Validator - Beautify JSON | Tidy Code</title>
+    <meta name="title" content="JSON Formatter &amp; Validator - Beautify JSON | Tidy Code">
+    <meta name="description" content="Paste minified or messy JSON and get readable, indented output. Invalid JSON is flagged with the line and column of the error. Free, runs in your browser.">
     <meta name="keywords" content="json formatter, json beautifier, json formatter online, format json, json pretty print, json validator, json lint, json viewer, json beautify online, json format tool">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://www.tidycode.ai/json-formatter/">
@@ -15,16 +15,16 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.tidycode.ai/json-formatter/">
-    <meta property="og:title" content="JSON Formatter Online - Free JSON Beautifier & Validator">
-    <meta property="og:description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. No signup required.">
+    <meta property="og:title" content="JSON Formatter &amp; Validator - Beautify JSON Online">
+    <meta property="og:description" content="Paste minified or messy JSON and get readable, indented output. Invalid JSON is flagged with the line and column of the error. Free, runs in your browser.">
     <meta property="og:image" content="https://www.tidycode.ai/tidycode-logo.svg">
     <meta property="og:site_name" content="Tidy Code">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://www.tidycode.ai/json-formatter/">
-    <meta property="twitter:title" content="JSON Formatter Online - Free JSON Beautifier & Validator">
-    <meta property="twitter:description" content="Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser. No signup required.">
+    <meta property="twitter:title" content="JSON Formatter &amp; Validator - Beautify JSON Online">
+    <meta property="twitter:description" content="Paste minified or messy JSON and get readable, indented output. Invalid JSON is flagged with the line and column of the error. Free, runs in your browser.">
     <meta property="twitter:image" content="https://www.tidycode.ai/tidycode-logo.svg">
 
     <!-- Favicon -->
@@ -38,7 +38,7 @@
       "name": "Tidy Code JSON Formatter",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Web",
-      "description": "Free online JSON formatter and beautifier. Format, validate, and fix JSON instantly in your browser with syntax highlighting and error detection.",
+      "description": "Paste minified or messy JSON and get readable, indented output. Invalid JSON is flagged with the line and column of the error. Free, runs in your browser.",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -46,13 +46,13 @@
       },
       "url": "https://www.tidycode.ai/json-formatter/",
       "featureList": [
-        "JSON formatting and beautification",
-        "JSON syntax validation with error highlighting",
-        "JSON minification",
-        "Tree view for JSON structure",
-        "Convert JSON to YAML, XML, or TOML",
-        "Syntax highlighting",
-        "Large file support"
+        "Pretty-print minified JSON with 2-space indentation",
+        "Validation with the line and column of the first error",
+        "Click an error to jump to it",
+        "Fix JSON with local rules first, optional AI, and a reviewable diff",
+        "Automatic formatting of .json files under 100 KB on open",
+        "Convert JSON to YAML, XML or TOML",
+        "Runs in the browser; JSON is not uploaded"
       ],
       "author": {
         "@type": "Organization",
@@ -67,40 +67,39 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "How do I format JSON online?",
+          "name": "How do I beautify JSON online?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Paste your JSON into the Tidy Code editor and it will be automatically formatted with proper indentation and syntax highlighting. You can also click the Format button or press Ctrl+Shift+F to beautify your JSON."
+            "text": "Open Tidy Code with the Format JSON now button and paste valid JSON to format it automatically with 2-space indentation. Use the Format button to format manually. JSON files under 100 KB are also formatted automatically when opened; see the formatting caveats on this page."
           }
         },
         {
           "@type": "Question",
-          "name": "Does the JSON formatter validate my JSON?",
+          "name": "Why does it say my JSON is invalid?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Tidy Code automatically validates your JSON as you type, highlighting syntax errors with line numbers and helpful error messages so you can quickly find and fix issues."
+            "text": "The most common causes are a trailing comma after the last item, property names or strings in single quotes or no quotes, a missing comma between properties, an unclosed bracket, or comments, which JSON doesn't allow. The error panel shows the line and column where the parser stopped; the mistake is usually just before that point."
           }
         },
         {
           "@type": "Question",
-          "name": "Can I convert JSON to other formats?",
+          "name": "Does formatting change my data?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Tidy Code supports converting JSON to YAML, XML, and TOML formats with a single click. The conversion preserves your data structure and handles nested objects and arrays."
+            "text": "Paste formatting and formatting after Accept All Changes preserve JSON tokens, including numeric spelling, duplicate keys, and escapes. Manual Format and automatic formatting on file open parse and rewrite JSON: numbers and escapes are normalized, duplicate keys keep only the last value, and large integers can lose precision. Keep the original when those details matter."
           }
         },
         {
           "@type": "Question",
-          "name": "Is the JSON formatter free?",
+          "name": "Is my JSON sent to a server?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, Tidy Code's JSON formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+            "text": "No. Formatting and validation run entirely in your browser. The only exception is if you choose to use an AI feature with a cloud AI provider, which receives the text you send it."
           }
         }
       ]
     }
     </script>
-
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -154,11 +153,23 @@
             color: #8b949e; font-size: 12px; margin-top: 40px;
         }
         .footer a { color: #58a6ff; text-decoration: none; }
+        .section > p:last-child, .section > ul:last-child { margin-bottom: 0; }
+        code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 6px; font-size: 13px; color: #e6edf3; }
+        pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin: 0 0 16px; overflow-x: auto; }
+        pre code { background: none; border: 0; padding: 0; font-size: 13px; line-height: 1.6; }
+        .label { font-size: 12px; color: #8b949e; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .pair > div { min-width: 0; }
+        pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .see-also { border-left: 3px solid #238636; padding-left: 16px; color: #8b949e; }
+        .see-also a { color: #58a6ff; }
+        @media (max-width: 768px) { .pair { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
             h1 { font-size: 1.75rem; }
             .nav-links { gap: 16px; }
             .container { padding: 16px; margin-top: 80px; }
         }
+    figure { margin: 24px 0; } figure img { display: block; width: 100%; height: auto; border: 1px solid #374151; border-radius: 8px; } figcaption { margin-top: 8px; font-size: 0.9rem; color: #9ca3af; } pre { overflow-x: auto; padding: 16px; background: #111827; color: #e5e7eb; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -177,69 +188,111 @@
     </nav>
 
     <div class="container">
-        <h1>JSON Formatter Online</h1>
-        <p class="lead">
-            Format, beautify, and validate JSON instantly in your browser. Paste your JSON and get perfectly indented, syntax-highlighted output with real-time error detection. Free, fast, and private — your data never leaves your browser.
-        </p>
+        <h1>JSON Formatter &amp; Validator</h1>
+        <p class="lead">Paste minified or messy JSON and get it back indented and readable. If it isn't valid JSON, Tidy Code shows the line and column where parsing failed. Everything runs in your browser, so nothing is uploaded.</p>
+        <a href="/?new=json" class="cta-button" target="_blank" rel="noopener">Format JSON now</a>
 
-        <a href="/?new=json" class="cta-button" target="_blank" rel="noopener">Open JSON Formatter</a>
+<div class="section" style="margin-top: 48px;">
+<h2>Before and After</h2>
+<p>A minified API response, pasted in and formatted:</p>
+<p class="label">Before</p>
+<pre><code>{&quot;id&quot;:42,&quot;user&quot;:{&quot;name&quot;:&quot;Ada&quot;,&quot;roles&quot;:[&quot;admin&quot;,&quot;dev&quot;]},&quot;active&quot;:true}</code></pre>
+<p class="label">After</p>
+<pre><code>{
+  &quot;id&quot;: 42,
+  &quot;user&quot;: {
+    &quot;name&quot;: &quot;Ada&quot;,
+    &quot;roles&quot;: [
+      &quot;admin&quot;,
+      &quot;dev&quot;
+    ]
+  },
+  &quot;active&quot;: true
+}</code></pre>
+<p>Objects and arrays are expanded one entry per line with 2-space indentation, and keys keep their original order.</p>
+</div>
 
-        <div class="section" style="margin-top: 48px;">
-            <h2>Features</h2>
+<div class="section">
+<h2>When Your JSON Won't Format</h2>
+<p>JSON has to be valid before it can be formatted. When it isn't, the error panel shows the parser's message with the line and column, and clicking the error moves the cursor there. This file is missing a comma at the end of line 3:</p>
+<pre><code>{
+  &quot;name&quot;: &quot;tidycode&quot;,
+  &quot;version&quot;: &quot;1.0.1&quot;
+  &quot;private&quot;: true
+}</code></pre>
+<p>In Chrome, the error reads:</p>
+<pre class="wrap"><code>Expected &#x27;,&#x27; or &#x27;}&#x27; after property value in JSON at position 47 (line 4 column 3)</code></pre>
+<p>The parser reports where it noticed the problem, at the start of line 4, so the mistake is usually just before the position it gives.</p>
+<h3>The usual causes</h3>
+<ul>
+<li>A trailing comma after the last item in an object or array</li>
+<li>Property names without double quotes</li>
+<li>Single quotes instead of double quotes</li>
+<li>A missing comma between two properties</li>
+<li>An unclosed <code>{</code> or <code>[</code></li>
+<li>Comments (<code>//</code> or <code>/* */</code>), which JSON doesn't allow</li>
+</ul>
+<h3>Fix JSON: Local Rules First, Optional AI</h3>
+<p>Choose <strong>Fix JSON</strong> in the error panel. <strong>Auto Fix</strong> is always selected and tries local rules first. The <strong>Use AI if rule-based fixing fails</strong> checkbox is checked by default; uncheck it to use local rules only.</p>
+<p>With Private AI selected, supported desktop Chrome installations can try experimental Gemini Nano repair for JSON up to 8,192 characters. Prepare the model first. Repairs may be refused if they cannot be validated safely. Private AI does not automatically fall back to cloud AI: a named cloud retry sends the original document only when you click it.</p>
+<p>Review the suggested changes in the diff before accepting. <strong>Replace current tab</strong> is selected by default when the source is still active and unchanged, and the replacement supports Undo. Choose <strong>Open in new tab</strong> to keep the original. <strong>Accept All Changes</strong> also formats the accepted JSON; accepting selected changes does not automatically format it.</p>
+</div>
 
-            <h3>Instant JSON Formatting</h3>
-            <p>Paste unformatted or minified JSON and get beautifully indented output instantly. Supports custom indentation (2 or 4 spaces, tabs) and handles deeply nested structures with ease.</p>
+<div class="section">
+<h2>What Formatting Changes, and What It Doesn't</h2>
+<p>Automatic formatting on paste and after Accept All Changes preserves numeric spelling, duplicate keys, and string escapes. The manual Format button and automatic formatting on file open instead parse and rewrite JSON, with these consequences:</p>
+<ul>
+<li><code>1.50</code> becomes <code>1.5</code> and <code>1e3</code> becomes <code>1000</code>: the same values in shorter notation</li>
+<li>Escapes such as <code>\u00e9</code> are written as the character itself (<code>é</code>)</li>
+<li>If a key appears twice in the same object, only the last value is kept</li>
+<li>Integers larger than 9,007,199,254,740,991 lose precision: <code>12345678901234567890</code> becomes <code>12345678901234567000</code></li>
+</ul>
+<p>If your JSON carries very large numeric IDs, keep the original file and use the formatted copy for reading only.</p>
+</div>
 
-            <h3>Real-Time Validation</h3>
-            <p>Tidy Code validates your JSON as you type, showing exact line numbers and clear error messages for missing commas, brackets, quotes, and other common issues.</p>
+<div class="section">
+<h2>How to Format JSON</h2>
+<ul>
+<li>Click <strong>Format JSON now</strong> to open a new JSON tab. There's no installation or signup</li>
+<li>Paste your JSON, or open a <code>.json</code> file. Files under 100 KB are formatted as soon as they open</li>
+<li>Valid pasted JSON formats automatically. To format manually, click <strong>Format</strong></li>
+<li>If the error panel appears, click the error to jump to it, fix the line, and format again</li>
+<li>Need another format? Choose <strong>Convert → Convert to YAML</strong>, XML or TOML</li>
+</ul>
+<p class="see-also">Editing a large file or working through deeply nested data? The <a href="/json-editor/">JSON Editor</a> page covers the structure tree, tabs, diff and large-file handling.</p>
+</div>
 
-            <h3>JSON Tree View</h3>
-            <p>Explore your JSON visually with a collapsible tree view. Navigate complex objects and arrays, see data types at a glance, and quickly find the data you need.</p>
+<div class="section" id="repair-example">
+<h2>Walkthrough: Review a Missing-Comma Repair</h2>
+<p>Paste <code>{"name":"Garden" "available":true}</code>. A comma is missing between the two properties. The error panel identifies the invalid JSON; click <strong>Fix JSON</strong> to try local rules first.</p>
+<figure><a href="/images/guides/json-repair-review.png" aria-label="View full-size product screenshot"><img src="/images/guides/json-repair-review.png" alt="JSON repair diff showing an inserted comma between the name and available properties, with Replace current tab selected" width="1440" height="900" loading="lazy" decoding="async"></a><figcaption>Actual local-rule repair: the proposed version adds a comma. Review the original and proposed versions before accepting.</figcaption></figure>
+<p>The expected result is <code>{"name":"Garden", "available":true}</code>. Check that the name is still Garden and available is still the boolean true. Keep <strong>Replace current tab</strong> to apply with Undo available, or choose <strong>Open in new tab</strong>. <strong>Accept All Changes</strong> applies the repair and formats the JSON.</p>
+<h3>When a Proposed Nano Repair Is Refused</h3>
+<p>Consider <code>{"count":12 "active":true}</code>. Inserting the missing comma preserves the data. A proposed output of <code>{"count":"12","active":true}</code> also parses, but turns a number into a string. Nano's repair guard rejects that proposal rather than presenting it as a safe fix. The original stays unchanged.</p>
+<p>This illustrates a checked rejection rule, not a promise that the model always produces that output or that local rules fail on this input. Nano is optional, runs only after local rules fail, and may also reject harmless changes. If repair fails, correct the source manually or explicitly choose a configured cloud retry; always review its proposed changes.</p>
+<p>Once the JSON is valid, <a href="/json-editor/#graph">explore its nested structure as a graph</a>.</p></div>
+<div class="section">
+<h2>Frequently Asked Questions</h2>
+<div class="faq-item">
+<h3>How do I beautify JSON online?</h3>
+<p>Open Tidy Code with the Format JSON now button and paste valid JSON to format it automatically with 2-space indentation. Use the Format button to format manually. JSON files under 100 KB are also formatted automatically when opened; see the formatting caveats on this page.</p>
+</div>
+<div class="faq-item">
+<h3>Why does it say my JSON is invalid?</h3>
+<p>The most common causes are a trailing comma after the last item, property names or strings in single quotes or no quotes, a missing comma between properties, an unclosed bracket, or comments, which JSON doesn't allow. The error panel shows the line and column where the parser stopped; the mistake is usually just before that point.</p>
+</div>
+<div class="faq-item">
+<h3>Does formatting change my data?</h3>
+<p>Paste formatting and formatting after Accept All Changes preserve JSON tokens, including numeric spelling, duplicate keys, and escapes. Manual Format and automatic formatting on file open parse and rewrite JSON: numbers and escapes are normalized, duplicate keys keep only the last value, and large integers can lose precision. Keep the original when those details matter.</p>
+</div>
+<div class="faq-item">
+<h3>Is my JSON sent to a server?</h3>
+<p>No. Formatting and validation run entirely in your browser. The only exception is if you choose to use an AI feature with a cloud AI provider, which receives the text you send it.</p>
+</div>
+</div>
 
-            <h3>JSON Minification</h3>
-            <p>Compress your JSON by removing all whitespace with a single click. Perfect for reducing payload size for APIs and configuration files.</p>
 
-            <h3>Format Conversion</h3>
-            <p>Convert JSON to YAML, XML, or TOML with one click. Tidy Code preserves your data structure, handles nested objects and arrays, and produces clean, well-formatted output.</p>
 
-            <h3>Large File Support</h3>
-            <p>Handle JSON files up to 100MB+ thanks to WebAssembly-powered parsing. Format large API responses, database exports, and log files without your browser slowing down.</p>
-        </div>
-
-        <div class="section">
-            <h2>How to Format JSON</h2>
-            <ul>
-                <li>Open Tidy Code in your browser — no installation or signup needed</li>
-                <li>Paste your JSON into the editor or drag and drop a .json file</li>
-                <li>Your JSON is automatically formatted with syntax highlighting</li>
-                <li>Use the Structure panel to explore your JSON as a tree</li>
-                <li>Click Convert to transform JSON to YAML, XML, or TOML</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Frequently Asked Questions</h2>
-
-            <div class="faq-item">
-                <h3>How do I format JSON online?</h3>
-                <p>Paste your JSON into the Tidy Code editor and it will be automatically formatted with proper indentation and syntax highlighting. You can also click the Format button or press Ctrl+Shift+F to beautify your JSON.</p>
-            </div>
-
-            <div class="faq-item">
-                <h3>Does the JSON formatter validate my JSON?</h3>
-                <p>Yes. Tidy Code automatically validates your JSON as you type, highlighting syntax errors with line numbers and helpful error messages so you can quickly find and fix issues.</p>
-            </div>
-
-            <div class="faq-item">
-                <h3>Can I convert JSON to other formats?</h3>
-                <p>Yes. Tidy Code supports converting JSON to YAML, XML, and TOML formats with a single click. The conversion preserves your data structure and handles nested objects and arrays.</p>
-            </div>
-
-            <div class="faq-item">
-                <h3>Is the JSON formatter free?</h3>
-                <p>Yes, Tidy Code's JSON formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
-            </div>
-        </div>
 
         <div class="footer">
             <p>&copy; 2026 <a href="/">Tidy Code</a> &mdash; Free Online JSON Formatter, XML Editor, and Code Editor</p>

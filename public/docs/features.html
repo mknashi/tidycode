@@ -556,14 +556,21 @@
 
             <h3>AI Integration<span class="platform-badge badge-both">Web + Desktop</span></h3>
             <ul class="feature-list">
-                <li><strong>OpenAI:</strong> GPT-4 and GPT-3.5 Turbo support (both platforms)</li>
-                <li><strong>Claude:</strong> Anthropic Claude models integration (both platforms)</li>
-                <li><strong>Groq:</strong> Fast cloud AI processing (both platforms)</li>
-                <li><strong>WebLLM:</strong> Browser-based AI models (web only)</li>
-                <li><strong>Ollama:</strong> Local AI models for privacy (desktop only)</li>
-                <li><strong>Code Suggestions:</strong> AI-powered code completion</li>
-                <li><strong>Error Fixes:</strong> Automatic error detection and fixes</li>
-                <li><strong>Explanations:</strong> Get AI explanations of complex code</li>
+                <li><strong>Private AI:</strong> Gemini Nano runs on your device in supported desktop Chrome installations. Free, with no API key. Availability depends on Chrome's Prompt API and device support; unsupported browsers show a disabled option.</li>
+                <li><strong>Model Setup:</strong> Prepare the model before using Private AI. Chrome manages the initial model download, which can be several gigabytes; Gemini Nano is selected automatically.</li>
+                <li><strong>Private AI Tasks:</strong> Short chat, grammar correction, brief explanations, and log summaries. Experimental JSON repair accepts documents up to 8,192 characters; Nano XML repair is not available.</li>
+                <li><strong>Cloud Providers:</strong> Configure a provider such as OpenAI, Claude, Groq, or Gemini. Cloud requests send submitted content to the selected provider.</li>
+                <li><strong>Ollama:</strong> Use locally hosted models in the desktop app.</li>
+            </ul>
+
+            <h3>JSON and XML Error Recovery</h3>
+            <ul class="feature-list">
+                <li><strong>Live Validation:</strong> JSON/XML errors appear after typing, pasting, or opening a file. Use Format for manual formatting; valid pasted JSON/XML is formatted automatically where safe.</li>
+                <li><strong>Local Rules First:</strong> Choose Fix JSON or Fix XML in the error panel. Auto Fix is always selected and tries rule-based repair first.</li>
+                <li><strong>Optional AI:</strong> Use AI if rule-based fixing fails is checked by default. Uncheck it to stop after local rules. With Private AI selected, eligible JSON can then be repaired locally by Nano.</li>
+                <li><strong>Explicit Cloud Retry:</strong> Private AI never automatically falls back to a cloud provider. Click a named cloud retry to send the original document to that provider.</li>
+                <li><strong>Review Before Applying:</strong> Inspect the proposed diff. Replace current tab is selected by default when the source is still active and unchanged, with Undo available. Choose Open in new tab to preserve the original tab.</li>
+                <li><strong>Accept All Changes:</strong> Applies and formats accepted JSON/XML where safe. Accepting selected changes does not automatically format them. Repair can fail or be refused; review the result for the intended meaning.</li>
             </ul>
 
             <h3>VIM Mode</h3>
@@ -604,7 +611,7 @@
                 <li><strong>No Installation:</strong> Access directly from your browser</li>
                 <li><strong>Cross-Platform:</strong> Works on any device with a modern browser</li>
                 <li><strong>Auto-Save:</strong> Browser-based local storage for your work</li>
-                <li><strong>WebLLM AI:</strong> Browser-based AI models (no API key needed)</li>
+                <li><strong>Private AI:</strong> On-device Gemini Nano in supported desktop Chrome installations (free, no API key)</li>
                 <li><strong>Groq API:</strong> Fast cloud-based AI processing</li>
                 <li><strong>Share via URL:</strong> Easy sharing and collaboration</li>
             </ul>
@@ -613,7 +620,7 @@
             <ul class="feature-list">
                 <li><strong>Native File System:</strong> Direct access to local files and folders</li>
                 <li><strong>Integrated Terminal:</strong> Full shell environment within the app</li>
-                <li><strong>Ollama Support:</strong> Local AI models for complete privacy</li>
+                <li><strong>Ollama Support:</strong> Run AI requests with locally hosted models</li>
                 <li><strong>System Tray:</strong> Quick access from system menu</li>
                 <li><strong>Native Dialogs:</strong> Platform-native file dialogs</li>
                 <li><strong>Offline Mode:</strong> Full functionality without internet</li>

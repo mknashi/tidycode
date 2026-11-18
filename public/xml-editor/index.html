@@ -161,6 +161,7 @@
             .nav-links { gap: 16px; }
             .container { padding: 16px; margin-top: 80px; }
         }
+    figure { margin: 24px 0; } figure img { display: block; width: 100%; height: auto; border: 1px solid #374151; border-radius: 8px; } figcaption { margin-top: 8px; font-size: 0.9rem; color: #9ca3af; } pre { overflow-x: auto; padding: 16px; background: #111827; color: #e5e7eb; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -222,7 +223,22 @@
             </ul>
         </div>
 
-        <div class="section">
+        <div class="section" id="graph">
+<h2>Follow XML Elements in a Graph</h2>
+<p>Paste this catalog, then click <strong>Graph</strong>. Follow the catalog element to its two book children and compare their titles and availability values:</p>
+<pre><code>&lt;catalog&gt;
+  &lt;book id="b1"&gt;
+    &lt;title&gt;The Secret Garden&lt;/title&gt;
+    &lt;available&gt;true&lt;/available&gt;
+  &lt;/book&gt;
+  &lt;book id="b2"&gt;
+    &lt;title&gt;Treasure Island&lt;/title&gt;
+    &lt;available&gt;false&lt;/available&gt;
+  &lt;/book&gt;
+&lt;/catalog&gt;</code></pre>
+<figure><a href="/images/guides/xml-graph.png" aria-label="View full-size product screenshot"><img src="/images/guides/xml-graph.png" alt="Tidy Code XML editor with a graph of a catalog and two book elements" width="1440" height="900" loading="lazy" decoding="async"></a><figcaption>A graph of the XML catalog makes repeated book elements and their parent-child relationships visible.</figcaption></figure>
+<p>Collapse branches, pan and zoom, or choose <strong>Fit to view</strong>. Export PNG or SVG for documentation. Graph exploration requires well-formed XML and is subject to graph size limits; it does not validate a document against an XSD schema. For syntax problems, follow the <a href="/xml-formatter/#repair">XML repair steps</a>.</p></div>
+<div class="section">
             <h2>Frequently Asked Questions</h2>
 
             <div class="faq-item">

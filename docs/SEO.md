@@ -155,14 +155,17 @@ Google has recrawled, nothing above has any effect.
      with proper canonical" and "Page with redirect" entries should go down.
      Google says to allow a few weeks before judging a change.
 
-2. **Make the homepage work at phone widths.** Google indexes the mobile
-   rendering of every page. At 390px the Welcome tab is cut off on the right,
-   and the cookie and privacy popups cover much of the screen. The text is still
-   in the page, so it's indexable, but this is the page experience Google
-   measures. Also run [PageSpeed Insights](https://pagespeed.web.dev/) on `/`
-   and a landing page: the app's main JS bundle is about 1.5 MB, plus ads and
-   analytics, so Core Web Vitals (LCP, INP, CLS) are worth measuring before
-   guessing.
+2. **Check the landing pages at phone width.** The app isn't built for phones,
+   and doesn't need to be. But Google crawls and ranks every site with a
+   phone-sized browser, so the version Google judges is the one at about 400px
+   wide. The landing pages are the ones that rank, and they already have mobile
+   CSS, so this is a check, not a project: open each at phone width and make sure
+   the text reads and nothing is cut off. The homepage's Welcome tab is cut off at
+   390px, but its text and links are still in the page, so Google
+   can index them; leave it unless that changes. Also run
+   [PageSpeed Insights](https://pagespeed.web.dev/) on a landing page and on `/`
+   (the app's main JS bundle is about 1.5 MB) before deciding whether load speed
+   needs work.
 
 3. **Make look-alike pages distinct.**
    - `json-formatter` vs `json-editor` and `xml-formatter` vs `xml-editor`
@@ -232,3 +235,58 @@ Google has recrawled, nothing above has any effect.
    Tidy Code on Product Hunt and AlternativeTo, and share it in developer
    communities where a JSON, YAML or diff tool genuinely helps. Google's starter
    guide also warns against overpromoting.
+
+## Google generative AI search review — 2026-11-17
+
+Reviewed [Google's AI optimization guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) against the current repository, including the pending JSON landing-page edits. This guidance concerns Google AI Overviews and AI Mode; it does not establish how other assistants choose recommendations.
+
+Google emphasizes original, useful content and ordinary crawling/indexing fundamentals. It does not require special AI markup or `llms.txt`, and inclusion is not guaranteed. Treat accurate product documentation and demonstrated workflows as the investment, rather than writing keyword variations for an imagined AI ranking formula.
+
+### Findings and implementation priorities
+
+| Priority | Repository finding | Concrete change |
+| --- | --- | --- |
+| 1 | `public/docs/features.html` still advertises older model options and WebLLM, without the current Nano workflow. | Document v2: local rules first, Chrome availability, optional experimental small-JSON Nano repair, explicit cloud retry, and review before acceptance. State that Nano XML repair is unavailable. |
+| 1 | `public/xml-formatter/index.html` says data never leaves the browser, including in FAQ JSON-LD. | Qualify the promise: formatting/validation are local; explicitly selected cloud AI receives submitted content. Keep visible text and JSON-LD consistent. Audit the other landing pages for the same claim. |
+| 1 | The pending JSON formatter rewrite still calls the button “AI Fix” and describes only new-tab acceptance. | Preserve the rewrite but update it to Fix JSON, Auto Fix → optional AI, default current-tab replacement with Undo, optional new tab, and formatting on Accept All. |
+| 1 | The homepage starts as an empty React root; its latest visible feature descriptions arrive through JavaScript. | Inspect the rendered page in Search Console. Consider prerendering the public Welcome content or providing a useful visible HTML introduction; retain real links to the static tool pages. Do not add hidden keyword blocks. |
+| 2 | Static pages give little detail about the graph and repair workflows now available in the app. | Add real examples to the relevant editor/formatter pages: nested JSON/XML graph exploration, a missing-comma repair, an ambiguous repair that is refused, and a reviewed diff. Include actual screenshots with descriptive captions and alt text. |
+| 2 | `index.html` metadata omits the new Private AI/graph capabilities; its JSON-LD `screenshot` points to a logo. | Refresh descriptions and supported features to match visible content. Use an actual product screenshot. Check evidence before retaining numerical performance claims. |
+| 2 | Sitemap dates remain November 6 despite the homepage's substantial feature update. | Update `lastmod` for genuinely changed pages when publishing their changes; leave unchanged pages' dates alone. |
+
+Keep the distinct intent of the pending JSON landing-page rewrites: editing/navigation/conversion on `/json-editor/`, and formatting/validation/error recovery on `/json-formatter/`. Apply that distinction to the XML pair as well. A useful graph walkthrough belongs in existing documentation or a substantive guide, not many near-identical keyword pages.
+
+### Observed access and limits
+
+Direct HTTPS requests to `/`, `/json-editor/`, and `/xml-formatter/` returned 200 on November 17, with no `X-Robots-Tag` header on those responses. The web extraction tool returned mostly the homepage's JavaScript-required fallback; this is **not** evidence that Google cannot render or index it. Two tool-page fetches failed in that tool, but ordinary HTTPS requests succeeded, so no crawler-blocking defect was established. Repository robots.txt allows crawling and links the sitemap; canonical URLs use the `www` host.
+
+No authenticated Search Console property, index coverage, rendered Googlebot output, or performance report was inspected. The review identifies opportunities, not a diagnosis of ranking or indexing failure. The separate SEO edits remain pending; this section does not imply they have been published.
+
+### Owner checks and measurement
+
+- In Search Console, check **Settings → Search generative AI** and confirm the site's effective setting includes it. Google documents inclusion as the default; inherited property settings can affect the effective choice. [Control documentation](https://support.google.com/webmasters/answer/16908024)
+- Inspect the homepage and priority tool URLs for indexing, canonical selection, and rendered content. Measure page experience before choosing performance work.
+- Record a baseline from the **Generative AI performance report**, then compare page-level impressions after deployment and recrawling. The report can be absent when impressions are insufficient; that alone is not proof of exclusion. Track useful visits and product engagement separately. [Report documentation](https://support.google.com/webmasters/answer/16984139)
+
+Recommended implementation order: correct product/privacy facts → enrich distinct JSON/XML pages with demonstrated workflows → improve public HTML/metadata and real screenshots → update changed sitemap entries → verify and measure in Search Console.
+
+### Priority 1 implementation — 2026-11-17
+
+- Updated static feature documentation for Private AI availability, model preparation, experimental small-JSON repair, local rules, explicit cloud retries, and review/accept destinations.
+- Corrected blanket privacy claims across tool landing pages and the privacy page's international-processing paragraph. FAQ JSON-LD and visible answers use the same qualifications.
+- Updated the pending JSON formatter rewrite for Fix JSON, optional AI, default current-tab replacement with Undo, new-tab output, and formatting on Accept All. Updated Format/Convert instructions while preserving the existing landing-page rewrites.
+- Documented the current formatting distinction: paste/Accept All preserve JSON tokens; manual Format and file-open formatting parse and rewrite values, so their precision warning remains.
+- Added useful tool/documentation links and product context to the homepage's JavaScript-disabled fallback. This is not prerendering and does not establish Googlebot rendering success.
+
+Pending owner verification: use Search Console URL Inspection after deployment to check the homepage's rendered content and indexing. No authenticated Search Console access was available. Prerendering remains a decision to make from that evidence. These changes have not yet been deployed.
+
+### Priority 2 implementation — 2026-11-17
+
+- Added distinct JSON and XML graph walkthroughs to the editor pages, with copyable catalog examples, navigation/export instructions, limitations, and cross-links to repair guides.
+- Added a missing-comma repair and review walkthrough to the JSON formatter page. The number-to-string rejection example was checked directly against validateNanoRepair; it illustrates a rejected proposal, not a recorded model response.
+- Added XML syntax repair and meaningful-whitespace guidance, including the current Nano XML limitation.
+- Captured three actual app screenshots in isolated Chrome at 1440 × 900 using synthetic catalog/repair documents: public/images/guides/json-graph.png, xml-graph.png, and json-repair-review.png. No cloud AI was used. Screenshots have captions, alt text, intrinsic dimensions, lazy loading, and full-size links.
+- Refreshed homepage titles/descriptions and WebApplication features for graph exploration and Private AI. Replaced the logo screenshot/social preview with the JSON graph screenshot and removed unsubstantiated numerical speed and blanket 100MB+ claims from homepage metadata.
+- Prepared November 17 sitemap lastmod dates for changed pages in this publication batch only; unchanged documentation dates remain November 6. Deploy the sitemap with these pages.
+
+Validation: production build passed; all 25 JSON-LD blocks parsed; visible FAQ answers matched their structured data; sitemap XML and screenshot paths passed checks. All four JSON/XML landing pages passed 390px and 1440px browser checks for horizontal overflow and image loading. Graph screenshots and the repair diff were visually inspected. Search Console verification and deployment remain pending.

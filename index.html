@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- Primary Meta Tags -->
-    <title>Tidy Code - Editor with Syntax Highlighting & Format Conversion</title>
-    <meta name="title" content="Tidy Code - Editor with Syntax Highlighting & Format Conversion" />
-    <meta name="description" content="Free editor with syntax highlighting for 30+ languages. JSON/XML/YAML/TOML formatting and conversion, VIM mode, Diff Viewer, and AI assistance." />
+    <title>Tidy Code — JSON/XML Editor, Graph View &amp; Private AI</title>
+    <meta name="title" content="Tidy Code — JSON/XML Editor, Graph View &amp; Private AI" />
+    <meta name="description" content="Format, validate, and explore JSON/XML with graph views and reviewed repairs. Free editor with conversion tools and on-device Private AI in supported Chrome." />
     <meta name="keywords" content="text editor, syntax highlighting, JSON editor, JSON formatter, XML editor, XML validator, YAML editor, TOML editor, format conversion, JSON to YAML, XML to JSON, CSV editor, Markdown editor, large file editor, WASM editor, VIM mode editor, code editor, diff viewer, file comparison, PDF viewer, notes app, todo list, multi-tab editor, desktop app, Tauri app, macOS editor, Windows editor, Linux editor, developer tools, AI code assistant" />
     <meta name="author" content="Tidy Code" />
     <meta name="robots" content="index, follow" />
@@ -60,17 +60,20 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.tidycode.ai/" />
-    <meta property="og:title" content="Tidy Code - Editor with Syntax Highlighting & Format Conversion" />
-    <meta property="og:description" content="Free editor with syntax highlighting for 30+ languages. JSON, XML, YAML, TOML formatting and conversion. VIM mode, Diff Viewer, large file support (100MB+), and AI assistance. Web and desktop apps." />
-    <meta property="og:image" content="https://www.tidycode.ai/tidycode-logo.svg" />
+    <meta property="og:title" content="Tidy Code — JSON/XML Editor, Graph View &amp; Private AI" />
+    <meta property="og:description" content="Format, validate, and explore JSON/XML with graph views and reviewed repairs. Free editor with conversion tools and on-device Private AI in supported Chrome." />
+    <meta property="og:image" content="https://www.tidycode.ai/images/guides/json-graph.png" />
+    <meta property="og:image:alt" content="Tidy Code JSON editor and catalog graph view" />
     <meta property="og:site_name" content="Tidy Code" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://www.tidycode.ai/" />
-    <meta property="twitter:title" content="Tidy Code - Editor with Syntax Highlighting & Format Conversion" />
-    <meta property="twitter:description" content="Free editor with syntax highlighting for 30+ languages. JSON, XML, YAML, TOML formatting and conversion. VIM mode, Diff Viewer, large file support (100MB+), and AI assistance." />
-    <meta property="twitter:image" content="https://www.tidycode.ai/tidycode-logo.svg" />
+    <meta property="twitter:title" content="Tidy Code — JSON/XML Editor, Graph View &amp; Private AI" />
+    <meta property="twitter:description" content="Format, validate, and explore JSON/XML with graph views and reviewed repairs. Free editor with conversion tools and on-device Private AI in supported Chrome." />
+    <meta property="twitter:image" content="https://www.tidycode.ai/images/guides/json-graph.png" />
+
+    <meta property="twitter:image:alt" content="Tidy Code JSON editor and catalog graph view" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/tidycode-logo.svg" />
@@ -92,49 +95,51 @@
 
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
-    {
+{
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Tidy Code",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Windows, macOS, Linux, Web",
-      "description": "Free editor with syntax highlighting for 30+ languages. JSON, XML, YAML, TOML formatting and conversion. VIM mode, Diff Viewer, PDF viewing, large file support (100MB+), and AI assistance. Web and desktop apps for Windows, macOS, Linux.",
+      "description": "Format, validate, and explore JSON/XML with graph views and reviewed repairs. Free editor with conversion tools and on-device Private AI in supported Chrome.",
       "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
       },
-      "browserRequirements": "Requires JavaScript. Modern browser recommended.",
+      "browserRequirements": "Requires JavaScript. Private AI additionally requires supported desktop Chrome and compatible hardware.",
       "url": "https://www.tidycode.ai/",
-      "screenshot": "https://www.tidycode.ai/tidycode-logo.svg",
+      "screenshot": "https://www.tidycode.ai/images/guides/json-graph.png",
       "featureList": [
-        "Syntax highlighting for 30+ programming languages",
-        "JSON editor and formatter with syntax validation",
-        "XML editor and validator with structure view",
-        "YAML editor with formatting and validation",
-        "TOML editor with formatting support",
-        "Format conversion between JSON, XML, YAML, and TOML",
-        "VIM mode for modal editing with full keybindings",
-        "Diff Viewer for side-by-side file comparison",
-        "AI assistance with OpenAI, Claude, and Ollama",
-        "PDF viewing with search, zoom, thumbnails, and focus mode",
-        "Large file support (100MB+) with WebAssembly",
-        "8x faster indexing and 14x faster search on large files",
-        "Multi-tab editing with drag-and-drop reordering",
-        "CSV file editor with preview and column management",
-        "Markdown preview with live rendering",
-        "Notes and Todo list management",
-        "Dark and light themes",
-        "Native desktop app for macOS, Windows, and Linux",
-        "Native PDF printing with page selection (desktop)",
-        "LSP support for code intelligence",
-        "Find and replace with regex support"
+            "JSON/XML graph exploration with PNG and SVG export",
+            "Local rule-based JSON/XML repair with optional AI and review before acceptance",
+            "Private AI with Gemini Nano in supported desktop Chrome; experimental small-JSON repair",
+            "Syntax highlighting for 30+ programming languages",
+            "JSON editor and formatter with syntax validation",
+            "XML editor and validator with structure view",
+            "YAML editor with formatting and validation",
+            "TOML editor with formatting support",
+            "Format conversion between JSON, XML, YAML, and TOML",
+            "VIM mode for modal editing with full keybindings",
+            "Diff Viewer for side-by-side file comparison",
+            "AI assistance with OpenAI, Claude, and Ollama",
+            "PDF viewing with search, zoom, thumbnails, and focus mode",
+            "Multi-tab editing with drag-and-drop reordering",
+            "CSV file editor with preview and column management",
+            "Markdown preview with live rendering",
+            "Notes and Todo list management",
+            "Dark and light themes",
+            "Native desktop app for macOS, Windows, and Linux",
+            "Native PDF printing with page selection (desktop)",
+            "LSP support for code intelligence",
+            "Find and replace with regex support"
       ],
       "author": {
-        "@type": "Organization",
-        "name": "Tidy Code"
-      }
-    }
+            "@type": "Organization",
+            "name": "Tidy Code"
+      },
+      "softwareVersion": "2.0.0"
+}
     </script>
   </head>
   <body>
@@ -143,7 +148,9 @@
     <script type="module" src="/src/main.jsx"></script>
     <noscript>
       <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
-        <h1>JavaScript Required</h1>
+        <h1>Tidy Code — JSON and XML Editor</h1>
+        <p>Format and validate JSON/XML, explore document structure, compare changes, and convert between JSON, XML, YAML, and TOML.</p>
+        <p>Read the <a href="/json-formatter/">JSON formatting guide</a>, <a href="/xml-formatter/">XML formatting guide</a>, or <a href="/docs/features">feature documentation</a> without JavaScript.</p>
         <p>Tidy Code requires JavaScript to function. Please enable JavaScript in your browser settings.</p>
         <p><a href="/privacy" style="color: #60a5fa;">Privacy Policy</a></p>
       </div>

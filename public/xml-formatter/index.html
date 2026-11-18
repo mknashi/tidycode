@@ -94,7 +94,7 @@
           "name": "Is the XML formatter free?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, Tidy Code's XML formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server."
+            "text": "Yes, Tidy Code's XML formatter is completely free with no signup required. Document editing and formatting run locally in your browser. If you choose a cloud AI feature, the content you submit is sent to that provider."
           }
         }
       ]
@@ -159,6 +159,7 @@
             .nav-links { gap: 16px; }
             .container { padding: 16px; margin-top: 80px; }
         }
+    figure { margin: 24px 0; } figure img { display: block; width: 100%; height: auto; border: 1px solid #374151; border-radius: 8px; } figcaption { margin-top: 8px; font-size: 0.9rem; color: #9ca3af; } pre { overflow-x: auto; padding: 16px; background: #111827; color: #e5e7eb; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -179,7 +180,7 @@
     <div class="container">
         <h1>XML Formatter Online</h1>
         <p class="lead">
-            Format, beautify, and validate XML instantly in your browser. Paste your XML and get perfectly indented, syntax-highlighted output with real-time error detection. Free, fast, and private — your data never leaves your browser.
+            Format, beautify, and validate XML instantly in your browser. Paste your XML and get perfectly indented, syntax-highlighted output with real-time error detection. Free, with local document processing. Optional cloud AI sends submitted content to the provider you choose.
         </p>
 
         <a href="/?new=xml" class="cta-button" target="_blank" rel="noopener">Open XML Formatter</a>
@@ -188,7 +189,7 @@
             <h2>Features</h2>
 
             <h3>Instant XML Formatting</h3>
-            <p>Paste unformatted or minified XML and get beautifully indented output instantly. Handles complex nested elements, attributes, namespaces, CDATA sections, and processing instructions.</p>
+            <p>Paste well-formed XML to format it automatically where safe, or click Format for manual formatting. Automatic paste formatting leaves mixed content, xml:space, CDATA, and DOCTYPE documents unchanged to preserve their content.</p>
 
             <h3>Real-Time Validation</h3>
             <p>Tidy Code validates your XML as you type, showing exact line numbers and clear error messages for unclosed tags, mismatched elements, malformed attributes, and encoding issues.</p>
@@ -211,13 +212,24 @@
             <ul>
                 <li>Open Tidy Code in your browser — no installation or signup needed</li>
                 <li>Paste your XML into the editor or drag and drop an .xml file</li>
-                <li>Your XML is automatically formatted with syntax highlighting</li>
+                <li>Valid pasted XML formats automatically where safe; use Format for manual formatting</li>
                 <li>Use the Structure panel to explore your XML as a tree</li>
                 <li>Click Convert to transform XML to JSON, YAML, or TOML</li>
             </ul>
         </div>
 
-        <div class="section">
+        <div class="section" id="repair">
+<h2>Repair XML Before Formatting</h2>
+<p>For example, <code>&lt;catalog&gt;&lt;book&gt;Garden&lt;/catalog&gt;</code> is missing a closing book tag. If you intended the book to contain Garden, the corrected document is:</p>
+<pre><code>&lt;catalog&gt;
+  &lt;book&gt;Garden&lt;/book&gt;
+&lt;/catalog&gt;</code></pre>
+<p>Use the error panel to locate the mismatch, then correct it manually or click <strong>Fix XML</strong> to try local rules. A repair is not guaranteed: inspect the proposed diff for element nesting, attributes, and text before accepting it. Replace current tab supports Undo; Open in new tab preserves the original. Accept All Changes formats the accepted document where safe.</p>
+<p>Gemini Nano XML repair is not enabled. If local rules cannot fix the document, optional cloud repair requires clicking a named provider and sends the original document to it. Uncheck <strong>Use AI if rule-based fixing fails</strong> to use only local rules.</p>
+<h3>When Whitespace Matters</h3>
+<p>Automatic paste formatting leaves mixed content, xml:space, CDATA, and DOCTYPE documents untouched. For example, spacing around the emphasized word in <code>&lt;p&gt;Read &lt;em&gt;this&lt;/em&gt; carefully.&lt;/p&gt;</code> can be meaningful. Keep the original and review formatting changes before using the result.</p>
+<p>After syntax errors are resolved, use the <a href="/xml-editor/#graph">XML graph walkthrough</a> to inspect element relationships.</p></div>
+<div class="section">
             <h2>Frequently Asked Questions</h2>
 
             <div class="faq-item">
@@ -237,7 +249,7 @@
 
             <div class="faq-item">
                 <h3>Is the XML formatter free?</h3>
-                <p>Yes, Tidy Code's XML formatter is completely free with no signup required. Your data stays in your browser and is never sent to any server.</p>
+                <p>Yes, Tidy Code's XML formatter is completely free with no signup required. Document editing and formatting run locally in your browser. If you choose a cloud AI feature, the content you submit is sent to that provider.</p>
             </div>
         </div>
 
