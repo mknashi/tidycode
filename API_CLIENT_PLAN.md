@@ -169,6 +169,8 @@ Response    { status, statusText, headers, body (text or base64), size, timings:
 
 ## 4. Phases
 
+The implementation review in section 9 revises the release sequence and estimates below. Follow section 9 for implementation: select transports before sending, do not automatically replay failed requests or use `no-cors` diagnostic retries, and release the local agent behind its own validation gate.
+
 ### Phase 1: MVP (about 1.5–2 weeks)
 - New tab type `request`. Add "New Request" to the new-tab menu and a command-palette entry.
 - Method, URL, query params (two-way synced with the URL), headers, body (none / JSON / text / form-urlencoded).
@@ -269,3 +271,55 @@ async fn http_request(state: State<'_, HttpState>, req: HttpRequest) -> Result<H
 2. Is maintaining a browser extension, with its store listings and reviews, worth it, or should B and D cover the gap?
 3. Should `.http` files be the native save format, or JSON collections plus `.http` import/export?
 4. Should this ship before or after AI reinstatement? Phase 4's AI hooks depend on it.
+
+---
+
+## 9. Implementation plan following code review
+
+Reviewed against the current repository on November 19, 2026. The architecture is workable, but the first release should be split into smaller milestones, with the local agent behind its own release gate. This section supersedes conflicting transport behavior, release sequencing, and estimates in earlier sections.
+
+### 9.1. Findings and corrections
+
+- **Tab integration requires more than a render branch.** The current serializer in `src/TidyCode.jsx` explicitly selects tab fields and would drop request data. Loading, saving, autosave, formatting, and file actions must recognize request tabs.
+- **Secret storage is currently AI-specific.** Reuse encryption and keychain primitives from `src/utils/secureStorage.js` through a namespaced API; do not route API-client credentials through AI settings.
+- **Select transport before sending.** Availability checks may choose another transport before execution. Never automatically replay a failed request through another transport: the server may already have processed it. Show the failure and let the user explicitly resend.
+- **Remove automatic `no-cors` diagnostic retries.** A retry can send another request without reliably identifying the failure. Browser code cannot reliably distinguish CORS from other network failures. Report likely causes and actionable next steps without claiming certainty. See the [Fetch standard](https://fetch.spec.whatwg.org/).
+- **Update local-agent browser assumptions.** Chrome introduced permission-gated local-network access; `Access-Control-Allow-Private-Network` alone is insufficient. Validate connectivity and permission behavior in supported browsers before committing to the agent implementation. See [Chrome 142 release notes](https://developer.chrome.com/release-notes/142).
+
+### 9.2. Milestones and completion criteria
+
+Estimates are engineering days for one developer, including focused validation.
+
+| Milestone | Implementation | Completion criteria | Estimate |
+|---|---|---|---|
+| **1. Request contracts and persistence** | Define versioned request, response, error, and transport-capability models. Add IndexedDB stores for requests, history, and workspace state. Separate saved definitions from live execution state. | Reload restores request drafts and tab order; existing editor tabs still restore correctly. | 2–3 days |
+| **2. Browser vertical slice** | Build `RequestTab`, request bar, editable headers/params, body modes, and response viewer. Implement browser transport, cancellation, timeout, and “Open response in editor.” | Send GET/POST requests to a controlled server; inspect JSON/text/headers; cancel a slow response; show honest browser limitations. | 3–4 days |
+| **3. Desktop transport** | Add a shared Rust HTTP execution service, Tauri commands, cancellation registry, redirect policy, TLS setting, and bounded response reads. | Desktop handles non-CORS endpoints, binary responses, timeouts, redirects, and cancellation without leaking request state. | 3–4 days |
+| **4. History and release hardening** | Add history sidebar, retention limits, redaction, size caps, preview lifecycle cleanup, and request-tab action guards. | History reopens editable requests; credentials stay out of persisted history; large responses remain bounded. | 2–3 days |
+| **5. Collections, variables, and auth** | Add collections/folders, environments, deterministic variable resolution, secret references, Basic/Bearer/API-key auth, and cURL import/export. | Saved requests run against different environments; unresolved variables fail before sending; exports omit secrets by default. | 5–7 days |
+| **6. Desktop local agent** | First prove browser connectivity, then add an opt-in loopback server, pairing, token storage, authenticated execution/cancellation, revocation, and Settings UI. | Unpaired, revoked, and disallowed-origin clients cannot execute requests; supported browsers pass pairing and permission tests. | 4–6 days |
+| **7. Editor-native workflows** | Add `.http` parsing and send actions, split response view, saved examples, response comparison, then Postman/OpenAPI import. | `.http` files stay plain text; imports report unsupported features; comparisons reuse `DiffViewer`. | 5–7 days |
+
+Ship milestones 1–4 first, followed by collections/auth, then the agent. Keep the extension and proxy as separate follow-on projects, and keep AI hooks outside the critical path.
+
+Estimated delivery: **10–14 working days for the initial desktop/browser client**, or **about 5–7 weeks through milestone 7**, excluding extension stores, a proxy product, OAuth2, and collection runners. These estimates replace the earlier phase estimates.
+
+### 9.3. Implementation decisions
+
+- Keep `TidyCode.jsx` responsible for tab routing and app integration. Put execution and persistence in `src/services/http/` and `src/hooks/useApiClient.js`.
+- Preserve query parameters as ordered rows, including duplicate keys and blank values. Avoid rebuilding URLs on every keystroke.
+- Give each send a unique execution ID. Cancel on tab close, and ignore stale results after another send.
+- Expose transport capabilities explicitly. Browser transport must disable unsupported TLS/header controls and mark unavailable timings or headers.
+- Start with proposed limits of **20 MiB received**, **1 MiB rendered**, and **1 MiB per persisted response**, plus the 200-entry history cap. Enforce receive limits while reading rather than after allocating the full response. Clearly mark truncated display and stored content.
+- Persist unresolved request definitions. Redact literal authorization, cookies, API keys, sensitive query fields, and response headers. Make response-body history storage optional because responses can contain secrets too.
+- Render response HTML/XML as text. Sanitize SVG previews and avoid executing response content. Revoke preview object URLs when responses are replaced or tabs close.
+
+### 9.4. Validation and release gates
+
+Use a local HTTP fixture server with routes for duplicate headers/query keys, redirects, delayed responses, binary content, oversized bodies, and CORS failures.
+
+- **Service tests:** variable precedence and unresolved variables, request serialization, query preservation, redaction, and cancellation races.
+- **Rust tests:** timeout and redirect behavior, bounded response reads, cancellation, and registry cleanup after success or failure.
+- **Browser checks:** tab restoration, send/cancel behavior, response rendering, history reopening, and existing editor actions with a request tab active.
+- **Build checks:** run the web build and desktop compile before each release milestone.
+- **Agent release gate:** validate origin and host checks, pairing expiry, authenticated cancellation, token revocation, browser permission denial, and connectivity in supported browsers. The agent ships only after these checks pass.
