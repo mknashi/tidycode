@@ -1,0 +1,11 @@
+{
+  "browser": "firefox",
+  "version": "160.0.1",
+  "ui": {
+    "api": "undefined",
+    "disabled": true,
+    "gray": "grayscale(1)",
+    "reason": "Private AI: unsupportedNeeds a supported desktop Chrome browser with built-in AI enabled.Supports brief explanations, log summaries and short text chat, including grammar correction. Small-JSON repair is experimental; XML repair is not enabled. Cloud processing requires choosing a cloud provider explicitly."
+  },
+  "status": "passed"
+}

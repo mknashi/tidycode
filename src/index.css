@@ -349,51 +349,23 @@ body.theme-light .markdown-preview hr {
   overflow-y: hidden !important;
 }
 
-/* CodeMirror Selection Styling - Dark Mode */
-/* Use mix-blend-mode to make selection visible while keeping text readable */
-body.theme-dark .cm-selectionLayer {
-  mix-blend-mode: multiply !important;
-}
+/* CodeMirror draws the background once; native selection supplies text contrast.
+   Do not paint a second native background over syntax-highlighted text. */
+body.theme-dark .cm-editor { --editor-selection-bg: #264f78; --editor-selection-text: #ffffff; }
+body.theme-light .cm-editor { --editor-selection-bg: #b6d7ff; --editor-selection-text: #111827; }
 
-body.theme-dark .cm-selectionBackground,
-body.theme-dark .cm-focused .cm-selectionBackground,
-body.theme-dark .cm-selectionLayer .cm-selectionBackground {
-  background: rgba(95, 232, 200, 0.35) !important;
-  box-shadow:
-    inset 0 -3px 0 rgba(0,0,0,0.35),
-    inset 0 3px 0 rgba(255,255,255,0.12),
-    inset 0 0 0 1px rgba(95, 232, 200, 0.15) !important;
+.cm-editor .cm-selectionLayer { mix-blend-mode: normal !important; }
+.cm-editor .cm-selectionBackground {
+  background: var(--editor-selection-bg) !important;
+  box-shadow: none !important;
 }
-
-/* Selection match (when text matches selection) - light gray at 25% */
-body.theme-dark .cm-selectionMatch {
-  background-color: rgba(95, 232, 200, 0.34) !important;
+.cm-editor .cm-content::selection,
+.cm-editor .cm-content ::selection {
+  background-color: transparent !important;
+  color: var(--editor-selection-text) !important;
 }
-
-/* Native selection fallback */
-body.theme-dark .cm-content ::selection,
-body.theme-dark .cm-line ::selection,
-body.theme-dark .cm-line span::selection {
-  background-color: rgba(95, 232, 200, 0.34) !important;
-}
-
-/* Light mode selection - keep existing blue */
-body.theme-light .cm-selectionBackground,
-body.theme-light .cm-focused .cm-selectionBackground,
-body.theme-light .cm-selectionLayer .cm-selectionBackground {
-  background-color: #add6ff !important;
-}
-
-body.theme-light .cm-selectionMatch {
-  background-color: rgba(173, 214, 255, 0.3) !important;
-}
-
-body.theme-light .cm-content ::selection,
-body.theme-light .cm-line ::selection,
-body.theme-light .cm-line span::selection {
-  background-color: #add6ff !important;
-}
-
+body.theme-dark .cm-selectionMatch { background-color: rgba(147, 197, 253, 0.18); }
+body.theme-light .cm-selectionMatch { background-color: rgba(37, 99, 235, 0.12); }
 
 /* Print styles for PDF viewer */
 @media print {

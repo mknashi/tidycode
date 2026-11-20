@@ -1,0 +1,624 @@
+{
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/158.0.8127.36",
+    "revision": "@14d6f648e8cd7ad750a4044200ce94d3321be260",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36",
+    "jsVersion": "15.8.62.31"
+  },
+  "checks": [
+    "Fresh profile shows needs-download without implicitly creating a session",
+    "Real pending model preparation can be cancelled",
+    "Retry reaches ready on real model"
+  ],
+  "states": [
+    {
+      "elapsedMs": 2085.2999999523163,
+      "state": "needs-download",
+      "progress": 0,
+      "reason": "Chrome is downloading the model. Click to connect and monitor progress."
+    },
+    {
+      "elapsedMs": 2088.899999976158,
+      "state": "initializing",
+      "progress": 0,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 2213.600000023842,
+      "state": "downloading",
+      "progress": 0.0002899169921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 5345.699999928474,
+      "state": "downloading",
+      "progress": 0.0100555419921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 9660.5,
+      "state": "downloading",
+      "progress": 0.0201416015625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 12112.899999976158,
+      "state": "error",
+      "progress": 0.0258636474609375,
+      "reason": "signal is aborted without reason"
+    },
+    {
+      "elapsedMs": 12121.699999928474,
+      "state": "initializing",
+      "progress": 0,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 12191.199999928474,
+      "state": "downloading",
+      "progress": 7.62939453125e-05,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 16202.5,
+      "state": "downloading",
+      "progress": 0.0101165771484375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 20085.5,
+      "state": "downloading",
+      "progress": 0.020111083984375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 24547.899999976158,
+      "state": "downloading",
+      "progress": 0.030517578125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 28390.199999928474,
+      "state": "downloading",
+      "progress": 0.040069580078125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 32424.600000023842,
+      "state": "downloading",
+      "progress": 0.0502777099609375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 36336.39999997616,
+      "state": "downloading",
+      "progress": 0.0600128173828125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 40713.39999997616,
+      "state": "downloading",
+      "progress": 0.07000732421875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 45731.60000002384,
+      "state": "downloading",
+      "progress": 0.080078125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 50085.10000002384,
+      "state": "downloading",
+      "progress": 0.0900115966796875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 54361.199999928474,
+      "state": "downloading",
+      "progress": 0.1000823974609375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 58984.199999928474,
+      "state": "downloading",
+      "progress": 0.110015869140625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 63582.10000002384,
+      "state": "downloading",
+      "progress": 0.120086669921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 69093.79999995232,
+      "state": "downloading",
+      "progress": 0.1300506591796875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 73926.69999992847,
+      "state": "downloading",
+      "progress": 0.14013671875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 79655,
+      "state": "downloading",
+      "progress": 0.150115966796875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 85334.69999992847,
+      "state": "downloading",
+      "progress": 0.16009521484375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 91396,
+      "state": "downloading",
+      "progress": 0.1700592041015625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 98296.79999995232,
+      "state": "downloading",
+      "progress": 0.1800689697265625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 103365,
+      "state": "downloading",
+      "progress": 0.1901092529296875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 108179.19999992847,
+      "state": "downloading",
+      "progress": 0.20001220703125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 112926,
+      "state": "downloading",
+      "progress": 0.210113525390625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 117958.89999997616,
+      "state": "downloading",
+      "progress": 0.22015380859375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 122862.60000002384,
+      "state": "downloading",
+      "progress": 0.23004150390625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 128548.89999997616,
+      "state": "downloading",
+      "progress": 0.240081787109375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 132764.79999995232,
+      "state": "downloading",
+      "progress": 0.250091552734375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 137423.39999997616,
+      "state": "downloading",
+      "progress": 0.2600555419921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 142528.29999995232,
+      "state": "downloading",
+      "progress": 0.27001953125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 147199.5,
+      "state": "downloading",
+      "progress": 0.2801055908203125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 152069.69999992847,
+      "state": "downloading",
+      "progress": 0.2900543212890625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 157237.79999995232,
+      "state": "downloading",
+      "progress": 0.3001251220703125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 164973.5,
+      "state": "downloading",
+      "progress": 0.310028076171875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 170345.79999995232,
+      "state": "downloading",
+      "progress": 0.320068359375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 174994.79999995232,
+      "state": "downloading",
+      "progress": 0.3300018310546875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 181200.60000002384,
+      "state": "downloading",
+      "progress": 0.3400726318359375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 187452.79999995232,
+      "state": "downloading",
+      "progress": 0.350006103515625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 192723.5,
+      "state": "downloading",
+      "progress": 0.360076904296875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 196899.60000002384,
+      "state": "downloading",
+      "progress": 0.370025634765625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 201183.60000002384,
+      "state": "downloading",
+      "progress": 0.380035400390625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 205365.39999997616,
+      "state": "downloading",
+      "progress": 0.390106201171875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 209537,
+      "state": "downloading",
+      "progress": 0.4000244140625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 214978.89999997616,
+      "state": "downloading",
+      "progress": 0.410064697265625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 220101.10000002384,
+      "state": "downloading",
+      "progress": 0.4201507568359375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 224506.89999997616,
+      "state": "downloading",
+      "progress": 0.4301300048828125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 229261.5,
+      "state": "downloading",
+      "progress": 0.440093994140625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 233812.69999992847,
+      "state": "downloading",
+      "progress": 0.4500579833984375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 238508.69999992847,
+      "state": "downloading",
+      "progress": 0.4600067138671875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 243300.79999995232,
+      "state": "downloading",
+      "progress": 0.4701080322265625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 247621.79999995232,
+      "state": "downloading",
+      "progress": 0.4800567626953125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 253776.29999995232,
+      "state": "downloading",
+      "progress": 0.490081787109375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 256711.29999995232,
+      "state": "downloading",
+      "progress": 0.50018310546875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 259754.19999992847,
+      "state": "downloading",
+      "progress": 0.5101470947265625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 262705.5,
+      "state": "downloading",
+      "progress": 0.5203399658203125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 265712.5,
+      "state": "downloading",
+      "progress": 0.530120849609375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 268512.6999999285,
+      "state": "downloading",
+      "progress": 0.5400543212890625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 271532.60000002384,
+      "state": "downloading",
+      "progress": 0.5501556396484375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 274526.10000002384,
+      "state": "downloading",
+      "progress": 0.560150146484375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 277231.5,
+      "state": "downloading",
+      "progress": 0.570159912109375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 280245.7999999523,
+      "state": "downloading",
+      "progress": 0.5800323486328125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 283074,
+      "state": "downloading",
+      "progress": 0.5900421142578125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 285963.1999999285,
+      "state": "downloading",
+      "progress": 0.6001434326171875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 288744.6999999285,
+      "state": "downloading",
+      "progress": 0.6102294921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 291686.5,
+      "state": "downloading",
+      "progress": 0.6201934814453125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 294389.6999999285,
+      "state": "downloading",
+      "progress": 0.6300506591796875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 297692.5,
+      "state": "downloading",
+      "progress": 0.6403350830078125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 300378,
+      "state": "downloading",
+      "progress": 0.650054931640625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 303374.7999999523,
+      "state": "downloading",
+      "progress": 0.660064697265625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 306452.39999997616,
+      "state": "downloading",
+      "progress": 0.67010498046875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 309211.39999997616,
+      "state": "downloading",
+      "progress": 0.68011474609375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 312185.5,
+      "state": "downloading",
+      "progress": 0.69012451171875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 314952.39999997616,
+      "state": "downloading",
+      "progress": 0.700164794921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 317897.10000002384,
+      "state": "downloading",
+      "progress": 0.7100830078125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 320577.7999999523,
+      "state": "downloading",
+      "progress": 0.7200927734375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 323622.89999997616,
+      "state": "downloading",
+      "progress": 0.7301483154296875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 326524,
+      "state": "downloading",
+      "progress": 0.74005126953125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 329475.5,
+      "state": "downloading",
+      "progress": 0.75018310546875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 332493.2999999523,
+      "state": "downloading",
+      "progress": 0.760040283203125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 335320.89999997616,
+      "state": "downloading",
+      "progress": 0.7701416015625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 338436.7999999523,
+      "state": "downloading",
+      "progress": 0.7800750732421875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 341352.6999999285,
+      "state": "downloading",
+      "progress": 0.790008544921875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 344415.39999997616,
+      "state": "downloading",
+      "progress": 0.8000640869140625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 347470,
+      "state": "downloading",
+      "progress": 0.8100433349609375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 351023.89999997616,
+      "state": "downloading",
+      "progress": 0.82000732421875,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 353865.1999999285,
+      "state": "downloading",
+      "progress": 0.830108642578125,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 357061.60000002384,
+      "state": "downloading",
+      "progress": 0.840087890625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 360983.89999997616,
+      "state": "downloading",
+      "progress": 0.850006103515625,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 365906.5,
+      "state": "downloading",
+      "progress": 0.8600921630859375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 371088.60000002384,
+      "state": "downloading",
+      "progress": 0.8701019287109375,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 419667.6999999285,
+      "state": "initializing",
+      "progress": 1,
+      "reason": ""
+    },
+    {
+      "elapsedMs": 419677.10000002384,
+      "state": "ready",
+      "progress": 1,
+      "reason": ""
+    }
+  ],
+  "initial": {
+    "state": "needs-download",
+    "progress": 0,
+    "reason": "Chrome is downloading the model. Click to connect and monitor progress."
+  },
+  "availabilityRechecks": [],
+  "beforeCancel": {
+    "state": "downloading",
+    "progress": 0.0258636474609375,
+    "reason": ""
+  },
+  "cancelled": {
+    "ok": false,
+    "error": "signal is aborted without reason"
+  },
+  "afterRetry": {
+    "state": "ready",
+    "progress": 1,
+    "reason": ""
+  },
+  "retryOutcome": {
+    "ok": true
+  },
+  "observedStateEvents": 6626,
+  "stateRecording": "State transitions and integer-percent progress changes retained; repetitive sub-percent events omitted.",
+  "observedRunSeconds": 417.6
+}

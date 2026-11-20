@@ -14,7 +14,7 @@ import { isLocalProvider } from '../privacyGuard.js';
 const suite = new TestSuite('Private AI lifecycle, budgeting and routing');
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-function fixture({ availability = 'available', create, timeoutMs = 1000, stallMs = 1000 } = {}) {
+function fixture({ availability = 'available', create, timeoutMs = 1000, stallMs = 1000, downloadTimeoutMs = 1000 } = {}) {
   const calls = { create: 0, destroy: 0, cloneDestroy: 0, prompts: [] };
   const child = () => ({ contextWindow: 4096, contextUsage: 100,
     measureContextUsage: async text => Math.ceil((typeof text === 'string' ? text.length : JSON.stringify(text).length) / 2),
@@ -24,7 +24,7 @@ function fixture({ availability = 'available', create, timeoutMs = 1000, stallMs
   });
   const base = { contextWindow: 4096, clone: async () => child(), destroy: () => { calls.destroy++; } };
   const api = { availability: async () => availability, create: options => { calls.create++; return create ? create(options, base) : Promise.resolve(base); } };
-  const provider = new ChromeBuiltInProvider({ getLanguageModel: () => api, desktop: () => false, timeoutMs, stallMs });
+  const provider = new ChromeBuiltInProvider({ getLanguageModel: () => api, desktop: () => false, timeoutMs, stallMs, downloadTimeoutMs });
   return { provider, calls, api, base };
 }
 suite.test('availability checks never download a downloadable model', async () => {
@@ -61,6 +61,35 @@ suite.test('unchanged progress events do not prevent stall detection', async () 
   const attempt = provider.startDownload(); const rejected = assert.rejects(attempt);
   progress({ loaded: 0.1 }); await delay(25); progress({ loaded: 0.1 });
   assert.equal(provider.status.getSnapshot().state, 'stalled'); provider.cancel(); await rejected;
+});
+suite.test('download timeout clears pending work and permits retry; late session is destroyed', async () => {
+  const pending = deferred(); let attempts = 0;
+  const { provider, calls, base } = fixture({ downloadTimeoutMs: 10,
+    create: (_, session) => ++attempts === 1 ? pending.promise : Promise.resolve(session) });
+  await assert.rejects(provider.startDownload(), /timed out/);
+  assert.equal(provider.attempt, null);
+  assert.equal(provider.status.getSnapshot().state, 'error');
+  await provider.retry();
+  assert.equal(provider.isReady(), true);
+  pending.resolve(base); await delay(0);
+  assert.equal(calls.destroy, 1);
+  assert.equal(provider.isReady(), true);
+  await provider.cleanup();
+});
+suite.test('increasing progress recovers a stalled download before it completes', async () => {
+  let progress; const pending = deferred();
+  const { provider, base } = fixture({ stallMs: 10, create: options => {
+    options.monitor({ addEventListener: (_, fn) => { progress = fn; } });
+    return pending.promise;
+  } });
+  const attempt = provider.startDownload();
+  progress({ loaded: 0.1 }); await delay(30);
+  assert.equal(provider.status.getSnapshot().state, 'stalled');
+  progress({ loaded: 0.2 });
+  assert.equal(provider.status.getSnapshot().state, 'downloading');
+  pending.resolve(base); await attempt;
+  assert.equal(provider.isReady(), true);
+  await provider.cleanup();
 });
 suite.test('completion and stream preserve sampling metadata and destroy clones', async () => {
   const { provider, calls } = fixture(); await provider.initialize();
@@ -326,4 +355,48 @@ suite.test('Nano repair uses complete-input budgeting and refuses overflowing es
   assert.ok(calls.prompts[0].includes(JSON.stringify({ document: '{"id":7' })));
   await provider.cleanup();
 });
+for (const phase of ['clone', 'prompt', 'stream']) {
+  suite.test('interrupted ' + phase + ' invalidates the session and permits explicit local recovery', async () => {
+    const { provider, base, calls } = fixture();
+    await provider.initialize();
+    const healthyClone = base.clone;
+    const interrupted = Object.assign(new Error('Model session is no longer valid'), { name: 'InvalidStateError' });
+    let chunks = [];
+    if (phase === 'clone') base.clone = async () => { throw interrupted; };
+    else base.clone = async () => ({
+      contextWindow: 4096, measureContextUsage: async () => 10,
+      prompt: async () => { throw interrupted; },
+      promptStreaming: () => {
+        let sent = false;
+        return new ReadableStream({ pull(controller) {
+          if (!sent) { sent = true; controller.enqueue('Partial response'); }
+          else controller.error(interrupted);
+        } });
+      },
+      destroy: () => { calls.cloneDestroy++; },
+    });
+    const request = phase === 'stream'
+      ? provider.streamChat([{ role: 'user', content: 'Explain this sentence.' }], (text, done) => chunks.push({ text, done }))
+      : provider.chat([{ role: 'user', content: 'Explain this sentence.' }]);
+    await assert.rejects(request, /no longer valid/);
+    assert.equal(provider.status.getSnapshot().state, 'error');
+    assert.equal(provider.isReady(), false);
+    assert.equal(provider.task, null);
+    assert.equal(calls.destroy, 1);
+    assert.equal(calls.cloneDestroy, phase === 'clone' ? 0 : 1);
+    if (phase === 'stream') {
+      assert.deepEqual(chunks, [{ text: 'Partial response', done: false }]);
+    }
+    // Do not silently replay interrupted prompts. Reprepare, then explicitly retry.
+    base.clone = healthyClone;
+    await provider.retry();
+    assert.equal(provider.isReady(), true);
+    assert.equal(calls.prompts.length, 0);
+    const result = await provider.chat([{ role: 'user', content: 'Explain this sentence.' }]);
+    assert.equal(result.text, 'A short explanation.');
+    assert.equal(calls.create, 2);
+    assert.equal(calls.prompts.length, 1);
+    await provider.cleanup();
+  });
+}
 export const allSuites = [suite];

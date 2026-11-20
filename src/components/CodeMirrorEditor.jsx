@@ -565,19 +565,6 @@ const CodeMirrorEditor = forwardRef(({
           color: '#9ca3af', // text-gray-400
           border: 'none',
         },
-        // Selection styling - teal background with enhanced 3D depth effect for dark mode
-        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-          background: 'rgba(95, 232, 200, 0.35) !important',
-          boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.35), inset 0 3px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(95, 232, 200, 0.15) !important',
-        },
-        '.cm-selectionLayer .cm-selectionBackground': {
-          background: 'rgba(95, 232, 200, 0.35) !important',
-          boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.35), inset 0 3px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(95, 232, 200, 0.15) !important',
-        },
-        // Selection match highlighting - teal at 34%
-        '.cm-selectionMatch': {
-          backgroundColor: 'rgba(95, 232, 200, 0.34) !important',
-        },
       }, { dark: true })
     : EditorView.theme({
         '&': {
@@ -601,13 +588,6 @@ const CodeMirrorEditor = forwardRef(({
           backgroundColor: '#f6f8fa',
           color: '#6e7781',
           border: 'none',
-        },
-        // Selection styling - light blue for light mode
-        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-          backgroundColor: '#add6ff !important',
-        },
-        '.cm-selectionLayer .cm-selectionBackground': {
-          backgroundColor: '#add6ff !important',
         },
       });
 

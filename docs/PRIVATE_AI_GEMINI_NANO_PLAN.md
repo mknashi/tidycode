@@ -2,11 +2,84 @@
 
 This document covers adding Chrome's built-in model, Gemini Nano, to the TidyCode web app as a "Private AI" option. It records what we measured in November 2026, what the model is good and bad at, how users will experience it, and the steps to build it. It is separate from `API_CLIENT_PLAN.md`, although the API client is one of the features that would use it.
 
-Status: analysis and probe tests done (November 4–5, 2026). Implementation plan reviewed against the existing code and Chrome documentation on November 15, 2026; revised plan in section 6. Implementation started on branch `feature/private-ai-gemini-nano` (November 15, 2026).
+## Current status — November 19, 2026
+
+Core implementation and experimental small-JSON repair are complete and were pushed to main and deploy/dokploy in bca627d; unsupported-browser selection was tightened in adec598. Subsequent repair/editor UX and documentation changes are also committed. A push is not proof of successful deployment; live deployment verification remains separate.
+
+The November 15–16 sections below preserve historical evaluations and decisions. Their “gated,” “local,” and “not deployed” statements describe that point in time, not today's implementation status. XML repair remains gated; small-JSON repair is enabled.
+
+### Validation completed in this follow-up
+
+| Check | Result and scope |
+| --- | --- |
+| Automated AI suite | 181 passed, zero failures/skips on November 19. Mocked lifecycle cases cover stalled progress, cancellation/retry races, timeout, model eviction, stale availability responses, cleanup, and private routing. |
+| Real Firefox 160.0.1 | Isolated headless profile: Prompt API absent; Private AI remains visible, disabled, grayscale, with the supported-Chrome explanation. No browser/API substitution. |
+| Real Chrome 157.0.8103.51 | Installed model initializes; grammar correction succeeds with CDP page-network offline emulation; immediate request cancellation releases the task; destroying the real session then refreshing availability recovers; cleanup/reinitialization succeeds. |
+| Simulated Chrome availability UI | API absent, unavailable, and downloadable states pass. Unsupported states are disabled/grayscale; downloadable is selectable with preparation controls. These are injected API states, not real download failures. |
+| Safari | Automation attempted but blocked because “Allow remote automation” is disabled. No settings were changed. Not validated. |
+
+Evidence: [Chrome results](validation/private-ai-chrome-2026-11-19.json), [Firefox results](validation/private-ai-firefox-2026-11-19.json). Reproduction drivers: [Chrome](../test/private-ai-browser-validation.mjs), [Firefox](../test/private-ai-firefox-validation.mjs). Both use synthetic content and isolated browser profiles. Run Vite at port 5187; Chrome needs CDP at 9337 with an already installed model, and Firefox needs WebDriver BiDi at 9338. The Chrome driver never requests a model download when availability is not available.
+
+Limits: this follow-up uses the same machine as the earlier pilot. Chrome page-network emulation does not prove OS-wide offline operation or exercise the browser-managed model download network. Session destruction is deliberate; it is not actual model eviction. Immediate cancellation does not establish cancellation during every streaming phase. The exact installed model build is still unrecorded. Driver deadlines are shortened to 45 seconds for initialization/inference; production defaults are unchanged.
+
+### Fresh-profile download follow-up — November 19, 2026
+
+A new isolated profile launched Chrome 158.0.8127.36, a newer installed browser than the still-running Chrome 157 profile used earlier. No model flags, API availability mocks, OS network changes, or artificial disk exhaustion were used.
+
+- The first availability check timed out and the provider returned a recoverable error. A later fresh-page check returned needs-download. [Initial evidence](validation/private-ai-fresh-profile-initial-2026-11-19.json).
+- The first download cancellation/retry run observed real progress, but a development-page reload interrupted measurement. It is retained as an incomplete run, not a passing completion test. [Interrupted evidence](validation/private-ai-download-interrupted-2026-11-19.json).
+- On the clean rerun, Chrome reported an ongoing download. Cancelling preparation rejected the pending request and kept the provider not ready. Retry progressed to ready in approximately 417.6 seconds for the recorded run (including the cancellation step). This is not a from-zero download benchmark: Chrome may retain partial progress across requests.
+- Cancelling Tidy Code's preparation request is not a guarantee that Chrome's shared background transfer stops; the later availability result explicitly reported downloading.
+- After completion, real grammar inference with CDP page-network offline emulation, immediate cancellation, deliberately destroyed-session recovery, and cleanup/reinitialization all passed on Chrome 158.
+- Added two automated regressions: a timed-out download can retry without a late session overwriting readiness, and increasing progress recovers stalled status. **183 AI tests passed.** No production behavior changed.
+
+Evidence: [successful download/retry](validation/private-ai-download-2026-11-19.json), [Chrome 158 lifecycle/inference](validation/private-ai-chrome158-2026-11-19.json). Download evidence retains state transitions and integer-percent progress changes, with the original event count. Reproduce with [download driver](../test/private-ai-download-validation.mjs) against isolated Chrome CDP port 9340 and Vite port 5187. For the subsequent installed-model driver, set CDP_PORT=9340 and EVIDENCE_PATH to a separate report path.
+
+This establishes fresh-profile preparation and recovery on the same machine, not independent hardware coverage, physical offline operation, forced transfer stalls, low-disk recovery, or real model eviction. Those remain open.
+
+### Model-update interruption follow-up — November 19, 2026
+
+Private AI settings now explain that Chrome manages model downloads and updates, and advise preparing again if prompted before retrying an interrupted request. Tidy Code does not offer a model version selector or promise an update notification.
+
+Added three deterministic regression cases for invalid-session failures during cloning, a normal prompt, and a partially delivered stream. Each verifies invalidation, task/session cleanup, explicit re-preparation and successful local retry. The stream case checks that partial text is not marked complete. Re-preparation does not silently replay the failed request. These are injected failures, not a real Chrome model hot swap.
+
+The AI suite now passes **186 tests**. Actual model-update interruption remains an open real-browser check: exercise a request across a Chrome-managed model update, verify the error/retry experience and provider preference, and confirm no automatic cloud dispatch or accepted partial repair. It requires an update becoming available; destroying a session is not equivalent evidence.
+
+Reference: [Chrome model management](https://developer.chrome.com/docs/ai/understand-built-in-model-management). Chrome documents automatic model updates and the possibility of a prompt failing during the switch.
+
+### Expanded repair and response evaluation — November 19, 2026
+
+Ran ten new JSON fixtures and three response-quality fixtures three times each against the installed real model in isolated Chrome 157.0.8103.51 on the same machine. No cloud provider was called. Fixtures: [expanded cases](../test/private-ai-expanded-cases.js); reproduction: [evaluation driver](../test/private-ai-expanded-evaluation.mjs); raw proposals, guarded outputs, latency, metadata, and manual review: [results](validation/private-ai-expanded-2026-11-19.json).
+
+Repair comparisons preserve literal numeric spelling, string escapes, array order, and keys; they ignore only whitespace outside strings. This prevents a parsed-number comparison from masking large-integer rounding. Nano is invoked directly for evaluation even when local rules succeed; rule outputs are recorded separately. These figures therefore do not measure production rules-first fallback success.
+
+| Cases (three attempts each) | Result |
+| --- | --- |
+| Large integer/exponent; false/null/zero; nested closings; fake system boundary; embedded quotation marks | 15/15 accepted outputs exactly matched expected tokens. |
+| Unicode with escaped path; quoted command to output BANANA | 0/6 accepted; all six proposals were refused by preservation checks. These are effectiveness limitations, not successful repairs. |
+| Duplicate keys; missing value; trailing comma requiring deletion | 9/9 refused as required by Nano's current guard. Local rules can legitimately handle some of these differently; this does not assert identical guard behavior for every repair provider. |
+
+Manual review of nine explanation/summary answers:
+- No tested embedded command was obeyed.
+- All three log summaries were acceptable.
+- All three JSON explanations had accuracy limitations: one described the internal document envelope as source content; two speculated that fields were unrelated.
+- All three sampled explanations disclosed the sample and did not assert the unseen tail's values. However, two grouped partial record 409 with complete records, despite its status and amount being outside the analyzed prefix. One sampled explanation was acceptable.
+
+Decision: retain experimental JSON repair, the preservation guard, and current capability limits. The next quality work is to prevent incomplete-record sampling where practical and reevaluate wrapper/relationship hallucinations with held-out cases. Prompt wording alone is not a guarantee. This single-device run does not justify enabling XML repair or reporting general model accuracy. The model build was not captured, and repeated calls are not independent hardware coverage.
+
+### Remaining validation and deferred work
+
+1. **Real download/recovery conditions:** fresh-profile preparation, cancel/retry during download, completion, and subsequent inference now passed on Chrome 158 (see follow-up below). Forced stalled transfer, low-disk failure, physical network interruption, actual model eviction, and interruption during a real model update remain untested. Existing mocks are coverage of application logic, not substitutes for these checks.
+2. **Browser/hardware coverage:** Safari manual or automated UI validation; additional supported Chrome versions and CPU/GPU hardware; record model build when exposed and distinguish cold/warm latency.
+3. **Repair and response quality:** expanded evaluation is now recorded above. Address incomplete-record sampling and wrapper/relationship hallucinations, then reevaluate with held-out cases and additional hardware. Retain the experimental designation and 8,192-character limit.
+4. **Cloud retry matrix:** broaden manual checks across configured providers for original-snapshot use, explicit consent, credential blocking, provider preference retention, and review before application. Previously reported user validation covers a working flow, not this entire matrix.
+5. **Intentionally deferred capabilities:** Nano XML repair, note transformations, inline completion, and API request drafting. API drafts depend on the API client. Desktop-specific validation is deferred until desktop GA preparation and is not a gate for this web-only release.
+
+The browser/download validation required no production logic changes. The model-update follow-up adds settings guidance and regression coverage; actual update delivery remains controlled by Chrome.
 
 Current implementation includes the shared Chrome provider, observable download/session state, retry/cancellation and timeouts, runtime budgeting, local-only routing and task capability checks, settings/progress UI, and brief explanation/log-summary integration with sampling labels. Auto-fix remains first; experimental small-JSON Nano repair is now enabled behind the existing Private AI selection and AI repair checkbox. Nano XML repair, note transformations and inline completion remain gated. Short text chat, including grammar correction, is enabled with complete conversation budgeting; oversized conversations are refused rather than sampled or sent to cloud. Unit tests cover lifecycle races, sampling and cloud dispatch prevention. Validation so far: `npm run test:ai` passes all 181 tests (38 new tests), and the web production build passes. Chrome 157 headless smoke checks pass for app startup, automatic Gemini Nano display, explicit download controls, and the evaluation page’s needs-download state, with no uncaught exceptions. A live single-device inference pilot is now recorded below; desktop UI checks remain unverified.
 
-Local UI revision (November 16, 2026): JSON/XML error buttons say “Fix JSON” / “Fix XML.” The original card layout is retained and labelled “Auto Fix,” including its Free, No API Key and Always first badges. Auto Fix is always checked and highlighted, independently of the selected AI provider; its checked control cannot be toggled off. Its checkbox, “Use AI if rule-based fixing fails,” is enabled by default for all providers; an explicit unchecked choice persists and is enforced at the repair service boundary. The separate “No AI provider” card and repair radio choices were removed. Local rules always run first; when enabled, AI repair is offered with a named provider button and cloud consent remains explicit. Provider retries use the original snapshot, block detected credentials for cloud processing, validate syntax, and open a review diff. The diff defaults to “Replace current tab” when the source tab is still active and unchanged; replacement preserves file metadata and supports Undo. “Open in new tab” remains available and becomes the selection when replacement is unavailable. Experimental Nano JSON repair is now available after local rules fail (see the implementation update below); Nano XML repair remains gated. These changes are local and not deployed.
+Local UI revision (November 16, 2026): JSON/XML error buttons say “Fix JSON” / “Fix XML.” The original card layout is retained and labelled “Auto Fix,” including its Free, No API Key and Always first badges. Auto Fix is always checked and highlighted, independently of the selected AI provider; its checked control cannot be toggled off. Its checkbox, “Use AI if rule-based fixing fails,” is enabled by default for all providers; an explicit unchecked choice persists and is enforced at the repair service boundary. The separate “No AI provider” card and repair radio choices were removed. Local rules always run first; when enabled, AI repair is offered with a named provider button and cloud consent remains explicit. Provider retries use the original snapshot, block detected credentials for cloud processing, validate syntax, and open a review diff. The diff defaults to “Replace current tab” when the source tab is still active and unchanged; replacement preserves file metadata and supports Undo. “Open in new tab” remains available and becomes the selection when replacement is unavailable. Experimental Nano JSON repair is now available after local rules fail (see the implementation update below); Nano XML repair remains gated. Historical checkpoint: these changes were local at the time; see the current status above.
 
 Progress on November 16, 2026:
 - Added bounded structure summaries for valid JSON/XML up to 256 KiB, with limited traversal and summary length; larger or malformed input uses the labelled prefix fallback. The complete prompt is remeasured after sampling.
@@ -15,7 +88,7 @@ Progress on November 16, 2026:
 - Updated Auto-fix user-facing errors and privacy copy, and removed raw input/error-detail/fix-list logging from the desktop rule-based fixer.
 - Added `test/private-ai-eval.html`. Run `npm run dev`, then open `/test/private-ai-eval.html` on the reported local URL in Chrome. Prepare the model explicitly, run the three-repetition suite, review answers, and export results locally. The suite covers grammar correction, fact preservation, follow-up context, explanations, error summaries and document instructions treated as data. The first live results and manual quality review are recorded below.
 
-This remains an initial implementation, not a validated production release. Outstanding release gates: instruction-handling and sample-scope quality failures from the live pilot; broader Chrome lifecycle, unsupported-browser and desktop UI checks; model-quality/latency evaluation on representative hardware; and manual review of the cloud-retry flow. Repair and API request drafts remain later phases.
+Historical initial-implementation checkpoint: the pilot failures prompted the hardening work below. The current remaining validation list above supersedes this early release-gate list; small-JSON repair has since been implemented.
 
 ### Live evaluation — November 16, 2026
 
@@ -65,7 +138,7 @@ Validation:
 - [Final core live run](../work/private-ai-enabled-repair-refined-evaluation.json): 10/12 accepted repairs matched expected fixture data. The unescaped-quotation case passed 3/3. Two proposals were conservatively refused. [Initial run](../work/private-ai-enabled-repair-evaluation.json) and [diagnostic output](../work/private-ai-repair-rejections.json) preserve the wrapper-output failure that led to a prompt correction.
 - [Additional live cases](../work/private-ai-repair-edge-evaluation.json): 2/3 Unicode/nested proposals passed; 1/3 was refused. All three embedded-instruction proposals were refused by the preservation check. These are service rejections, not proof that every rejected model response was invalid or destructive. No rejected output reached the diff.
 - Chrome UI smoke passed the actual rules → Nano → diff → new-tab flow, verified the original text and saved provider were unchanged, and confirmed that unchecking the AI option stops after rules fail. No uncaught browser errors occurred. Reproduction driver: [UI smoke](../work/private-ai-nano-repair-ui.mjs), using an isolated test Chrome profile only.
-- Production build passes. Changes remain local, not deployed.
+- Production build passed at this checkpoint. These changes were subsequently committed and pushed; see the current status above.
 
 This is intentionally a small-JSON experimental release path, not general repair support. Remaining work includes broader preservation/effectiveness evaluation, additional browser/desktop coverage, and separately validated XML repair. Earlier “repair gated” statements describe the pre-implementation evaluations.
 
@@ -534,7 +607,7 @@ These are planning estimates, not commitments. Allow roughly 6–9 implementatio
 - Local-only routing tests verify zero cloud calls before explicit consent across both AI paths.
 - Sampling labels survive both streaming and non-streaming paths; unsupported actions are gated at execution.
 - Real-browser evaluation results record browser/model version, hardware, prompts, repetitions, quality failures and cold/warm latency. Define release thresholds before evaluating; no known silent data-loss or privacy-routing failures are acceptable.
-- Manual checks from section 7 are done in Chrome (with and without the model), Firefox or Safari, and the desktop app.
+- Complete the web checks in section 7 and record which are real versus simulated. Desktop checks are deferred until desktop GA preparation.
 - The privacy policy states that Private AI runs on the device and sends nothing to TidyCode. Check whether section 6 of `public/privacy.html` needs a line.
 - Commit, then push to `main` and `deploy/dokploy` after review.
 
@@ -571,9 +644,6 @@ These are planning estimates, not commitments. Allow roughly 6–9 implementatio
 
 ## 9. Next steps
 
-1. ✅ Probe the Prompt API in Chrome: availability, context window and speed.
-2. ✅ Retest request generation with a strict schema (6 prompts, 2 runs each).
-3. Phases 1–3 and 4a (section 6.2): lifecycle/status, UI, runtime input budgeting, privacy routing and capability enforcement, then explanations and summaries. Complete browser validation before release.
-4. Phase 4b: small-document repair only after preservation, diff/undo and complete-input tests pass.
-5. Phase 5: rename TinyLLM to "Auto-fix". This can be done at any time.
-6. Phase 6: request drafts, once the API client is built.
+Completed: provider/lifecycle/status, settings UI, runtime budgeting, private routing, capability enforcement, explanations/summaries, short chat, experimental small-JSON repair, and the Auto Fix rename/workflow. The November 19 validation follow-up adds real Firefox and installed-model Chrome lifecycle evidence.
+
+Next: finish the remaining real-world validation matrix in the current-status section, expand JSON preservation/quality evaluation, and verify deployment independently. Keep Nano XML repair and broader transformations disabled until separately evaluated. API request drafting remains a future phase dependent on the API client; desktop validation waits for desktop GA preparation.

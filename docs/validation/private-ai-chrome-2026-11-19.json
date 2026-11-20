@@ -1,0 +1,20 @@
+{
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/157.0.8103.51",
+    "revision": "@653674df293788cf4932c40d914e9e15b41a2d31",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "jsVersion": "15.7.112.23"
+  },
+  "checks": [
+    "Real installed model initialization: ready",
+    {
+      "check": "Real model inference with page network offline",
+      "answer": "She goes to school every day."
+    },
+    "Immediate inference cancellation frees task and preserves ready state",
+    "Destroyed real session recovers through availability refresh",
+    "Cleanup and reinitialization with installed model"
+  ],
+  "availability": "available"
+}

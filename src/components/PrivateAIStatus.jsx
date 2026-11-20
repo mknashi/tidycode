@@ -18,6 +18,7 @@ export default function PrivateAIStatus({ compact = false }) {
       <button type="button" className="underline ml-2" onClick={() => navigator.clipboard.writeText('chrome://on-device-internals').catch(() => {})}>Copy diagnostics address</button>
       <p>For Chrome diagnostics, paste <code>chrome://on-device-internals</code> into the address bar.</p>
     </>}
+    {!compact && <p>Model downloads and updates are managed automatically by Chrome. If an update interrupts a request, prepare Private AI again if prompted, then retry your request.</p>}
     {!compact && <p>Supports brief explanations, log summaries and short text chat, including grammar correction. Small-JSON repair is experimental; XML repair is not enabled. Cloud processing requires choosing a cloud provider explicitly.</p>}
   </div>;
 }
