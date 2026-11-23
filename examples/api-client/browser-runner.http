@@ -1,0 +1,14 @@
+# Run file opens a review dialog. It never starts automatically.
+# On step 1 configure Capture path /json/token and Capture name run_token.
+# The returned value is demo data, not a real credential.
+@base_url=https://httpbin.org
+
+### Echo a demo session
+POST {{base_url}}/anything
+Content-Type: application/json
+
+{"token":"DEMO_NOT_A_SECRET"}
+
+### Use the run-only captured session
+GET {{base_url}}/get?session={{run_token}}
+Accept: application/json

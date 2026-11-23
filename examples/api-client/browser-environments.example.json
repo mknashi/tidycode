@@ -1,0 +1,10 @@
+{
+  "Development": {
+    "base_url": "https://httpbin.org",
+    "name": "From environment"
+  },
+  "Production demo": {
+    "base_url": "https://httpbin.org",
+    "name": "Production demo value"
+  }
+}

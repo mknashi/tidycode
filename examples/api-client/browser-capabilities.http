@@ -1,0 +1,32 @@
+# Browser HTTP editor acceptance examples. These calls use public httpbin.
+# File declarations are plain text; keep real credentials in secret API variables.
+@base_url=https://httpbin.org
+@name=Avery
+
+### Inspect parameters
+GET {{base_url}}/get?name={{name}}&tag=api&tag=editor
+Accept: application/json
+
+### Format and send JSON
+POST {{base_url}}/anything
+Content-Type: application/json
+Accept: application/json
+
+{"id":9007199254740993,"name":"{{name}}","items":[1,2,3]}
+
+### Format XML body
+POST {{base_url}}/anything
+Content-Type: application/xml
+
+<request><name>Avery</name><count>42</count></request>
+
+### Multipart upload
+# @body multipart
+# Open this request in the API client and select a file before sending.
+POST {{base_url}}/anything
+Accept: application/json
+
+### Binary upload
+# @body binary
+# Open this request in the API client and select a file before sending.
+POST {{base_url}}/anything

@@ -1,4 +1,19 @@
+import TestDataGenerator from './components/api-client/TestDataGenerator';
+import { applyTestDataToSource } from './services/http/testDataSource';
+import HttpRequestRename from './components/api-client/HttpRequestRename';
+import CollectionRunner from './components/api-client/CollectionRunner';
+import ExportRequests from './components/api-client/ExportRequests';
+import VariablesDialog from './components/api-client/VariablesDialog';
+import EnvironmentImport from './components/api-client/EnvironmentImport';
+import CodeHttpResponsePane from './components/api-client/CodeHttpResponsePane';
+import { useApiClient } from './hooks/useApiClient';
+import { editingBlocks, HTTP_TEMPLATES, editHttpBlock } from './services/http/httpEditing';
+import { formatPastedDocument as formatHttpBodyText } from './utils/codemirror/formatOnPaste';
 import WelcomeUpdates from './components/WelcomeUpdates';
+import ApiClientWorkspace from './components/api-client/ApiClientWorkspace';
+import HttpEditorMenu from './components/api-client/HttpEditorMenu';
+import HttpRequestOutline from './components/api-client/HttpRequestOutline';
+import { requestAtLine, httpRequestOutline } from './services/http/editorRequests.js';
 import { formatPastedDocument } from './utils/codemirror/formatOnPaste';
 import { isolateHistory } from '@codemirror/commands';
 import { getEditorTypography } from './utils/editorTypography';
@@ -191,6 +206,7 @@ const getFileType = (filename = '') => {
     '.r', '.R',  // R
     '.dart',  // Dart
     '.sql',  // SQL
+    '.http', '.rest', // HTTP request source files
     '.vb', '.vbs',  // Visual Basic
     '.asm', '.s',  // Assembly
     '.f', '.f90', '.f95',  // Fortran
@@ -1454,7 +1470,22 @@ const TidyCode = () => {
   const aiDropdownRef = useRef(null);
   const [infoPanelHeight, setInfoPanelHeight] = useState(150);
   const infoPanelResizing = useRef(false);
-  const [currentPanel, setCurrentPanel] = useState('dev');
+  const [currentPanel, setCurrentPanel] = useState(() => new URLSearchParams(window.location.search).get('tool') === 'api' ? 'api' : 'dev');
+  const apiClient = useApiClient();
+  const httpBindingsRef = useRef(new Map());
+  const [httpBindingRevision,setHttpBindingRevision]=useState(0);
+  const [inlineHttpRequestId, setInlineHttpRequestId] = useState(null);
+  const [inlineHttpVisible, setInlineHttpVisible] = useState(false);
+  const [inlineHttpHeight, setInlineHttpHeight] = useState(320);
+  const [codeVariableRequest, setCodeVariableRequest] = useState(null);
+  const [codeVariablesGlobalOnly, setCodeVariablesGlobalOnly] = useState(false);
+  const [codeEnvironmentImport, setCodeEnvironmentImport] = useState(false);
+  const [httpRename, setHttpRename] = useState(null);
+  const [httpExtract, setHttpExtract] = useState(null);
+  const [httpTestData, setHttpTestData] = useState(null);
+  const [httpRun,setHttpRun]=useState(null);
+  const [inlineHttpSourceId,setInlineHttpSourceId]=useState(null);
+  const [httpEditorMenu, setHttpEditorMenu] = useState(null);
   const initialNotesStateRef = useRef(loadNotesState());
   const initialTodosStateRef = useRef(loadTodosState());
   const [notes, setNotes] = useState(initialNotesStateRef.current.notes);
@@ -2346,6 +2377,15 @@ const TidyCode = () => {
   // Keyboard shortcuts for Save and Save As
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // API requests have their own shortcuts; never save/format a hidden code tab.
+      if (currentPanel === 'api') {
+        if ((e.ctrlKey || e.metaKey) && ['s', 'p'].includes(e.key.toLowerCase())) e.preventDefault();
+        return;
+      }
+      if (document.querySelector('dialog[open]')) {
+        if ((e.ctrlKey || e.metaKey) && ['s','p'].includes(e.key.toLowerCase())) e.preventDefault();
+        return;
+      }
       // Ctrl/Cmd + S for Save
       if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault();
@@ -2469,7 +2509,7 @@ const TidyCode = () => {
     // Use capture phase to intercept before CodeMirror's Vim extension
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [activeTabId, tabs, vimEnabled, aiActions.openActionsMenu, aiActions.executeAction, aiChat.setShowChatPanel]); // Dependencies to ensure we have latest data
+  }, [currentPanel, activeTabId, tabs, vimEnabled, aiActions.openActionsMenu, aiActions.executeAction, aiChat.setShowChatPanel]); // Dependencies to ensure we have latest data
 
   // Restore once, including React StrictMode effect replay, so restoration
   // cannot overwrite a tab opened by the landing-page launch effect.
@@ -2647,7 +2687,7 @@ const TidyCode = () => {
       try {
         // Sanitize tabs to only include serializable properties
         // For large files or files with absolutePath, don't save content (will reload from disk)
-        const sanitizedTabs = tabs.map(tab => {
+        const sanitizedTabs = tabs.filter(tab => !tab.sessionOnly).map(tab => {
           // Save content if: no absolutePath, OR tab has unsaved modifications, OR autosaved to localStorage
           const shouldSaveContent = tab.isModified || tab.autosavedToLocalStorage ||
                                    (!tab.absolutePath && (!tab.content || tab.content.length < 100000));
@@ -4792,6 +4832,10 @@ const TidyCode = () => {
     if (!tabId) return false;
 
     const targetTab = tabsRef.current.find(t => t.id === tabId);
+    if (/\.(http|rest)$/i.test(targetTab?.filePath || targetTab?.title || '')) {
+      if (!autoTriggered) showTransientMessage('HTTP files stay plain text. Format JSON bodies in the API client.');
+      return false;
+    }
     const workingContent = content ?? targetTab?.content ?? '';
     if (!String(workingContent).trim()) {
       if (!autoTriggered) {
@@ -5440,7 +5484,7 @@ const TidyCode = () => {
                   ...tab,
                   absolutePath: filePath,
                   title: filePath.split(/[/\\]/).pop() || suggestedName,
-                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
+                  isModified: false, autosavedToLocalStorage: false, sessionOnly: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5495,7 +5539,7 @@ const TidyCode = () => {
                   fileHandle: handle,
                   absolutePath: virtualPath,
                   title: getSafeFileName(handle.name),
-                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
+                  isModified: false, autosavedToLocalStorage: false, sessionOnly: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5584,7 +5628,7 @@ const TidyCode = () => {
           // Mark as saved
           setTabs(tabs.map(tab =>
             tab.id === tabId
-              ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual' }
+              ? { ...tab, isModified: false, autosavedToLocalStorage: false, sessionOnly: false, savedToFile: 'manual' }
               : tab
           ));
 
@@ -5625,7 +5669,7 @@ const TidyCode = () => {
               // Mark as saved
               setTabs(tabs.map(tab =>
                 tab.id === tabId
-                  ? { ...tab, isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual' }
+                  ? { ...tab, isModified: false, autosavedToLocalStorage: false, sessionOnly: false, savedToFile: 'manual' }
                   : tab
               ));
               console.log('[saveFile] File saved using existing handle');
@@ -5678,7 +5722,7 @@ const TidyCode = () => {
                   fileHandle: handle,
                   absolutePath: virtualPath,
                   title: getSafeFileName(handle.name),
-                  isModified: false, autosavedToLocalStorage: false, savedToFile: 'manual'
+                  isModified: false, autosavedToLocalStorage: false, sessionOnly: false, savedToFile: 'manual'
                 }
               : tab
           ));
@@ -5722,7 +5766,7 @@ const TidyCode = () => {
     }
 
     const modifiedTab = tabs.find(t => t.id === activeTabId && t.isModified);
-    if (!modifiedTab || modifiedTab.title === 'Welcome') return;
+    if (!modifiedTab || modifiedTab.title === 'Welcome' || modifiedTab.sessionOnly) return;
 
     const isTauri = window.__TAURI_INTERNALS__;
     const hasFileHandle = !!modifiedTab.fileHandle;
@@ -5851,7 +5895,7 @@ const TidyCode = () => {
             },
             {
               name: 'Text Files',
-              extensions: ['txt', 'md', 'log', 'json', 'xml', 'html', 'css', 'js', 'jsx', 'ts', 'tsx']
+              extensions: ['txt', 'md', 'log', 'http', 'rest', 'json', 'xml', 'html', 'css', 'js', 'jsx', 'ts', 'tsx']
             }
           ]
         });
@@ -5900,7 +5944,7 @@ const TidyCode = () => {
                 description: 'Code & Text Files',
                 accept: {
                   // Text
-                  'text/plain': ['.txt', '.log'],
+                  'text/plain': ['.txt', '.log', '.http', '.rest'],
                   'text/markdown': ['.md', '.markdown'],
                   'text/html': ['.html', '.htm', '.xhtml'],
                   'text/css': ['.css', '.scss', '.sass', '.less'],
@@ -7514,6 +7558,134 @@ const TidyCode = () => {
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const editorLines = activeTab && activeTab.content ? String(activeTab.content).split('\n') : [];
+  const isHttpEditor = /\.(http|rest)$/i.test(activeTab?.filePath || activeTab?.title || '');
+  const httpOutline = useMemo(() => {
+    if (!isHttpEditor) return { items: [], error: '' };
+    try { return { items: httpRequestOutline(activeTab?.content || ''), error: '' }; }
+    catch (error) { return { items: [], error: error.message }; }
+  }, [isHttpEditor, activeTab?.content]);
+  const jumpToHttpRequest = (item) => {
+    try {
+      const view = codeMirrorRef.current?.getView?.();
+      if (!view) return;
+      const current = httpRequestOutline(view.state.doc.toString()).find(row => row.blockIndex === item.blockIndex);
+      if (!current || current.name !== item.name || current.method !== item.method) throw new Error('The request changed. Select it again in the outline.');
+      view.dispatch({ selection: { anchor: view.state.doc.line(current.line).from }, scrollIntoView: true });
+      view.focus();
+    } catch (error) { showTransientMessage(error.message || 'Could not navigate to this request.'); }
+  };
+  const insertHttpRequest = (template = 'get') => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view) return;
+    const prefix = view.state.doc.length ? '\n\n' : '';
+    const insert = prefix + (HTTP_TEMPLATES[template] || HTTP_TEMPLATES.get);
+    view.dispatch({ changes: { from: view.state.doc.length, insert }, selection: { anchor: view.state.doc.length + prefix.length }, scrollIntoView: true });
+    view.focus();
+  };
+  const registerHttpRequest = (selected) => {
+    if(!apiClient.ready)throw new Error('API client is loading local data. Try again when it is ready.');
+    const key = `${activeTab.id}:${selected.blockIndex}`;
+    const existing = apiClient.requests.find(r => r.id === httpBindingsRef.current.get(key));
+    const request = existing ? { ...selected.request, id: existing.id, credentialOrigin: existing.credentialOrigin, collectionId: existing.collectionId, folderId: existing.folderId, assertions: existing.assertions || [], timeoutMs: existing.timeoutMs, ...(selected.request.bodyMode === existing.bodyMode && ['multipart','binary'].includes(existing.bodyMode) ? { multipart: existing.multipart, binaryFile: existing.binaryFile } : {}) } : apiClient.add(null, selected.request);
+    if (existing) { apiClient.update(existing.id, request); apiClient.select(existing.id); }
+    httpBindingsRef.current.set(key, request.id);
+    setHttpBindingRevision(previous=>previous+1);
+    return request;
+  };
+  const httpVariableRows = useMemo(() => {
+    const active = httpOutline.items.find(r=>cursorPosition.line>=r.startLine&&cursorPosition.line<=r.endLine);
+    const bound=apiClient.requests.find(r=>r.id===httpBindingsRef.current.get(`${activeTab?.id}:${active?.blockIndex}`));
+    const settings=apiClient.variableSettings;
+    const groups=[[0,settings.globals],[2,settings.collections[bound?.collectionId]||[]],[3,settings.environments.find(e=>e.id===settings.activeId)?.variables||[]],[4,settings.requests[bound?.id]||[]]];
+    return groups.flatMap(([rank,rows])=>rows.filter(r=>r.enabled&&r.key).map(r=>({key:r.key,rank,hasValue:!r.secret||!!r.value,secret:!!r.secret,value:r.secret?undefined:r.value,scope:['Global','File','Collection','Environment','Request'][rank],...([2,4].includes(rank)?{blockIndex:active?.blockIndex}:{})})));
+  }, [apiClient.variableSettings, apiClient.requests, activeTab?.id, cursorPosition.line, httpBindingRevision]);
+  const httpVariableMetadataKey = JSON.stringify(httpVariableRows);
+  const httpVariableMetadata = useMemo(() => httpVariableRows, [httpVariableMetadataKey]);
+  const httpEndpointOptions = useMemo(() => {
+    const ids=new Set(apiClient.collections.filter(c=>c.sourceFormat==='openapi').map(c=>c.id));
+    const requests=[...apiClient.requests,...Object.values(apiClient.saved).map(record=>record.request)].filter(r=>ids.has(r.collectionId));
+    return [...new Map(requests.map(request=>[request.method+' '+request.url.split(/[?#]/)[0],{method:request.method,url:request.url.split(/[?#]/)[0]}])).values()];
+  }, [apiClient.collections,apiClient.requests,apiClient.saved]);
+  const editHttpRequest = (item,action,name) => {
+    if(action === 'generate-body' || action === 'generate-params'){
+      try { const source=codeMirrorRef.current.getView().state.doc.toString();const current=httpRequestOutline(source).find(row=>row.blockIndex===item.blockIndex);if(!current||current.name!==item.name||current.method!==item.method)throw new Error('Request changed. Select it again.');const selected=requestAtLine(source,current.line);setHttpTestData({source,tabId:activeTab.id,item:current,request:selected.request,target:action==='generate-body'?'body':'params'}); }catch(error){showTransientMessage(error.message);}return;
+    }
+    if(action === 'rename' && name === undefined){setHttpRename({item,name:item.name});return;}
+    try{const view=codeMirrorRef.current?.getView?.();if(!view)return;const source=view.state.doc.toString();const next=editHttpBlock(source,item,action,name);if(next===source)return;
+      view.dispatch({changes:{from:0,to:view.state.doc.length,insert:next},annotations:isolateHistory.of('full')});view.focus();
+      if(['up','down','duplicate','rename','delete'].includes(action))for(const key of httpBindingsRef.current.keys())if(key.startsWith(activeTab.id+':'))httpBindingsRef.current.delete(key);
+      setHttpBindingRevision(previous=>previous+1);
+      setHttpRename(null);
+    }catch(error){showTransientMessage(error.message);}
+  };
+  const runHttpFile = () => {
+    try {const source=codeMirrorRef.current.getView().state.doc.toString(),items=httpRequestOutline(source);if(!items.length||items.length>200)throw new Error('Run files with 1–200 requests.');
+      const selected=items.map(item=>requestAtLine(source,item.line));if(selected.some(item=>item.warnings.length))throw new Error('Review unsupported request features in the API client before running this file.');
+      setHttpRun({title:activeTab.title,requests:selected.map(registerHttpRequest)});
+    }catch(error){showTransientMessage(error.message);}
+  };
+  const extractHttpRequest = item => {try{const view=codeMirrorRef.current.getView();const current=httpRequestOutline(view.state.doc.toString()).find(row=>row.blockIndex===item.blockIndex);if(!current||current.name!==item.name)throw new Error('Request changed. Select it again.');setHttpExtract(requestAtLine(view.state.doc.toString(),current.line).request);}catch(error){showTransientMessage(error.message);}};
+  const openHttpRequestFromEditor = (shouldSend, item = null) => {
+    try {
+      const view = codeMirrorRef.current?.getView?.();
+      const source = view?.state.doc.toString() ?? activeTab?.content ?? '';
+      let line = view ? view.state.doc.lineAt(view.state.selection.main.head).number : cursorPosition.line;
+      if (item) {
+        const current = httpRequestOutline(source).find(row => row.blockIndex === item.blockIndex);
+        if (!current || current.name !== item.name || current.method !== item.method) throw new Error('The request changed. Select it again in the outline.');
+        line = current.line;
+      }
+      const selected = requestAtLine(source, line);
+      const request = registerHttpRequest(selected);
+      if (shouldSend && selected.warnings.length === 0) {
+        setInlineHttpRequestId(request.id); setInlineHttpSourceId(activeTab.id); setInlineHttpVisible(true); apiClient.send(request);
+      } else {
+        setCurrentPanel('api');
+        showTransientMessage(selected.warnings.length ? 'Opened without sending. ' + selected.warnings.join(' ') : 'Opened the request without sending. Source file unchanged.');
+      }
+    } catch (error) { showTransientMessage(error.message || 'Could not read the HTTP request at the cursor.'); }
+  };
+  const formatHttpBody = () => {
+    try {
+      const view = codeMirrorRef.current?.getView?.(); if (!view) return;
+      const source=view.state.doc.toString(), position=view.state.selection.main.head;
+      const block=editingBlocks(source).find(b=>position>=b.from&&position<=b.to);
+      if (!block) throw new Error('Place the cursor inside a request body or block.');
+      const raw=source.slice(block.bodyStart,block.to), body=raw.trim();
+      if(new TextEncoder().encode(body).length>1024*1024)throw new Error('Body formatting supports bodies up to 1 MiB.');
+      if (!body || !/^[{[<]/.test(body) || /\{\{/.test(body)) throw new Error('Select a complete JSON or XML body without unresolved variables to format.');
+      const formatted=formatHttpBodyText(body); if(formatted===body) { showTransientMessage('Body is already formatted, or its content cannot be safely reformatted.'); return; }
+      const start=block.bodyStart+raw.indexOf(body);
+      view.dispatch({changes:{from:start,to:start+body.length,insert:formatted},selection:{anchor:start},scrollIntoView:true}); view.focus();
+    } catch(error) { showTransientMessage(error.message); }
+  };
+  useEffect(() => { setHttpEditorMenu(null); }, [currentPanel, activeTab?.id]);
+  const showHttpEditorMenu = (x, y) => {
+    const view = codeMirrorRef.current?.getView?.();
+    if (!view) return;
+    const line = view.state.doc.lineAt(view.state.selection.main.head).number;
+    let item = null;
+    try { item = httpRequestOutline(view.state.doc.toString()).find(row => line >= row.startLine && line <= row.endLine) || null; }
+    catch (error) { showTransientMessage(error.message); }
+    setHttpEditorMenu({ id: crypto.randomUUID(), x, y, item, tabId: activeTab.id });
+  };
+  useEffect(() => {
+    if (currentPanel !== 'dev' || !isHttpEditor) { setHttpEditorMenu(null); return; }
+    const keyboard = event => {
+      const view = codeMirrorRef.current?.getView?.();
+      if (!view?.contentDOM.contains(event.target)) return;
+      if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && !event.getModifierState('AltGraph') && ['r', 'o'].includes(event.key.toLowerCase())) {
+        event.preventDefault(); event.stopPropagation();
+        if (!event.repeat) openHttpRequestFromEditor(event.key.toLowerCase() === 'r');
+      } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+        event.preventDefault(); event.stopPropagation();
+        const rect = view.coordsAtPos(view.state.selection.main.head) || view.dom.getBoundingClientRect();
+        showHttpEditorMenu(rect.left, rect.bottom);
+      }
+    };
+    document.addEventListener('keydown', keyboard, true);
+    return () => document.removeEventListener('keydown', keyboard, true);
+  }, [currentPanel, isHttpEditor, activeTab?.id, activeTab?.content]);
 
   // Detect if current file should have syntax highlighting - needs to be before CSV/Markdown detection
   const syntaxLanguage = useMemo(() => {
@@ -7528,6 +7700,8 @@ const TidyCode = () => {
       console.log(`[Performance] Disabling syntax highlighting for ${(fileSize / 1024 / 1024).toFixed(1)}MB file`);
       return null; // No syntax highlighting for large files
     }
+
+    if (/\.(http|rest)$/i.test(fileName)) return 'http';
 
     // First try filename-based detection
     const filenameLang = getPrismLanguage(fileName);
@@ -7888,6 +8062,7 @@ const TidyCode = () => {
   }, [activeTab?.id, isMarkdownFileName, isMarkdownByContent, isCSVTab]);
 
   const structureTree = useMemo(() => {
+    if (isHttpEditor) return { type: 'HTTP', nodes: [] };
     if (!activeTab?.content) return { type: null, nodes: [] };
     // Once a tab has shown a JSON tree, keep it while the content is briefly invalid mid-edit
     const wasJSON = jsonStructureTabsRef.current.has(activeTab.id);
@@ -9256,6 +9431,8 @@ const TidyCode = () => {
           onChange={(newValue) => {
             updateTabContent(activeTab.id, newValue);
           }}
+          httpVariables={httpVariableMetadata}
+          httpEndpoints={httpEndpointOptions}
           language={syntaxLanguage || 'javascript'}
           theme={theme}
           fontSize={fontSize}
@@ -9263,8 +9440,8 @@ const TidyCode = () => {
           onVimModeChange={(mode) => {
             setVimMode(mode);
           }}
-          aiSettings={aiSettings}
-          lspSettings={aiSettings}
+          aiSettings={activeTab.sessionOnly || isHttpEditor ? null : aiSettings}
+          lspSettings={activeTab.sessionOnly || isHttpEditor ? null : aiSettings}
           searchTerm={findValue}
           caseSensitive={caseSensitive}
           onGeometryChange={() => {
@@ -9380,7 +9557,8 @@ const TidyCode = () => {
             }
           }}
           onContextMenu={({ x, y, selectedText: selText, selectionRange: selRange }) => {
-            aiActions.openActionsMenu({ x, y }, selText, selRange);
+            if (isHttpEditor) showHttpEditorMenu(x, y);
+            else aiActions.openActionsMenu({ x, y }, selText, selRange);
           }}
           onSelectionChange={(sel) => {
             if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
@@ -9403,13 +9581,13 @@ const TidyCode = () => {
   };
 
   const renderDevPanel = () => {
-    const structurePaneStyle = { width: `${Math.round(structureWidth)}px` };
+    const structurePaneStyle = { width: `${Math.round(structureWidth)}px`, ...(isHttpEditor ? { maxWidth: '45%', minWidth: '150px' } : {}) };
     // Only show structure panel for JSON and XML files when user has it enabled
     const showStructurePane = !isCSVTab && !isMarkdownTab && structureTree.type !== null && !structureTree.isLarge && structurePanelVisible;
     return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0 overflow-hidden">
       {/* Menu Bar */}
-      <div className={`border-b px-3 py-1 flex items-center gap-1.5 lg:gap-3 min-w-0 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
+      <div className={`border-b px-3 py-1 flex items-center gap-1.5 lg:gap-3 min-w-0 overflow-x-auto ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'}`}>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs font-bold text-indigo-400">TIDY CODE</span>
         </div>
@@ -9566,10 +9744,10 @@ const TidyCode = () => {
 
           {/* Format acts immediately; conversion choices have their own button. */}
           <button
-            onClick={() => { setShowDataConvertDropdown(false); formatContent(); }}
+            onClick={() => { setShowDataConvertDropdown(false); if (isHttpEditor) formatHttpBody(); else formatContent(); }}
             disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF}
             className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-indigo-500 hover:bg-indigo-600 text-white'}`}
-            title="Format document (auto-detect JSON, XML, YAML or TOML)"
+            title={isHttpEditor ? "Format only the JSON/XML body of the request at the cursor" : "Format document (auto-detect JSON, XML, YAML or TOML)"}
             aria-label="Format document"
           >
             <Code2 className="w-4 h-4" />
@@ -9578,9 +9756,9 @@ const TidyCode = () => {
           <div className="relative" ref={dataConvertDropdownRef}>
             <button
               onClick={() => setShowDataConvertDropdown(!showDataConvertDropdown)}
-              disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF}
+              disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF || isHttpEditor}
               className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-              title="Convert document to another format"
+              title={isHttpEditor ? "HTTP request files are not data documents to convert" : "Convert document to another format"}
               aria-label="Convert document"
               aria-expanded={showDataConvertDropdown}
               aria-controls="document-conversion-options"
@@ -9678,11 +9856,11 @@ const TidyCode = () => {
                     ? theme === 'dark' ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'
                     : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
                 }`}
-                title={structurePanelVisible && !structureTree.isLarge ? 'Hide Structure Panel' : 'Show Structure Panel'}
+                title={isHttpEditor ? (structurePanelVisible ? 'Hide HTTP requests' : 'Show HTTP requests') : (structurePanelVisible && !structureTree.isLarge ? 'Hide Structure Panel' : 'Show Structure Panel')}
                 aria-pressed={structurePanelVisible && !structureTree.isLarge}
               >
                 <PanelLeft className="w-4 h-4" />
-                <span className="hidden lg:inline">Structure</span>
+                <span className="hidden lg:inline">{isHttpEditor ? 'Requests' : 'Structure'}</span>
               </button>
             </>
           )}
@@ -10290,6 +10468,9 @@ const TidyCode = () => {
                     }}
                     onMouseLeave={() => setStructureHeaderHover(false)}
                   >
+                    {isHttpEditor ? <HttpRequestOutline outline={httpOutline.items} error={httpOutline.error} cursorLine={cursorPosition.line} theme={theme} ready={apiClient.ready} environments={apiClient.variableSettings.environments} activeEnvironment={apiClient.variableSettings.activeId || ''} onEnvironment={apiClient.selectEnvironment} onVariables={() => {
+                      try { const view=codeMirrorRef.current?.getView?.(); const selected=requestAtLine(view.state.doc.toString(),view.state.doc.lineAt(view.state.selection.main.head).number); setCodeVariablesGlobalOnly(false); setCodeVariableRequest(registerHttpRequest(selected)); } catch { setCodeVariablesGlobalOnly(true); setCodeVariableRequest(apiClient.active); }
+                    }} onImportEnvironments={() => setCodeEnvironmentImport(true)} onJump={jumpToHttpRequest} onOpen={item => openHttpRequestFromEditor(false, item)} onSend={item => openHttpRequestFromEditor(true, item)} onInsert={insertHttpRequest} onEdit={editHttpRequest} onExtract={extractHttpRequest} onRun={() => runHttpFile()} /> : <>
                     {/* Header floats over the tree so the first row sits level with line 1. It appears
                         while the pointer is over its strip; otherwise only faint controls show and the
                         strip lets clicks through to the rows beneath. */}
@@ -10364,6 +10545,7 @@ const TidyCode = () => {
                         <p className="text-gray-500 text-xs">No structure detected</p>
                       )}
                     </div>
+                    </>}
                   </div>
 
                   <button
@@ -10643,6 +10825,10 @@ const TidyCode = () => {
                           Edit, format, and repair your files with clear feedback and AI you control.
                         </p>
 
+                        <button onClick={() => setCurrentPanel('api')} className={`mb-6 w-full rounded-lg border p-4 text-left ${theme === 'dark' ? 'border-indigo-800 bg-indigo-950/30 text-indigo-200' : 'border-indigo-200 bg-indigo-50 text-indigo-900'}`}>
+                          <span className="flex items-center gap-2 font-semibold"><Network className="w-5 h-5" /> API Client <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${theme === 'dark' ? 'bg-indigo-900/60 text-indigo-200' : 'bg-indigo-100 text-indigo-700'}`}>Beta</span></span>
+                          <span className="block mt-1 text-sm">Build requests, inspect responses, and keep working in your editor.</span>
+                        </button>
                         <WelcomeUpdates theme={theme} desktop={isDesktop()} onOpenAISettings={() => setShowAISettings(true)} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-left mb-6">
@@ -10865,6 +11051,10 @@ const TidyCode = () => {
                 )}
               </div>
             </div>
+
+            {isHttpEditor && inlineHttpVisible && inlineHttpRequestId && inlineHttpSourceId === activeTab.id && <CodeHttpResponsePane key={inlineHttpRequestId} client={apiClient} requestId={inlineHttpRequestId} theme={theme} height={inlineHttpHeight} onHeight={setInlineHttpHeight} onClose={() => setInlineHttpVisible(false)} onOpenApi={() => { apiClient.select(inlineHttpRequestId); setCurrentPanel('api'); }} onOpenEditor={(content, language) => {
+              const id=nextIdRef.current++; setTabs(previous=>[...previous,{id,title:language==='json'?'response.json':'response.txt',content,isModified:true,sessionOnly:true,filePath:null,absolutePath:null}]); setActiveTabId(id); requestEditorFocus(id); showTransientMessage('Temporary response copy. Changes stay in memory until you save a file.');
+            }} />}
 
             {/* Search Results Panel */}
             {showSearchResults && searchResults.length > 0 && (
@@ -11487,6 +11677,7 @@ const TidyCode = () => {
   };
 
   const renderPanel = () => {
+    if (currentPanel === 'api') return null;
     if (currentPanel === 'notes') return renderNotesPanel();
     if (currentPanel === 'todo') return renderTodoPanel();
     return renderDevPanel();
@@ -11494,6 +11685,7 @@ const TidyCode = () => {
 
   const navItems = [
     { id: 'dev', label: 'Code', icon: Code2 },
+    { id: 'api', label: 'API Client', icon: Network, beta: true },
     { id: 'notes', label: 'Notes', icon: StickyNote },
     { id: 'todo', label: 'Tasks', icon: CheckSquare },
     ...(isDesktop() ? [{ id: 'terminal', label: 'Terminal', icon: Terminal }] : []),
@@ -11526,10 +11718,13 @@ const TidyCode = () => {
           }
         }}
         aria-label={item.label}
+        aria-description={item.beta ? 'Beta feature' : undefined}
+        title={item.beta ? `${item.label} (Beta)` : item.label}
         className={`w-full flex flex-col items-center justify-center px-1 py-2 border-l-4 transition-colors ${active ? navActiveClass : navInactiveClass}`}
       >
         <Icon className="w-5 h-5" />
         <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+        {item.beta && <span aria-hidden="true" className="mt-0.5 rounded bg-indigo-500/15 px-1 text-[10px] font-medium text-indigo-400">Beta</span>}
       </button>
     );
   };
@@ -11870,6 +12065,8 @@ const TidyCode = () => {
     <div className="flex flex-col h-[100dvh] w-screen max-w-full bg-gray-950 text-gray-100 overflow-hidden" data-theme={theme}>
       {appMessage && (
         <div
+          role="status"
+          aria-live="polite"
           className={`fixed top-4 right-2 sm:right-4 max-w-[calc(100vw-1rem)] z-50 px-4 py-3 rounded-md shadow-lg border transition-opacity ${
             theme === 'dark' ? 'bg-gray-900 border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
           } ${
@@ -12087,10 +12284,21 @@ const TidyCode = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderPanel()}
+          <div className="flex-1 min-h-0 flex flex-col" style={{ display: currentPanel === 'api' ? 'flex' : 'none' }}>
+            <ApiClientWorkspace aiSettings={aiSettings} aiService={aiService} client={apiClient} theme={theme} visible={currentPanel === 'api'} onOpenResponse={(content, language) => {
+              const id = nextIdRef.current++;
+              const extension = language === 'json' ? 'json' : language === 'xml' ? 'xml' : 'txt';
+              setTabs(prev => [...prev, { id, title: `response.${extension}`, content, isModified: true, sessionOnly: true, filePath: null, absolutePath: null }]);
+              setActiveTabId(id);
+              setCurrentPanel('dev');
+              showTransientMessage('Temporary response copy. Changes stay in memory until you save a file.');
+              requestEditorFocus(id);
+            }} />
+          </div>
         </div>
 
         {/* AI Chat Panel - available across all panels */}
-        {aiChat.showChatPanel && (
+        {aiChat.showChatPanel && currentPanel !== 'api' && (
           <AIChatPanel
             theme={theme}
             messages={aiChat.messages}
@@ -12154,12 +12362,15 @@ const TidyCode = () => {
                 }
               }}
               aria-label={item.label}
+        aria-description={item.beta ? 'Beta feature' : undefined}
+        title={item.beta ? `${item.label} (Beta)` : item.label}
               className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
                 active ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-200'
               }`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>
+              {item.beta && <span aria-hidden="true" className="rounded bg-indigo-500/15 px-1 text-[10px] font-medium text-indigo-400">Beta</span>}
             </button>
           );
         })}
@@ -12446,6 +12657,23 @@ const TidyCode = () => {
           }}
         />
       )}
+
+      {httpRun && <CollectionRunner client={apiClient} requests={httpRun.requests} title={httpRun.title} theme={theme} onClose={()=>setHttpRun(null)} onReview={()=>setCurrentPanel('api')}/>}
+      {httpTestData && <TestDataGenerator request={httpTestData.request} target={httpTestData.target} theme={theme} aiSettings={aiSettings} aiService={aiService} sourceFile onClose={()=>setHttpTestData(null)} onApply={text=>{
+        try {const view=codeMirrorRef.current?.getView?.();if(!view||activeTab.id!==httpTestData.tabId||view.state.doc.toString()!==httpTestData.source)throw new Error('Source changed. Open the generator again before applying data.');const next=applyTestDataToSource(httpTestData.source,httpTestData.item,httpTestData.target,text);view.dispatch({changes:{from:0,to:view.state.doc.length,insert:next},annotations:isolateHistory.of('full')});setHttpTestData(null);showTransientMessage('Test data applied to the source. Undo restores the previous request. Nothing was sent.');requestAnimationFrame(()=>view.focus());}catch(error){setHttpTestData(null);showTransientMessage(error.message);}
+      }}/>}
+      {httpRename && <HttpRequestRename item={httpRename.item} theme={theme} onSave={name=>editHttpRequest(httpRename.item,'rename',name)} onClose={()=>setHttpRename(null)}/>}
+      {httpExtract && <ExportRequests requests={[httpExtract]} initialFormat="http" theme={theme} onClose={()=>setHttpExtract(null)}/>}
+      {codeVariableRequest && <VariablesDialog client={apiClient} request={codeVariableRequest} hideRequestScopes={codeVariablesGlobalOnly} initialScope={codeVariablesGlobalOnly?'global':undefined} theme={theme} onClose={() => setCodeVariableRequest(null)} />}
+      {codeEnvironmentImport && <EnvironmentImport client={apiClient} theme={theme} onClose={message => { setCodeEnvironmentImport(false); if(message)showTransientMessage(message); }} />}
+
+      {httpEditorMenu && httpEditorMenu.tabId === activeTab?.id && currentPanel === 'dev' && <HttpEditorMenu context={httpEditorMenu} theme={theme} onClose={() => setHttpEditorMenu(null)} onFocusEditor={() => codeMirrorRef.current?.getView?.()?.focus()} onAction={action => {
+        setHttpEditorMenu(null);
+        if (action === 'outline') { setStructurePanelVisible(true); return; }
+        if (action === 'format') { formatHttpBody(); return; }
+        if (action.startsWith('generate-') && httpEditorMenu.item) { editHttpRequest(httpEditorMenu.item,action);return; }
+        if (httpEditorMenu.item) openHttpRequestFromEditor(action === 'send', httpEditorMenu.item);
+      }} />}
 
       {/* AI Actions Menu (Cmd+Shift+A) */}
       {aiActions.actionsMenuPos && (

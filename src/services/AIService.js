@@ -751,6 +751,7 @@ Fixed ${errorDetails.type}:`;
     }
 
     const prompts = {
+      'test-data': `Return only valid JSON synthetic API test data following these requirements:\n\n${text}`,
       rewrite: `Rewrite the following text to be clearer and more concise while maintaining the original meaning:\n\n${text}`,
       rephrase: `Rephrase the following text using different words while keeping the same meaning:\n\n${text}`,
       improve: `Improve the following text by making it more professional and well-structured:\n\n${text}`,
@@ -777,7 +778,7 @@ Fixed ${errorDetails.type}:`;
             messages: [
               {
                 role: 'system',
-                content: 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
+                content: action === 'test-data' ? 'You generate fictional API test data. Return valid JSON only, no markdown or explanation.' : 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
               },
               {
                 role: 'user',
@@ -806,7 +807,7 @@ Fixed ${errorDetails.type}:`;
         const requestBody = this.buildOpenAIRequestBody(effectiveModel, [
             {
               role: 'system',
-              content: 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
+              content: action === 'test-data' ? 'You generate fictional API test data. Return valid JSON only, no markdown or explanation.' : 'You are a helpful writing assistant. Output only the transformed text, no explanations.'
             },
             {
               role: 'user',
@@ -831,7 +832,7 @@ Fixed ${errorDetails.type}:`;
             body: JSON.stringify({
               model: claudeModel || DEFAULT_MODELS.claude,
               max_tokens: claudeMaxTokens(4000),
-              system: 'You are a helpful writing assistant. Output only the transformed text, no explanations.',
+              system: action === 'test-data' ? 'You generate fictional API test data. Return valid JSON only, no markdown or explanation.' : 'You are a helpful writing assistant. Output only the transformed text, no explanations.',
               messages: [
                 {
                   role: 'user',

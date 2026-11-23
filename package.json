@@ -30,6 +30,8 @@
     "preview": "vite preview",
     "start": "node serve.js",
     "test:smoke": "npm run build && npm run prepare:lsp && tauri build --debug --bundles none",
+    "test:http": "node --test src/services/http/__tests__/testData.test.js src/services/http/__tests__/client.test.js src/services/http/__tests__/exporters.test.js src/services/http/__tests__/auth.test.js src/services/http/__tests__/compare.test.js src/services/http/__tests__/responseValues.test.js src/services/http/__tests__/assertions.test.js src/services/http/__tests__/editorRequests.test.js src/services/http/__tests__/browserCapabilities.test.js",
+    "test:api:browser": "node test/api-client-browser.cjs && node test/api-client-persistence.cjs && node test/api-client-layout.cjs && node test/api-client-imports.cjs && node test/api-client-fork.cjs && node test/api-client-variables.cjs && node test/api-client-sidebar.cjs && node test/api-client-compact.cjs && node test/api-client-export.cjs && node test/api-client-auth.cjs && node test/api-client-compare.cjs && node test/api-client-response-values.cjs && node test/api-client-assertions.cjs && node test/api-client-http-editor.cjs && node test/api-client-http-outline.cjs && node test/api-client-browser-capabilities.cjs && node test/api-client-test-data.cjs && node test/api-client-source-test-data.cjs && node test/api-client-form-encoding.cjs",
     "test:ai": "node src/services/ai/__tests__/run.js",
     "test:ai:live": "node src/services/ai/__tests__/run.js --live"
   },
@@ -80,7 +82,9 @@
     "react-pdf": "^10.2.0",
     "react-zoom-pan-pinch": "^3.7.0",
     "smol-toml": "^1.6.0",
-    "tinyllm": "github:mknashi/tinyllm#d592d4a12e75c0e76204b496bfbdd4709dc9f08e"
+    "tinyllm": "github:mknashi/tinyllm#d592d4a12e75c0e76204b496bfbdd4709dc9f08e",
+    "@codemirror/lint": "^6.9.2",
+    "@codemirror/autocomplete": "^6.20.0"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.9.0",

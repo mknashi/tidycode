@@ -1,0 +1,156 @@
+{
+  "info": {
+    "name": "httpbin Playground",
+    "description": "Browser-friendly practice requests with fictional data. Requests are only sent when you select Send. httpbin is a third-party public service; do not enter real credentials or personal data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Start here",
+      "item": [
+        {
+          "name": "GET query parameters",
+          "request": {
+            "method": "GET",
+            "url": "https://httpbin.org/get?name=Avery&tag=api&tag=editor",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Inspect sent headers",
+          "request": {
+            "method": "GET",
+            "url": "https://httpbin.org/headers",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Demo-Client",
+                "value": "TidyCode"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Request bodies",
+      "item": [
+        {
+          "name": "POST JSON customer",
+          "request": {
+            "method": "POST",
+            "url": "https://httpbin.org/post",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Avery Chen\",\n  \"email\": \"avery@example.test\",\n  \"plan\": \"starter\",\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST form values",
+          "request": {
+            "method": "POST",
+            "url": "https://httpbin.org/post",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Avery Chen"
+                },
+                {
+                  "key": "plan",
+                  "value": "starter"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Responses and timing",
+      "item": [
+        {
+          "name": "404 is an HTTP response",
+          "request": {
+            "method": "GET",
+            "url": "https://httpbin.org/status/404",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Slow response \u2014 try Cancel",
+          "request": {
+            "method": "GET",
+            "url": "https://httpbin.org/delay/5",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication (fictional token)",
+      "item": [
+        {
+          "name": "Bearer auth \u2014 demo token",
+          "request": {
+            "method": "GET",
+            "url": "https://httpbin.org/bearer",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "demo-token-not-a-real-secret",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

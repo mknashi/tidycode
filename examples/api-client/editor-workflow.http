@@ -1,0 +1,13 @@
+# Open this file in Code. Put the cursor in a request block, then use
+# Open HTTP request to review it or Send HTTP request to execute it once.
+
+### Inspect query parameters
+GET https://httpbin.org/get?name=Avery&tag=api&tag=editor
+Accept: application/json
+
+### Send JSON
+POST https://httpbin.org/anything
+Accept: application/json
+Content-Type: application/json
+
+{"name":"Avery","source":"TidyCode"}

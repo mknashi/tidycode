@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "Environment Practice (setup required)",
+    "description": "Define base_url=https://httpbin.org in Variables, then send. No variable values or secrets are imported automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET with base URL variable",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/get?client=TidyCode&request_id={{$uuid}}&at={{$timestamp}}",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "POST with reusable values",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/post",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{customer_name}}\",\n  \"plan\": \"starter\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

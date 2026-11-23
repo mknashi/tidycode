@@ -1,3 +1,5 @@
+import { variableHover } from '../utils/codemirror/variableHover';
+import { httpEditingExtensions, httpStreamParser } from '../utils/codemirror/httpEditing';
 import { createFormatOnPaste } from '../utils/codemirror/formatOnPaste';
 import { EDITOR_FONT_FAMILY, getFontSizePixels, getLineHeightValue } from '../utils/editorTypography';
 import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
@@ -83,6 +85,7 @@ const lightHighlighting = HighlightStyle.define([
   { tag: t.invalid, color: '#ffffff', backgroundColor: '#e45649' },
 ]);
 
+const EMPTY_HTTP_VARIABLES = [];
 const CodeMirrorEditor = forwardRef(({
   value,
   onChange,
@@ -99,6 +102,9 @@ const CodeMirrorEditor = forwardRef(({
   className = '',
   style = {},
   aiSettings = null, // AI completion settings
+  variablePreview = null,
+  httpVariables = EMPTY_HTTP_VARIABLES,
+  httpEndpoints = EMPTY_HTTP_VARIABLES,
   lspSettings = null, // LSP settings
   searchTerm = '', // Search term to highlight
   caseSensitive = false, // Case sensitivity for search
@@ -153,6 +159,7 @@ const CodeMirrorEditor = forwardRef(({
   // Map language names to CodeMirror language extensions
   const getLanguageExtension = useCallback((lang) => {
     const langMap = {
+      'http': StreamLanguage.define(httpStreamParser),
       'javascript': javascript({ jsx: true }),
       'typescript': javascript({ jsx: true, typescript: true }),
       'jsx': javascript({ jsx: true }),
@@ -315,8 +322,13 @@ const CodeMirrorEditor = forwardRef(({
         return false;
       },
       contextmenu: (event, view) => {
+        if (language === 'http' && !view.contentDOM.contains(event.target)) return false;
         const ctxCb = onContextMenuRef.current;
         if (ctxCb) {
+          if (language === 'http') {
+            const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
+            if (position !== null) view.dispatch({ selection: { anchor: position } });
+          }
           const sel = view.state.selection.main;
           const selectedText = sel.empty ? '' : view.state.sliceDoc(sel.from, sel.to);
           ctxCb({
@@ -345,9 +357,12 @@ const CodeMirrorEditor = forwardRef(({
       return false;
     }));
 
+    if (variablePreview) exts.push(variableHover(variablePreview));
+
     // Add custom completion source with language-specific keywords and snippets
     // Pass AI settings to enable AI-powered completions
-    exts.push(autocompletion({
+    if (language === 'http') exts.push(...httpEditingExtensions(httpVariables,httpEndpoints));
+    else exts.push(autocompletion({
       override: [createSmartCompletionSource(language, aiSettings)],
       activateOnTyping: true,
       maxRenderedOptions: 10,
@@ -447,7 +462,7 @@ const CodeMirrorEditor = forwardRef(({
     exts.push(clipboardExtension());
 
     return exts;
-  }, [autoFormatOnPaste, vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, aiSettings, lspSettings, searchTerm, caseSensitive]);
+  }, [autoFormatOnPaste, vimEnabled, language, getLanguageExtension, onCursorChange, theme, fontSize, aiSettings, lspSettings, httpVariables, httpEndpoints, variablePreview, searchTerm, caseSensitive]);
 
   // Prevent browser from intercepting VIM Ctrl keys (MUST use capture phase)
   useEffect(() => {
