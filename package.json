@@ -30,6 +30,7 @@
     "preview": "vite preview",
     "start": "node serve.js",
     "test:smoke": "npm run build && npm run prepare:lsp && tauri build --debug --bundles none",
+    "test:save-menu": "node test/save-menu.cjs",
     "test:http": "node --test src/services/http/__tests__/testData.test.js src/services/http/__tests__/client.test.js src/services/http/__tests__/exporters.test.js src/services/http/__tests__/auth.test.js src/services/http/__tests__/compare.test.js src/services/http/__tests__/responseValues.test.js src/services/http/__tests__/assertions.test.js src/services/http/__tests__/editorRequests.test.js src/services/http/__tests__/browserCapabilities.test.js",
     "test:api:browser": "node test/api-client-browser.cjs && node test/api-client-persistence.cjs && node test/api-client-layout.cjs && node test/api-client-imports.cjs && node test/api-client-fork.cjs && node test/api-client-variables.cjs && node test/api-client-sidebar.cjs && node test/api-client-compact.cjs && node test/api-client-export.cjs && node test/api-client-auth.cjs && node test/api-client-compare.cjs && node test/api-client-response-values.cjs && node test/api-client-assertions.cjs && node test/api-client-http-editor.cjs && node test/api-client-http-outline.cjs && node test/api-client-browser-capabilities.cjs && node test/api-client-test-data.cjs && node test/api-client-source-test-data.cjs && node test/api-client-form-encoding.cjs",
     "test:ai": "node src/services/ai/__tests__/run.js",

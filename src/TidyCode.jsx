@@ -1464,6 +1464,8 @@ const TidyCode = () => {
   const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const fileDropdownRef = useRef(null);
+  const fileMenuRef = useRef(null);
+  const [fileMenuPosition, setFileMenuPosition] = useState({left:0,top:0});
   const [showDataConvertDropdown, setShowDataConvertDropdown] = useState(false);
   const dataConvertDropdownRef = useRef(null);
   const [showAIDropdown, setShowAIDropdown] = useState(false);
@@ -2354,7 +2356,7 @@ const TidyCode = () => {
       if (convertDropdownRef.current && !convertDropdownRef.current.contains(e.target)) {
         setShowConvertDropdown(false);
       }
-      if (fileDropdownRef.current && !fileDropdownRef.current.contains(e.target)) {
+      if (fileDropdownRef.current && !fileDropdownRef.current.contains(e.target) && !fileMenuRef.current?.contains(e.target)) {
         setShowFileDropdown(false);
       }
       if (dataConvertDropdownRef.current && !dataConvertDropdownRef.current.contains(e.target)) {
@@ -2373,6 +2375,15 @@ const TidyCode = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showConvertDropdown, showFileDropdown, showDataConvertDropdown, showAIDropdown]);
+
+  useEffect(() => {
+    if (!showFileDropdown) return;
+    fileMenuRef.current?.querySelector('button:not(:disabled)')?.focus();
+    const close = event => { if (!fileMenuRef.current?.contains(event.target)) setShowFileDropdown(false); };
+    window.addEventListener('resize', close);
+    document.addEventListener('scroll', close, true);
+    return () => {window.removeEventListener('resize', close);document.removeEventListener('scroll', close, true);};
+  }, [showFileDropdown]);
 
   // Keyboard shortcuts for Save and Save As
   useEffect(() => {
@@ -4262,6 +4273,18 @@ const TidyCode = () => {
     }
   };
 
+  const openHomeTab = () => {
+    const home = tabs.find(tab => tab.title === 'Welcome' && !tab.filePath);
+    if (home) setActiveTabId(home.id);
+    else {
+      const id = nextIdRef.current++;
+      setTabs(previous => [...previous, { id, title: 'Welcome', content: '', isModified: false, filePath: null }]);
+      setActiveTabId(id);
+      setNextId(nextIdRef.current);
+    }
+    setCurrentPanel('dev');
+  };
+
   const closeAllTabs = () => {
     // Clear all tab-specific state
     setTabSearchResults({});
@@ -5547,10 +5570,9 @@ const TidyCode = () => {
           return;
         }
       } catch (err) {
-        // User cancelled or API not supported, fall through to download
-        if (err.name !== 'AbortError') {
-          console.log('File System Access API error:', err);
-        }
+        // Cancelling the picker must not download a file or mark the draft saved.
+        if (err.name === 'AbortError') return;
+        console.log('File System Access API error:', err);
       }
 
       // Fallback to browser download with original extension
@@ -5730,10 +5752,9 @@ const TidyCode = () => {
           return;
         }
       } catch (err) {
-        // User cancelled or API not supported, fall through to download
-        if (err.name !== 'AbortError') {
-          console.log('File System Access API error:', err);
-        }
+        // Cancelling the picker must not download a file or mark the draft saved.
+        if (err.name === 'AbortError') return;
+        console.log('File System Access API error:', err);
       }
 
       // Fallback to browser download with original extension
@@ -9623,16 +9644,27 @@ const TidyCode = () => {
           {/* File dropdown: Save, Save As */}
           <div className="relative" ref={fileDropdownRef}>
             <button
-              onClick={() => setShowFileDropdown(!showFileDropdown)}
+              onClick={event => {
+                const rect=event.currentTarget.getBoundingClientRect();
+                setFileMenuPosition({left:Math.max(8,Math.min(rect.left,window.innerWidth-184)),top:rect.bottom+4});
+                setShowFileDropdown(previous=>!previous);
+              }}
+              aria-haspopup="menu"
+              aria-expanded={showFileDropdown}
+              aria-controls={showFileDropdown ? "code-save-menu" : undefined}
               className={`flex items-center gap-1 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
               title="Save options"
             >
               <Save className="w-4 h-4" />
               <ChevronDown className="w-3 h-3" />
             </button>
-            {showFileDropdown && (
-              <div className={`absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                <button
+            {showFileDropdown && createPortal(
+              <div ref={fileMenuRef} id="code-save-menu" role="menu" aria-label="Save options" style={fileMenuPosition} onKeyDown={event=>{
+                const buttons=[...fileMenuRef.current.querySelectorAll('button:not(:disabled)')];
+                if(event.key==='Escape'){event.preventDefault();setShowFileDropdown(false);fileDropdownRef.current?.querySelector('button')?.focus();}
+                if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const index=buttons.indexOf(document.activeElement);buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length]?.focus();}
+              }} className={`fixed py-1 rounded-md shadow-lg z-[100] min-w-[176px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                <button role="menuitem"
                   onClick={() => { saveFile(); setShowFileDropdown(false); }}
                   disabled={!hasUnsavedChanges(activeTab) || activeTab.title === 'Welcome'}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9648,7 +9680,7 @@ const TidyCode = () => {
                   Save
                   <span className={`ml-auto text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>⌘S</span>
                 </button>
-                <button
+                <button role="menuitem"
                   onClick={() => { saveFileAs(); setShowFileDropdown(false); }}
                   disabled={!activeTab || activeTab.title === 'Welcome'}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9662,7 +9694,7 @@ const TidyCode = () => {
                   <span className={`ml-auto text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>⇧⌘S</span>
                 </button>
               </div>
-            )}
+            , document.body)}
           </div>
 
           {/* Find & Replace Button */}
@@ -12147,9 +12179,15 @@ const TidyCode = () => {
       <div className="flex flex-1 overflow-hidden">
 
       <div className="hidden md:flex w-16 bg-gray-950 border-r border-gray-800 flex-col relative">
-        <div className="flex items-center justify-center px-3 py-3 text-sm text-gray-400 uppercase tracking-wide">
+        <button
+          type="button"
+          onClick={openHomeTab}
+          aria-label="Go to Home"
+          title="Home"
+          className="flex items-center justify-center px-3 py-3 text-sm text-gray-400 uppercase tracking-wide hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400 focus-visible:outline-offset-[-2px]"
+        >
           <LogoMark size={26} />
-        </div>
+        </button>
         <div className="flex-1">
           {navItems.filter(item => !item.bottom).map(renderSidebarNavItem)}
         </div>
