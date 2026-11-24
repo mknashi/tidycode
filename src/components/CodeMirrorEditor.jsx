@@ -183,6 +183,7 @@ const CodeMirrorEditor = forwardRef(({
       'toml': StreamLanguage.define(toml),
       'config': StreamLanguage.define(toml), // Default for config files
     };
+    if (lang === 'text') return [];
     return langMap[lang] || javascript();
   }, []);
 

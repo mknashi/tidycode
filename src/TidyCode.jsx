@@ -1,3 +1,5 @@
+import NewFileDialog from './components/NewFileDialog';
+import { detectConfigurationLanguage } from './utils/configLanguageDetection';
 import { mergeAlignedStructureRows } from './utils/alignedStructureRows';
 import ToolbarMenu from "./components/ToolbarMenu";
 import TestDataGenerator from './components/api-client/TestDataGenerator';
@@ -315,6 +317,9 @@ const detectLanguageFromContent = (content = '') => {
     return 'javascript';
   }
 
+  const configurationLanguage = detectConfigurationLanguage(content);
+  if (configurationLanguage) return configurationLanguage;
+
   // CSS - has selectors and properties
   if (trimmed.match(/[.#\w-]+\s*\{[\s\S]*:\s*[\s\S]*;?[\s\S]*\}/)) {
     return 'css';
@@ -349,11 +354,6 @@ const detectLanguageFromContent = (content = '') => {
   // C - #include and common patterns
   if (trimmed.match(/^#include\s*[<"]/m) && !trimmed.match(/^(class |namespace )/m)) {
     return trimmed.includes('iostream') ? 'cpp' : 'c';
-  }
-
-  // YAML - starts with --- or has key: value
-  if (trimmed.startsWith('---') || trimmed.match(/^[\w-]+:\s*[\w\s]/m)) {
-    if (!trimmed.includes('{') && !trimmed.includes(';')) return 'yaml';
   }
 
   // Markdown - has markdown syntax
@@ -673,6 +673,8 @@ const detectMarkdownContent = (text = '', filename = '') => {
   // Don't detect as markdown if it looks like JSON or XML
   if (looksLikeJSON(trimmed) || looksLikeXML(trimmed)) return false;
   if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.startsWith('<')) return false;
+
+  if (detectConfigurationLanguage(text)) return false;
 
   // Check for common markdown patterns
   const markdownPatterns = [
@@ -2678,6 +2680,7 @@ const TidyCode = () => {
             content: shouldSaveContent ? tab.content : '',
             isModified: tab.isModified,
             filePath: tab.filePath,
+            languageOverride: tab.languageOverride || null,
             absolutePath: tab.absolutePath ? normalizeForComparison(tab.absolutePath) : null,
             isPDF: tab.isPDF || false,
             autosavedToLocalStorage: tab.autosavedToLocalStorage || false
@@ -4064,14 +4067,18 @@ const TidyCode = () => {
     }
   }, [activeTabId]);
 
-  const createNewTab = () => {
+  const [newFileDialogOpen, setNewFileDialogOpen] = useState(false);
+  const createNewTab = () => setNewFileDialogOpen(true);
+  const createTypedTab = ([type, , extension, language]) => {
+    setNewFileDialogOpen(false);
     // Use ref to get ID synchronously, bypassing React's state batching
     const newTabId = nextIdRef.current;
     nextIdRef.current += 1;
 
     const newTab = {
       id: newTabId,
-      title: `Untitled-${newTabId}`,
+      title: `Untitled-${newTabId}${extension}`,
+      languageOverride: type === 'text' ? language : null,
       content: '',
       isModified: false, // Start as unmodified, will become modified when user types
       filePath: null
@@ -7692,6 +7699,7 @@ const TidyCode = () => {
       return null; // No syntax highlighting for large files
     }
 
+    if (activeTab?.languageOverride) return activeTab.languageOverride;
     if (/\.(http|rest)$/i.test(fileName)) return 'http';
 
     // First try filename-based detection
@@ -7701,7 +7709,7 @@ const TidyCode = () => {
     // If no filename match, try content-based detection
     const contentLang = detectLanguageFromContent(content);
     return contentLang;
-  }, [activeTab?.filePath, activeTab?.title, activeTab?.content, activeTab?.fileSize]);
+  }, [activeTab?.filePath, activeTab?.title, activeTab?.content, activeTab?.fileSize, activeTab?.languageOverride]);
 
   const isCsvFileName = useMemo(() => {
     const name = (activeTab?.filePath || activeTab?.title || '').toLowerCase();
@@ -8053,6 +8061,7 @@ const TidyCode = () => {
   }, [activeTab?.id, isMarkdownFileName, isMarkdownByContent, isCSVTab]);
 
   const structureTree = useMemo(() => {
+    if (activeTab?.languageOverride === 'text') return { type: null, nodes: [] };
     if (isHttpEditor) return { type: 'HTTP', nodes: [] };
     if (!activeTab?.content) return { type: null, nodes: [] };
     // Once a tab has shown a JSON tree, keep it while the content is briefly invalid mid-edit
@@ -8119,7 +8128,7 @@ const TidyCode = () => {
     }
 
     return { type: null, nodes: [] };
-  }, [activeTab?.id, activeTab?.content, activeTab?.filePath, activeTab?.title, forceShowStructureTabs]);
+  }, [activeTab?.id, activeTab?.content, activeTab?.filePath, activeTab?.title, activeTab?.languageOverride, forceShowStructureTabs]);
 
   const graphFormat = ['JSON', 'XML', 'YAML', 'TOML'].includes(structureTree.type) ? structureTree.type.toLowerCase() : null;
 
@@ -10975,7 +10984,7 @@ const TidyCode = () => {
                   const paneLanguage = paneTab ? (() => {
                     const ext = (paneTab.filePath || paneTab.title || '').split('.').pop()?.toLowerCase();
                     const langMap = { js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript', py: 'python', json: 'json', xml: 'xml', html: 'html', css: 'css', md: 'markdown', yaml: 'yaml', yml: 'yaml', toml: 'toml', sql: 'sql', rs: 'rust', go: 'go', java: 'java', cpp: 'cpp', c: 'c', cs: 'csharp', rb: 'ruby', php: 'php', sh: 'shell' };
-                    return langMap[ext] || 'javascript';
+                    return paneTab.languageOverride || langMap[ext] || 'javascript';
                   })() : 'javascript';
                   const isActive = activePaneId === pane.id;
                   return (
@@ -12674,6 +12683,8 @@ const TidyCode = () => {
         if (action.startsWith('generate-') && httpEditorMenu.item) { editHttpRequest(httpEditorMenu.item,action);return; }
         if (httpEditorMenu.item) openHttpRequestFromEditor(action === 'send', httpEditorMenu.item);
       }} />}
+
+      {newFileDialogOpen && <NewFileDialog theme={theme} onCreate={createTypedTab} onClose={() => { setNewFileDialogOpen(false); requestEditorFocus(activeTabId); }} />}
 
       {/* AI Actions Menu (Cmd+Shift+A) */}
       {aiActions.actionsMenuPos && (
