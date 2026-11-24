@@ -1,3 +1,4 @@
+import { mergeAlignedStructureRows } from './utils/alignedStructureRows';
 import ToolbarMenu from "./components/ToolbarMenu";
 import TestDataGenerator from './components/api-client/TestDataGenerator';
 import { applyTestDataToSource } from './services/http/testDataSource';
@@ -6467,11 +6468,12 @@ const TidyCode = () => {
       });
     };
     walk(structureTree.nodes, 0);
+    const alignedRows = mergeAlignedStructureRows(rows, parseFloat(structureRowHeight));
 
     // The cursor's row: the last row at or above the cursor line
     let activeKey = null;
-    for (const row of rows) {
-      if (row.line > structureSyncLine) break;
+    for (const row of alignedRows) {
+      if ((row.node.selectionLine ?? row.line) > structureSyncLine) continue;
       activeKey = row.key;
     }
 
@@ -6480,8 +6482,8 @@ const TidyCode = () => {
     const closingClass = theme === 'dark' ? 'text-gray-500' : 'text-gray-400';
 
     return (
-      <div className="relative" style={{ height: scroller.scrollHeight, fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureRowHeight }}>
-        {rows.map(row => {
+      <div className="relative" style={{ height: alignedRows.reduce((height, row) => Math.max(height, row.top + parseFloat(structureRowHeight)), scroller.scrollHeight), fontFamily: structureFont, fontSize: structureFontSize, lineHeight: structureRowHeight }}>
+        {alignedRows.map(row => {
           const isActive = row.key === activeKey;
           const textClass = isActive
             ? 'text-white'
@@ -6511,9 +6513,9 @@ const TidyCode = () => {
               <button
                 onClick={() => selectStructureNode({ line: row.line })}
                 className={`flex-1 text-left truncate ${isActive ? 'font-semibold' : ''}`}
-                title={`Line ${row.line}`}
+                title={`Line ${row.line}: ${row.displayLabel}`}
               >
-                {row.closing ? row.node.closeLabel : row.node.label}
+                {row.displayLabel}
               </button>
             </div>
           );
@@ -8110,19 +8112,16 @@ const TidyCode = () => {
       return { type: 'YAML', nodes: [] };
     }
 
-    // TOML support using format service
+    // Recover valid TOML entries while a new key or table is incomplete.
     if (detection.format === 'toml' || (fileType.type === 'config' && fileName.endsWith('.toml'))) {
       const result = formatService.buildStructure(activeTab.content, 'toml');
-      if (result.errors.length === 0) {
-        return { type: 'TOML', nodes: result.nodes };
-      }
-      return { type: 'TOML', nodes: [] };
+      return { type: 'TOML', nodes: result.nodes };
     }
 
     return { type: null, nodes: [] };
   }, [activeTab?.id, activeTab?.content, activeTab?.filePath, activeTab?.title, forceShowStructureTabs]);
 
-  const graphFormat = structureTree.type === 'JSON' ? 'json' : structureTree.type === 'XML' ? 'xml' : null;
+  const graphFormat = ['JSON', 'XML', 'YAML', 'TOML'].includes(structureTree.type) ? structureTree.type.toLowerCase() : null;
 
   const structureNodeList = useMemo(() => {
     const list = [];
@@ -8143,7 +8142,7 @@ const TidyCode = () => {
     let candidate = null;
     let bestDiff = Infinity;
     structureNodeList.forEach(node => {
-      const diff = structureSyncLine - node.line;
+      const diff = structureSyncLine - (node.selectionLine ?? node.line);
       if (diff >= 0 && diff < bestDiff) {
         candidate = node;
         bestDiff = diff;
@@ -9859,7 +9858,7 @@ const TidyCode = () => {
             </>
           )}
 
-          {/* Graph View Button - JSON/XML only */}
+          {/* Graph View Button - supported structured formats */}
           {!isCSVTab && !isMarkdownTab && graphFormat && (
             <button
               onClick={() => setGraphViewOpen(prev => !prev)}

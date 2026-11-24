@@ -5,7 +5,7 @@ import { X, Plus, Minus, Maximize, Expand, Shrink, UnfoldVertical, FoldVertical,
 import { buildDataGraph, GraphTooLargeError, MAX_GRAPH_CARDS } from '../utils/dataGraph';
 
 /**
- * Node-and-link view of JSON or XML data. Objects, arrays and elements are
+ * Node-and-link view of JSON, XML, YAML or TOML data. Objects, arrays and elements are
  * cards laid out left to right; clicking a card or row moves the editor to it.
  */
 
@@ -749,7 +749,7 @@ const DataGraphView = ({ content, format, theme, title, onSelectOffset, onExport
 
 DataGraphView.propTypes = {
   content: PropTypes.string.isRequired,
-  format: PropTypes.oneOf(['json', 'xml']).isRequired,
+  format: PropTypes.oneOf(['json', 'xml', 'yaml', 'toml']).isRequired,
   theme: PropTypes.string,
   title: PropTypes.string,
   onSelectOffset: PropTypes.func,

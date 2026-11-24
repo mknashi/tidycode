@@ -1,5 +1,5 @@
 import * as TOML from 'smol-toml';
-import { BaseFormatter } from './BaseFormatter';
+import { BaseFormatter } from './BaseFormatter.js';
 
 /**
  * TOML format handler
@@ -118,113 +118,162 @@ export class TomlFormatter extends BaseFormatter {
   }
 
   buildStructure(content) {
-    try {
-      const parsed = TOML.parse(content);
-      const lines = content.split('\n');
-      this.nodeCounter = 0;
-      return { nodes: this.buildNodes(parsed, '', 0, lines), errors: [] };
-    } catch (error) {
-      return { nodes: [], errors: [this.parseTomlError(error)] };
-    }
-  }
-
-  /**
-   * Find the line number for a key or section in the TOML content
-   */
-  findKeyLine(lines, key, isSection = false, isArrayTable = false) {
-    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    if (isArrayTable) {
-      // Look for [[section]]
-      const pattern = new RegExp(`^\\s*\\[\\[${escapedKey}\\]\\]\\s*$`);
-      for (let i = 0; i < lines.length; i++) {
-        if (pattern.test(lines[i])) {
-          return i + 1;
-        }
-      }
-    } else if (isSection) {
-      // Look for [section]
-      const pattern = new RegExp(`^\\s*\\[${escapedKey}\\]\\s*$`);
-      for (let i = 0; i < lines.length; i++) {
-        if (pattern.test(lines[i])) {
-          return i + 1;
-        }
-      }
-    } else {
-      // Look for key = value
-      const pattern = new RegExp(`^\\s*${escapedKey}\\s*=`);
-      for (let i = 0; i < lines.length; i++) {
-        if (pattern.test(lines[i])) {
-          return i + 1;
-        }
+    const lines = content.split('\n');
+    const errors = [];
+    // Outline recovery only: validation and formatting still parse the original
+    // document strictly. Blank unfinished lines to retain original line numbers.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const source = lines.join('\n');
+      try {
+        const parsed = TOML.parse(source);
+        this.nodeCounter = 0;
+        const locations = this.buildSourceLocations(source, parsed);
+        return { nodes: this.buildNodes(parsed, '', locations), errors };
+      } catch (error) {
+        if (!errors.length) errors.push(this.parseTomlError(error));
+        let index = Math.min(lines.length, error.line || lines.length) - 1;
+        while (index >= 0 && !lines[index].trim()) index--;
+        if (index < 0) break;
+        lines[index] = '';
       }
     }
-    return 1;
+    return { nodes: [], errors };
   }
 
-  buildNodes(data, parentKey = '', depth = 0, lines = []) {
-    const nodes = [];
-
-    for (const [key, value] of Object.entries(data)) {
-      const fullKey = parentKey ? `${parentKey}.${key}` : key;
-
-      if (Array.isArray(value)) {
-        // Check if array of tables
-        if (value.length > 0 && typeof value[0] === 'object' && !Array.isArray(value[0]) && !(value[0] instanceof Date)) {
-          const line = this.findKeyLine(lines, fullKey, false, true);
-          nodes.push({
-            id: `toml-${this.nodeCounter++}-${line}`,
-            label: `[[${fullKey}]] (${value.length})`,
-            line,
-            children: value.map((item, i) => {
-              const itemLine = this.findKeyLine(lines, fullKey, false, true);
-              return {
-                id: `toml-${this.nodeCounter++}-${itemLine}`,
-                label: `[${i}]`,
-                line: itemLine,
-                children: this.buildNodes(item, '', depth + 2, lines)
-              };
-            })
-          });
+  // Scan complete statements, ignoring apparent keys inside strings and arrays.
+  // Object identity keeps repeated keys and nested arrays of tables distinct.
+  buildSourceLocations(content, parsed) {
+    const locations = new WeakMap();
+    const arrayIndices = new WeakMap();
+    locations.leadingComments = new Map();
+    let commentStart = null;
+    const mark = (object, key, line) => {
+      if (!locations.has(object)) locations.set(object, new Map());
+      locations.get(object).set(key, line);
+    };
+    const keyPath = text => {
+      let object = TOML.parse(`${text} = 0`);
+      const path = [];
+      while (object && typeof object === 'object') {
+        const key = Object.keys(object)[0];
+        path.push(key);
+        object = object[key];
+      }
+      return path;
+    };
+    const resolve = (object, path, line, newArray = false) => {
+      for (let i = 0; i < path.length; i++) {
+        const key = path[i];
+        if (!locations.get(object)?.has(key)) mark(object, key, line);
+        object = object[key];
+        if (Array.isArray(object)) {
+          if (newArray && i === path.length - 1) {
+            arrayIndices.set(object, (arrayIndices.get(object) ?? -1) + 1);
+          }
+          const index = arrayIndices.get(object) ?? 0;
+          if (!locations.get(object)?.has(index)) mark(object, index, line);
+          object = object[index];
+        }
+      }
+      return object;
+    };
+    let table = parsed;
+    let start = 0;
+    let quote = null;
+    let triple = false;
+    let nesting = 0;
+    let statement = '';
+    const lines = content.split('\n');
+    for (let n = 0; n < lines.length; n++) {
+      const line = lines[n];
+      if (!statement) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('#')) {
+          commentStart ??= n + 1;
+          continue;
+        }
+        if (!trimmed) continue;
+        start = n + 1;
+        if (commentStart !== null) locations.leadingComments.set(start, commentStart);
+        commentStart = null;
+      }
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (quote) {
+          if (c === '\\' && quote === '"') { statement += c + (line[++i] ?? ''); continue; }
+          if (c === quote && (!triple || line.slice(i, i + 3) === quote.repeat(3))) {
+            statement += triple ? quote.repeat(3) : c;
+            if (triple) i += 2;
+            quote = null;
+            triple = false;
+          } else statement += c;
         } else {
-          const line = this.findKeyLine(lines, key);
-          const preview = this.formatArrayPreview(value);
-          nodes.push({
-            id: `toml-${this.nodeCounter++}-${line}`,
-            label: `${key} = ${preview}`,
-            line,
-            children: []
-          });
+          if (c === '#') break;
+          if (c === '"' || c === "'") {
+            quote = c;
+            triple = line.slice(i, i + 3) === c.repeat(3);
+            statement += triple ? c.repeat(3) : c;
+            if (triple) i += 2;
+          } else {
+            if (c === '[' || c === '{') nesting++;
+            if (c === ']' || c === '}') nesting--;
+            statement += c;
+          }
         }
-      } else if (value instanceof Date) {
-        const line = this.findKeyLine(lines, key);
-        nodes.push({
-          id: `toml-${this.nodeCounter++}-${line}`,
-          label: `${key} = ${value.toISOString()}`,
-          line,
-          children: []
-        });
-      } else if (typeof value === 'object' && value !== null) {
-        const line = this.findKeyLine(lines, fullKey, true);
-        nodes.push({
-          id: `toml-${this.nodeCounter++}-${line}`,
-          label: `[${fullKey}]`,
-          line,
-          children: this.buildNodes(value, fullKey, depth + 1, lines)
-        });
+      }
+      if (quote || nesting > 0) { statement += '\n'; continue; }
+      const text = statement.trim();
+      statement = '';
+      if (!text) continue;
+      if (text.startsWith('[')) {
+        const array = text.startsWith('[[');
+        const path = keyPath(text.slice(array ? 2 : 1, array ? -2 : -1));
+        table = resolve(parsed, path, start, array);
+        // Explicit headers supersede the location of an implicit parent table.
+        mark(table, '$header', start);
       } else {
-        const line = this.findKeyLine(lines, key);
-        const valueStr = this.truncateValue(value);
-        nodes.push({
-          id: `toml-${this.nodeCounter++}-${line}`,
-          label: `${key} = ${valueStr}`,
-          line,
-          children: []
-        });
+        // Locate the assignment operator outside a quoted key.
+        let keyQuote = null;
+        let equals = 0;
+        for (; equals < text.length; equals++) {
+          const c = text[equals];
+          if (keyQuote && c === '\\' && keyQuote === '"') { equals++; continue; }
+          if (c === keyQuote) keyQuote = null;
+          else if (!keyQuote && (c === '"' || c === "'")) keyQuote = c;
+          else if (!keyQuote && c === '=') break;
+        }
+        resolve(table, keyPath(text.slice(0, equals)), start);
       }
     }
+    return locations;
+  }
 
-    return nodes;
+  buildNodes(data, parentKey = '', locations, fallbackLine = 1) {
+    return Object.entries(data).map(([key, value]) => {
+      const fullKey = parentKey ? `${parentKey}.${key}` : key;
+      const object = value && typeof value === 'object' && !(value instanceof Date);
+      const line = (object && locations.get(value)?.get('$header')) || locations.get(data)?.get(key) || fallbackLine;
+      const node = { id: `toml-${this.nodeCounter++}-${line}`, line, selectionLine: locations.leadingComments.get(line) || line, children: [] };
+      if (Array.isArray(value)) {
+        if (value.length && value[0] && typeof value[0] === 'object' && !(value[0] instanceof Date) && !Array.isArray(value[0])) {
+          node.label = `[[${fullKey}]] (${value.length})`;
+          node.isArrayGroup = true;
+          node.children = value.map((item, index) => {
+            const itemLine = locations.get(value)?.get(index) || line;
+            return {
+              id: `toml-${this.nodeCounter++}-${itemLine}`,
+              label: `[${index}]`, line: itemLine, selectionLine: locations.leadingComments.get(itemLine) || itemLine,
+              children: this.buildNodes(item, fullKey, locations, itemLine)
+            };
+          });
+        } else node.label = `${key} = ${this.formatArrayPreview(value)}`;
+      } else if (value instanceof Date) node.label = `${key} = ${value.toISOString()}`;
+      else if (object) {
+        node.label = `[${fullKey}]`;
+        node.children = this.buildNodes(value, fullKey, locations, line);
+      } else node.label = `${key} = ${this.truncateValue(value)}`;
+      return node;
+    }).sort((a, b) => a.line - b.line);
   }
 
   getValueType(value) {

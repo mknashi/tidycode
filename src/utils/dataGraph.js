@@ -1,5 +1,9 @@
+import yaml from 'js-yaml';
+import * as TOML from 'smol-toml';
+import { TomlFormatter } from '../services/formatters/TomlFormatter.js';
+
 /**
- * Turn JSON or XML text into a graph of cards for the graph view.
+ * Turn JSON, XML, YAML or TOML text into a graph of cards for the graph view.
  *
  * Each object, array or element becomes a card. Simple values are rows on
  * their parent's card; nested containers are rows that link to a child card.
@@ -107,8 +111,9 @@ const parseJsonWithOffsets = (text) => {
 
 const formatJsonValue = (node) => (node.type === 'string' ? JSON.stringify(node.value) : node.raw ?? String(node.value));
 
-const buildJsonGraph = (text) => {
-  const root = parseJsonWithOffsets(text);
+const buildJsonGraph = text => buildValueGraph(parseJsonWithOffsets(text));
+
+const buildValueGraph = (root) => {
   const cards = new Map();
 
   const addCard = (node, title) => {
@@ -149,6 +154,73 @@ const buildJsonGraph = (text) => {
 
   const rootId = addCard(root, root.type === 'array' ? 'root[ ]' : root.type === 'object' ? 'root' : 'value');
   return { rootId, cards };
+};
+
+// --- YAML / TOML ----------------------------------------------------------
+
+const buildConfigGraph = (text, format) => {
+  let value;
+  let locations;
+  let rootOffset = 0;
+  const offsets = [0];
+  for (let i = 0; i < text.length; i++) if (text[i] === '\n') offsets.push(i + 1);
+  if (format === 'toml') {
+    value = TOML.parse(text);
+    locations = new TomlFormatter().buildSourceLocations(text, value);
+  } else {
+    locations = new WeakMap();
+    const stack = [];
+    value = yaml.load(text, {
+      listener(event, state) {
+        if (event === 'open') {
+          stack.push({ offset: state.position, children: [] });
+          return;
+        }
+        const node = stack.pop();
+        node.value = state.result;
+        if (state.result && typeof state.result === 'object') {
+          const entries = new Map();
+          if (state.kind === 'mapping') {
+            for (let i = 0; i + 1 < node.children.length; i += 2) {
+              entries.set(String(node.children[i].value), node.children[i].offset);
+            }
+          } else if (state.kind === 'sequence') {
+            node.children.forEach((child, index) => entries.set(String(index), child.offset));
+          }
+          // Aliases have no children: preserve the anchored object's locations.
+          if (entries.size) locations.set(state.result, entries);
+        }
+        if (stack.length) stack[stack.length - 1].children.push(node);
+        else rootOffset = node.offset;
+      }
+    });
+  }
+  const sourceOffset = (object, key, fallback) => {
+    const location = locations.get(object)?.get(format === 'toml' && Array.isArray(object) ? Number(key) : key);
+    return location === undefined ? fallback : format === 'toml' ? offsets[location - 1] ?? fallback : location;
+  };
+  let containers = 0;
+  const ancestors = new Set();
+  const convert = (item, offset) => {
+    if (item instanceof Date) return { type: 'string', value: item.toISOString(), offset };
+    if (item === null || item === undefined) return { type: 'null', value: null, offset };
+    if (typeof item !== 'object') return { type: typeof item, value: item, offset };
+    if (ancestors.has(item)) return { type: 'string', value: '[Circular alias]', offset };
+    if (++containers > MAX_GRAPH_CARDS) throw new GraphTooLargeError();
+    ancestors.add(item);
+    let node;
+    if (Array.isArray(item)) {
+      node = { type: 'array', offset, items: item.map((child, index) => convert(child, sourceOffset(item, String(index), offset))) };
+    } else {
+      node = { type: 'object', offset, entries: Object.entries(item).map(([key, child]) => {
+        const keyOffset = sourceOffset(item, key, offset);
+        return { key, keyOffset, value: convert(child, keyOffset) };
+      }) };
+    }
+    ancestors.delete(item);
+    return node;
+  };
+  return buildValueGraph(convert(value, rootOffset));
 };
 
 // --- XML ------------------------------------------------------------------
@@ -240,10 +312,11 @@ const buildXmlGraph = (text) => {
 
 /**
  * @param {string} text
- * @param {'json'|'xml'} format
+ * @param {'json'|'xml'|'yaml'|'toml'} format
  * @returns {{ rootId: string, cards: Map<string, object> }}
  * @throws {SyntaxError} for invalid input, GraphTooLargeError past MAX_GRAPH_CARDS
  */
 export function buildDataGraph(text, format) {
+  if (format === 'yaml' || format === 'toml') return buildConfigGraph(text, format);
   return format === 'xml' ? buildXmlGraph(text) : buildJsonGraph(text);
 }
