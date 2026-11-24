@@ -116,49 +116,89 @@ export function httpVariablePreview(source, pos, metadata = []) {
   const end = source.indexOf("\n", pos);
   const line = source.slice(start, end < 0 ? source.length : end);
   const match = [...line.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].find(
-    m => pos >= start + m.index && pos < start + m.index + m[0].length,
+    (m) => pos >= start + m.index && pos < start + m.index + m[0].length,
   );
   if (!match) return null;
   const key = match[1].trim();
-  const block = editingBlocks(source).find(b => pos >= b.from && pos <= b.to);
+  const block = editingBlocks(source).find((b) => pos >= b.from && pos <= b.to);
   let declarations;
-  try { declarations = fileDeclarations(source, block?.blockIndex || 0); }
-  catch { return { key, from: start + match.index, to: start + match.index + match[0].length, detail: "Fix variable declarations to preview this value." }; }
+  try {
+    declarations = fileDeclarations(source, block?.blockIndex || 0);
+  } catch {
+    return {
+      key,
+      from: start + match.index,
+      to: start + match.index + match[0].length,
+      detail: "Fix variable declarations to preview this value.",
+    };
+  }
   const rows = [
-    ...metadata.filter(r => typeof r !== "string" && (r.blockIndex === undefined || r.blockIndex === block?.blockIndex)),
-    ...declarations.file.map(r => ({ ...r, rank: 1, scope: "File" })),
-    ...declarations.block.map(r => ({ ...r, rank: 5, scope: "Request block" })),
-  ].sort((a,b) => (a.rank || 0) - (b.rank || 0));
-  const row = rows.filter(r => r.key === key).at(-1);
+    ...metadata.filter(
+      (r) =>
+        typeof r !== "string" &&
+        (r.blockIndex === undefined || r.blockIndex === block?.blockIndex),
+    ),
+    ...declarations.file.map((r) => ({ ...r, rank: 1, scope: "File" })),
+    ...declarations.block.map((r) => ({
+      ...r,
+      rank: 5,
+      scope: "Request block",
+    })),
+  ].sort((a, b) => (a.rank || 0) - (b.rank || 0));
+  const row = rows.filter((r) => r.key === key).at(-1);
   const detail = row
     ? `${row.scope || "Variable"} · ${row.secret ? "Secret value hidden" : row.hasValue === false ? "Value required" : String(row.value ?? "").slice(0, 1000) || "(empty)"}`
-    : ["$uuid", "$timestamp"].includes(key) ? "Generated when the request is sent" : "Not defined in the current scopes";
-  return { key, detail, from: start + match.index, to: start + match.index + match[0].length };
+    : ["$uuid", "$timestamp"].includes(key)
+      ? "Generated when the request is sent"
+      : "Not defined in the current scopes";
+  return {
+    key,
+    detail,
+    from: start + match.index,
+    to: start + match.index + match[0].length,
+  };
 }
 
-export function httpEditingExtensions(metadata = [], endpoints = []) {
+export function httpEditingExtensions(
+  metadata = [],
+  endpoints = [],
+  options = {},
+) {
   return [
     hoverTooltip((view, pos) => {
-      const preview = httpVariablePreview(view.state.doc.toString(), pos, metadata);
+      const preview = httpVariablePreview(
+        view.state.doc.toString(),
+        pos,
+        metadata,
+      );
       if (!preview) return null;
-      return { pos: preview.from, end: preview.to, above: true, create() {
-        const dom = document.createElement("div");
-        dom.style.cssText = "padding:6px 9px;max-width:420px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px";
-        const name = document.createElement("strong");
-        name.textContent = preview.key;
-        const value = document.createElement("div");
-        value.textContent = preview.detail;
-        dom.append(name, value);
-        return { dom };
-      }};
+      return {
+        pos: preview.from,
+        end: preview.to,
+        above: true,
+        create() {
+          const dom = document.createElement("div");
+          dom.style.cssText =
+            "padding:6px 9px;max-width:420px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px";
+          const name = document.createElement("strong");
+          name.textContent = preview.key;
+          const value = document.createElement("div");
+          value.textContent = preview.detail;
+          dom.append(name, value);
+          return { dom };
+        },
+      };
     }),
     autocompletion({
       override: [httpCompletionSource(metadata, endpoints)],
       activateOnTyping: true,
     }),
-    linter((view) => httpDiagnostics(view.state.doc.toString(), metadata), {
-      delay: 350,
-    }),
+    linter(
+      (view) => httpDiagnostics(view.state.doc.toString(), metadata, options),
+      {
+        delay: 350,
+      },
+    ),
     foldService.of((state, lineStart, lineEnd) => {
       if (state.doc.length > 1024 * 1024) return null;
       try {

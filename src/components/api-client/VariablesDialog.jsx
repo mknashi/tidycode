@@ -1,4 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import SecretVisibilityButton from "../SecretVisibilityButton";
+import { ShieldCheck } from "lucide-react";
+import { createDesktopVault } from "../../services/http/desktopVault";
+import DesktopVault from "./DesktopVault";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   credentialVariable,
   newVariable,
@@ -27,6 +31,7 @@ export default function VariablesDialog({
           variables: source.variables.map((row) => ({
             ...row,
             id: crypto.randomUUID(),
+            vaultId: undefined,
             value: row.secret || credentialVariable(row.key) ? "" : row.value,
           })),
         });
@@ -51,6 +56,15 @@ export default function VariablesDialog({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState(new Set());
+  const [vaultTarget, setVaultTarget] = useState(null);
+  const vaultEntries = useMemo(() => {
+    if (client.transport !== "desktop") return [];
+    try {
+      return createDesktopVault().list();
+    } catch {
+      return [];
+    }
+  }, [client.transport, vaultTarget]);
   useEffect(() => {
     const dialog = ref.current;
     dialog.showModal();
@@ -238,6 +252,9 @@ export default function VariablesDialog({
         <div className="api-variable-rows">
           {rows.map((row) => {
             const secret = row.secret || credentialVariable(row.key);
+            const vaultEntry = vaultEntries.find(
+              (entry) => entry.id === row.vaultId,
+            );
             return (
               <div key={row.id} className="api-variable-row">
                 <input
@@ -272,17 +289,18 @@ export default function VariablesDialog({
                         : "Value or {{another_variable}}"
                     }
                     value={row.value}
-                    onChange={(e) => patch(row.id, { value: e.target.value })}
+                    onChange={(e) =>
+                      patch(row.id, {
+                        value: e.target.value,
+                        vaultId: undefined,
+                      })
+                    }
                   />
                   {secret && (
-                    <button
+                    <SecretVisibilityButton
                       disabled={busy}
-                      aria-label={
-                        revealed.has(row.id)
-                          ? "Hide secret value"
-                          : "Show secret value"
-                      }
-                      onClick={() =>
+                      shown={revealed.has(row.id)}
+                      onToggle={() =>
                         setRevealed((s) => {
                           const next = new Set(s);
                           next.has(row.id)
@@ -291,9 +309,45 @@ export default function VariablesDialog({
                           return next;
                         })
                       }
-                    >
-                      {revealed.has(row.id) ? "Hide" : "Show"}
-                    </button>
+                    />
+                  )}
+                  {secret && client.transport === "desktop" && (
+                    <>
+                      <button
+                        disabled={busy}
+                        aria-label={`Vault for ${row.key || "unnamed variable"}`}
+                        className={vaultEntry ? "api-vault-linked" : undefined}
+                        data-vault-linked={!!vaultEntry}
+                        title={
+                          vaultEntry
+                            ? `Linked to vault: ${vaultEntry.name}. Loading remains explicit.`
+                            : row.vaultId
+                              ? "Linked credential is missing from the vault catalog. Choose another explicitly."
+                              : "Choose or save a vault credential"
+                        }
+                        onClick={() =>
+                          setVaultTarget({
+                            rowId: row.id,
+                            name: row.key,
+                            value: row.value,
+                            vaultId: row.vaultId,
+                            label: `${row.key} · ${environment?.name || scope}`,
+                          })
+                        }
+                      >
+                        {vaultEntry && (
+                          <ShieldCheck size={14} aria-hidden="true" />
+                        )}
+                        Vault…
+                      </button>
+                      <button
+                        disabled={busy || !row.value}
+                        aria-label={`Clear session draft value for ${row.key}`}
+                        onClick={() => patch(row.id, { value: "" })}
+                      >
+                        Clear
+                      </button>
+                    </>
                   )}
                 </div>
                 <label className="api-import-check">
@@ -329,7 +383,8 @@ export default function VariablesDialog({
         </button>
         <p className="api-muted api-small">
           Non-secret values can be stored as readable local data. Secret values
-          stay in memory and must be re-entered after reload. Credential-like
+          stay in memory unless explicitly saved to the desktop OS vault, and
+          must be re-entered or explicitly loaded after reload. Credential-like
           names are always secret. Saving keeps their names, not their values.{" "}
           {"{{$uuid}}"} and {"{{$timestamp}}"} generate values per send.
         </p>
@@ -342,6 +397,34 @@ export default function VariablesDialog({
           <p role="alert" className="api-warning">
             {error}
           </p>
+        )}
+        {client.transport === "desktop" && (
+          <button disabled={busy} onClick={() => setVaultTarget({})}>
+            Manage desktop vault
+          </button>
+        )}
+        {vaultTarget && (
+          <DesktopVault
+            theme={theme}
+            initialName={vaultTarget.name || ""}
+            initialValue={vaultTarget.value || ""}
+            initialId={vaultTarget.vaultId || ""}
+            targetLabel={vaultTarget.label}
+            onClose={() => setVaultTarget(null)}
+            onUse={
+              vaultTarget.rowId
+                ? (value, credential) => {
+                    patch(vaultTarget.rowId, {
+                      value,
+                      secret: true,
+                      vaultId: credential.id,
+                    });
+                    setVaultTarget(null);
+                    setRevealed(new Set());
+                  }
+                : undefined
+            }
+          />
         )}
         <div className="api-row">
           <button

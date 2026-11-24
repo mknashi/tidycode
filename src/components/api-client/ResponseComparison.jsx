@@ -77,7 +77,7 @@ export default function ResponseComparison({ baseline, current }) {
       </div>
       {section === "headers" && (
         <p className="api-small api-muted">
-          Compares browser-readable headers. Known credential headers and
+          Compares available response headers. Known credential headers and
           Location are excluded on both sides because saved snapshots omit them.
         </p>
       )}

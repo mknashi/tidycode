@@ -1,0 +1,3 @@
+These certificates and the leaf private key are synthetic localhost-only TLS test fixtures, not application credentials. They are never loaded by production code. Do not install the test CA in your system trust store.
+
+The root is `localhost-test-ca.pem`; `localhost-test-cert.pem` contains the localhost leaf and root chain, and `localhost-test-key.pem` is the unencrypted test leaf key used only by the native test server. The leaf was generated on 2026-11-23 and expires in one year; regenerate the fixtures before expiry with a localhost DNS/IP SAN, CA:FALSE, digitalSignature/keyEncipherment and serverAuth. Keep the CA private key out of the repository. Native tests prove default trust rejection, request-scoped CA acceptance, and subsequent default trust rejection.

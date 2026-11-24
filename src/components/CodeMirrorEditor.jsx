@@ -1,3 +1,4 @@
+import { isDesktop } from '../utils/platform';
 import { variableHover } from '../utils/codemirror/variableHover';
 import { httpEditingExtensions, httpStreamParser } from '../utils/codemirror/httpEditing';
 import { createFormatOnPaste } from '../utils/codemirror/formatOnPaste';
@@ -361,7 +362,7 @@ const CodeMirrorEditor = forwardRef(({
 
     // Add custom completion source with language-specific keywords and snippets
     // Pass AI settings to enable AI-powered completions
-    if (language === 'http') exts.push(...httpEditingExtensions(httpVariables,httpEndpoints));
+    if (language === 'http') exts.push(...httpEditingExtensions(httpVariables,httpEndpoints,{native:isDesktop()}));
     else exts.push(autocompletion({
       override: [createSmartCompletionSource(language, aiSettings)],
       activateOnTyping: true,

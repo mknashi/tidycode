@@ -1,0 +1,22 @@
+# Start: node examples/api-client/desktop-smoke-server.cjs
+# Open this file in the TidyCode desktop app. Approve local HTTP if prompted.
+# The fixture deliberately sends no CORS headers; it should work through native HTTP.
+@base_url=http://127.0.0.1:8766
+
+### Native JSON response
+GET {{base_url}}/ok
+
+### Read the real 400 error
+POST {{base_url}}/error
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=synthetic
+
+### Inspect redirect without following
+GET {{base_url}}/redirect
+
+### Cancel or set timeout to 1 second
+GET {{base_url}}/slow
+
+### Download exact binary bytes
+GET {{base_url}}/binary

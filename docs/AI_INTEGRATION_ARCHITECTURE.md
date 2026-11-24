@@ -1,5 +1,7 @@
 # AI Integration Architecture
 
+Current code-based assessment: see [section 9](#9-current-assessment-custom-llms-an-ai-chat-app-and-skills) for the 2026-11-23 proposal covering custom LLM connections, an AI Chat workspace and instruction skills. Earlier provider lists and plans are historical.
+
 ## Claude Code & Codex Integration for Tidy Code Desktop
 
 This document outlines the architecture for integrating Claude Code and Codex into Tidy Code's desktop application, providing a flexible system for AI-powered code assistance.
@@ -1727,3 +1729,82 @@ VITE_OLLAMA_BASE_URL=http://localhost:11434
 - Web version falls back to direct fetch with proper headers
 - Ghost text rendering uses CodeMirror decorations for performance
 - Consider implementing request caching to reduce API costs
+
+---
+
+## 9. Current assessment: custom LLMs, an AI Chat app, and skills
+
+Assessment date: 2026-11-23. This section is a proposed implementation plan, not a claim that the three features have shipped. Earlier sections describe historical architecture/proposals; the repository findings below take precedence for this work. No new cloud service, model downloads or executable skill runtime is implied.
+
+### 9.1 Recommendation and product boundary
+
+Implement all three on one shared AI foundation, in this order: provider/transport and privacy foundations → configurable LLM profiles → AI Chat workspace → instruction-based skills → separately scoped tools. Keep current providers, editor assistance and private/on-device AI working throughout. “Bring your own LLM” initially means connecting the user's existing hosted or local model endpoint; it does not mean training models or loading arbitrary model-weight files inside TidyCode.
+
+AI Chat should become a peer of Code and API Client in the left navigation, with the same app available on web and desktop. Keep an optional compact Code assistant view, backed by the same conversation state. Skills should first be reviewed reusable instructions/resources, rather than permissions to execute code.
+
+### 9.2 Findings in the current code
+
+| Existing component | Reuse | Gap to address |
+| --- | --- | --- |
+| `src/services/ai/ProviderInterface.js`, `ProviderManager.js` | Capability-based provider adapters, chat/streaming interfaces and custom registration | Registration is a code-level extension point; there is no general user-managed profile catalog. Active provider/model are mutable global manager state. Snapshot a provider configuration per execution/conversation. |
+| `src/services/ai/providers/OpenAIProvider.js` | Configurable base URL and compatible chat/streaming adapter foundation | Existing model assumptions, feature flags and temperature-retry behavior are provider-specific. A custom endpoint must not inherit unverified capabilities or automatic retries. |
+| `src/services/AIService.js`, `AIService.desktop.js`, completion/action services | Existing editor actions and desktop/local integration | AI operations use multiple dispatch paths. A custom profile selected for Chat would not automatically work for notes, repairs or API test-data generation. Introduce a shared execution service and migrate incrementally. |
+| `src/hooks/useAIChat.js`, `AIChatPanel.jsx` | Conversation controls, streaming, cancellation, context attachment and code-block actions | Chat is currently a side panel coupled to the active editor/tab. Conversations auto-save to localStorage and storage failure is silent. File content is assembled inside the system prompt; compaction is a truncation-based summary. These need explicit storage/context policies. |
+| `ProviderManager` privacy guards, `privacyGuard.js`, `inputBudget.js` | Existing scanning and bounded-context work | Custom endpoints need an explicit data-handling classification; a provider name or loopback URL does not establish where inference actually occurs. Apply consistent guards across every AI entry point. |
+| `src/services/http/transport.js`, desktop Rust HTTP engine, OS vault infrastructure | Platform detection, validation/cancellation patterns, native network controls and credential-storage patterns | The API Client response transport buffers entire bodies. It is not a drop-in streaming LLM transport. Keep API and LLM credentials/configuration separately scoped. |
+| `TidyCode.jsx` navigation and shared client pattern | App navigation, responsive workspace and root-owned state conventions | Chat has no dedicated app route/workspace. Avoid another large feature implemented directly inside this root component. |
+
+No skill registry, package importer, activation policy or skill execution permission model was found in the current AI flow.
+
+### 9.3 Bring your own LLM: proposed first release
+
+Add **AI Settings → Models & connections** with multiple named profiles. Each profile contains an opaque ID, display name, protocol adapter, normalized base URL, model ID, credential reference, optional reviewed headers, context/output budgets, capabilities and data-handling label. Persist connection metadata separately from secrets. Support manual model IDs when model discovery is unavailable. Explicit Test Connection should use synthetic text only, with no conversation/file/API context; explain that the provider may charge for this request.
+
+Start with a defined Chat Completions-compatible subset: text chat, bounded streaming, cancellation and optional model discovery. Provide local-server presets for LM Studio and Ollama while retaining the existing native Ollama adapter. LM Studio documents compatible model/chat endpoints and a configurable local base URL; Ollama explicitly describes partial compatibility. Treat endpoint/model capabilities as a matrix, not universal parity. See [LM Studio compatibility documentation](https://lmstudio.ai/docs/developer/openai-compat) and [Ollama compatibility documentation](https://docs.ollama.com/api/openai-compatibility).
+
+Initial authentication: no auth or Bearer API key, with selected header-based authentication as a bounded extension. Normalize URL joining under the reviewed base path; reject embedded credentials and credential-bearing query strings. Endpoints such as Azure deployment APIs, Anthropic-compatible gateways and proprietary formats need dedicated adapters rather than an arbitrary request-template editor. Defer vision, tools, reasoning controls and structured-output promises until verified for that profile/model.
+
+Desktop should send through a dedicated native LLM streaming bridge using shared HTTP builder/security primitives. Add request-scoped cancellation, bounded UTF-8/SSE decoding across chunk boundaries, backpressure/sequence handling, connection/stall/overall timeouts and sanitized errors. Scope TLS/proxy approval to each connection's origin. Do not repurpose API Client execution history, request persistence or variable resolver as the LLM transport. Browser profiles use fetch only where CORS permits; show an actionable limitation without automatic cloud-proxy fallback.
+
+Keep custom-profile API keys in a UUID-addressed AI-specific keychain namespace on desktop; browser defaults remain session-only unless a separately reviewed encrypted-storage feature is chosen. Do not export credentials or inherit another profile's keys. Changing the endpoint requires credential/destination review. Keep keys in transport headers, never model prompts. Explicitly selected localhost HTTP is useful for local servers; remote HTTP requires a clear opt-in. A loopback server may itself forward requests remotely, so label endpoint locality separately from a claim of on-device inference and never disable privacy guards solely because a URL is localhost.
+
+Every execution captures profile/model/configuration at start. Switching UI selection must not reroute an active stream. No automatic fallback to another model/provider or replay of a failed generation. Unsupported parameters should fail clearly or be disabled based on configured capabilities. Route editor actions, Chat and API AI features through this shared service in stages so their selected profiles behave consistently.
+
+### 9.4 Promote AI Chat into an app
+
+Add an **AI Chat** navigation item and `?tool=chat`, with a dedicated workspace: conversation sidebar, provider/model selector, active-skill chips, attachment/context chips, transcript and composer. Include New Chat, search/rename/delete, Stop, explicit Retry, export and session-only mode. Show which endpoint/model will receive the message and what context is attached. Keep provider setup one click away from an empty chat.
+
+Extract a root-owned conversation controller/store from `useAIChat`. Both the full workspace and compact Code assistant consume it; opening another app must not duplicate a conversation or send a message. Define whether an active stream continues or is stopped when navigating away, and keep its status discoverable. Prefer continuing until explicit Stop, with app-level status and cancellation ownership. Preserve conversation state across app switches.
+
+Move history to bounded IndexedDB with explicit persistence choice and visible storage failures. Existing localStorage history needs a validated, non-destructive migration: preserve IDs/content, verify the new copy, and only then retire the old copy. Include retention limits and clear/delete controls. Session-only conversations and temporary API response/editor documents must remain outside persistent history unless explicitly saved; attaching a response must not silently turn its secret contents into saved conversation data.
+
+Replace implicit active-editor coupling with a context manifest: selected text, selected files, API request/response/schema excerpts and chosen skill resources, each added explicitly and previewable/removable before Send. Preserve the consented attachment/version for that turn. Keep source content separate from trusted application instructions instead of embedding arbitrary documents as high-priority instructions. Label truncated context and distinguish a generated summary from original evidence; character counts are estimates, not guaranteed token counts or prices.
+
+Code/API bridges should be explicit actions such as Ask about selection or Explain response, preparing a draft with reviewed/redacted attachments. They must never auto-send a request, read vault secrets, or attach hidden environment values. Generated code should first open as a temporary editor copy or a reviewed diff; applying changes must target the intended document revision and support Undo. Safe text/code rendering must not execute HTML or embedded links/scripts.
+
+### 9.5 Skills: interoperable instructions first
+
+Use the Agent Skills `SKILL.md` directory format as the import target: YAML metadata plus Markdown instructions, with optional supporting resources. The published format also permits scripts; that does not require this first TidyCode release to execute them. Track supported versus imported-but-disabled features and disclose limits. Reference: [Agent Skills specification](https://agentskills.io/specification).
+
+Add a Skills library with import/create/edit/preview/enable/disable/remove, provenance and content hash/version. Start with user-selected Markdown/skill folders and bounded local references. Git URL/marketplace installation, dependency installers and remote resource fetching should be later work. Validate required metadata and names; constrain YAML aliases/tags, file count/size, total package bytes and traversal depth. Reject absolute/outside-root references and symlink/path traversal. Archive import, if added, must independently enforce decompressed-size and entry-count limits.
+
+Proposed initial bounds for validation: 256 KiB SKILL.md, 1 MiB per reference and 10 MiB/200 files per package, followed by a smaller per-send context budget. Tune with measured fixtures rather than model context-window assumptions. Show scripts/binaries as unsupported and do not load or execute them. Treat `allowed-tools` as descriptive metadata, never an authorization grant. Imported instructions cannot grant filesystem/network/keychain access or change provider destinations, TLS policy or secret handling.
+
+Users explicitly select skills per conversation using a picker or slash command. Persist selected IDs/hashes when the conversation is saved; prompt before adopting a changed skill version. Assemble app policy, selected instructions, user request and separately labeled reference data deterministically, with preview and budget accounting. Load referenced resources only when selected/needed within the imported package, with no arbitrary machine-file access. Recommendations may suggest skills later, but automatic activation should be opt-in and visible.
+
+Initial built-in instruction packs could cover API review, test-case design, JSON/schema review and code review. They provide workflows and expected output formats, not capabilities to send APIs or run shell commands. Skills can guide plain chat models without native function calling. A future tool runtime must separately enforce capabilities, user approval, sandboxing, cancellation, quotas and audit information outside the model; prompt wording alone cannot prevent malicious instructions. MCP integrations, autonomous API execution and arbitrary scripts require their own design/release gate.
+
+### 9.6 Suggested modules and delivery sequence
+
+| Stage | Scope | Completion evidence |
+| --- | --- | --- |
+| 0 — Current repair | Shared portaled toolbar menus for Save, Convert and AI actions/settings | Actual conversion/settings/save actions, outside click, keyboard focus, viewport edges and desktop/narrow layouts. |
+| 1 — Shared AI foundation | Typed execution context, provider profiles/credentials, native streaming adapter, consistent context/privacy budgeting | Endpoint changes never forward another profile's key; cancellation/chunk boundaries/timeouts/stream limits pass; no fallback/replay; existing private AI/actions regressions pass. |
+| 2 — Custom connection UI | Named connections, compatible protocol adapter, manual/discovered models, explicit connection tests and capability controls | Local-server and compatible mock fixtures work on desktop; browser CORS restrictions are explained; no user context reaches Test Connection. |
+| 3 — Chat app | Shared workspace/controller, navigation, context manifests and safe history migration | App switches retain one conversation; streams remain cancellable; session-only data and temporary documents do not leak into saved history; context/apply targets are explicit. |
+| 4 — Instruction skills | Reviewed SKILL.md import/library, explicit activation, reference bounds and pinned versions | Malformed/oversized/traversal packages fail; scripts never execute; prompt assembly and context budgets are deterministic; skills cannot read vaults or call APIs. |
+| 5 — Later extensions | Additional protocols/model features, tool-capable skills, external registries/integrations | Separate sandbox/permissions and compatibility acceptance criteria before enabling execution. |
+
+Proposed files: `services/ai/profiles/`, `services/ai/transport/`, `services/ai/context/`, `services/skills/`; `hooks/useChatWorkspace.js`; `components/ai-chat/AIChatWorkspace.jsx`, connection and skill-library dialogs; a dedicated `src-tauri/src/ai_transport.rs`. Reuse existing provider/action contracts rather than creating an independent second Chat engine. The earlier API desktop TLS/proxy and vault work can supply patterns, while retaining separate permissions, credentials, streaming limits and lifecycle.
+
+Recommended first review decisions: the compatible text-chat subset; desktop-first connection validation with browser support where possible; metadata-only profile persistence plus explicit secret storage; session-only Chat mode with reviewed history migration; instruction/resource skills without executable code. These defaults make the proposal implementable without claiming support for every endpoint, model or agent skill.

@@ -1,3 +1,4 @@
+import SecretVisibilityButton from "../SecretVisibilityButton";
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   responseValues,
@@ -248,14 +249,16 @@ export default function ResponseValues({
                   value={
                     revealed
                       ? entry.value
-                      : "Value hidden — select Show value to reveal"
+                      : "Value hidden — use the eye button to reveal"
                   }
                 />
               </label>
               <div className="api-row">
-                <button onClick={() => setRevealed((v) => !v)}>
-                  {revealed ? "Hide value" : "Show value"}
-                </button>
+                <SecretVisibilityButton
+                  shown={revealed}
+                  onToggle={() => setRevealed((v) => !v)}
+                  label="value"
+                />
                 <button onClick={() => copy(entry.value)}>Copy value</button>
                 <button onClick={() => copy(entry.path)}>Copy path</button>
                 <button

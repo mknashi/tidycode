@@ -1,3 +1,5 @@
+mod api_vault;
+mod api_http;
 use std::process::{Command, Stdio};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -3175,7 +3177,13 @@ pub fn run() {
             shells: Mutex::new(HashMap::new()),
         })
         .manage(FileOpenState::default())
+        .manage(api_http::ApiHttpState::default())
         .invoke_handler(tauri::generate_handler![
+            api_vault::api_vault_get,
+            api_vault::api_vault_set,
+            api_vault::api_vault_delete,
+            api_http::api_http_request,
+            api_http::api_http_cancel,
             check_ollama_status,
             pull_ollama_model,
             fix_with_ollama,

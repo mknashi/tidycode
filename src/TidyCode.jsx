@@ -1,3 +1,4 @@
+import ToolbarMenu from "./components/ToolbarMenu";
 import TestDataGenerator from './components/api-client/TestDataGenerator';
 import { applyTestDataToSource } from './services/http/testDataSource';
 import HttpRequestRename from './components/api-client/HttpRequestRename';
@@ -1460,12 +1461,8 @@ const TidyCode = () => {
   const [activePaneId, setActivePaneId] = useState('primary');
   const splitPaneRefs = useRef({});
   const splitDragStates = useRef({});
-  const [showConvertDropdown, setShowConvertDropdown] = useState(false);
-  const convertDropdownRef = useRef(null);
   const [showFileDropdown, setShowFileDropdown] = useState(false);
   const fileDropdownRef = useRef(null);
-  const fileMenuRef = useRef(null);
-  const [fileMenuPosition, setFileMenuPosition] = useState({left:0,top:0});
   const [showDataConvertDropdown, setShowDataConvertDropdown] = useState(false);
   const dataConvertDropdownRef = useRef(null);
   const [showAIDropdown, setShowAIDropdown] = useState(false);
@@ -2350,40 +2347,11 @@ const TidyCode = () => {
     };
   }, [tabContextMenu]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (convertDropdownRef.current && !convertDropdownRef.current.contains(e.target)) {
-        setShowConvertDropdown(false);
-      }
-      if (fileDropdownRef.current && !fileDropdownRef.current.contains(e.target) && !fileMenuRef.current?.contains(e.target)) {
-        setShowFileDropdown(false);
-      }
-      if (dataConvertDropdownRef.current && !dataConvertDropdownRef.current.contains(e.target)) {
-        setShowDataConvertDropdown(false);
-      }
-      if (aiDropdownRef.current && !aiDropdownRef.current.contains(e.target)) {
-        setShowAIDropdown(false);
-      }
-    };
-
-    if (showConvertDropdown || showFileDropdown || showDataConvertDropdown || showAIDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showConvertDropdown, showFileDropdown, showDataConvertDropdown, showAIDropdown]);
-
-  useEffect(() => {
-    if (!showFileDropdown) return;
-    fileMenuRef.current?.querySelector('button:not(:disabled)')?.focus();
-    const close = event => { if (!fileMenuRef.current?.contains(event.target)) setShowFileDropdown(false); };
-    window.addEventListener('resize', close);
-    document.addEventListener('scroll', close, true);
-    return () => {window.removeEventListener('resize', close);document.removeEventListener('scroll', close, true);};
-  }, [showFileDropdown]);
+    setShowFileDropdown(false);
+    setShowDataConvertDropdown(false);
+    setShowAIDropdown(false);
+  }, [currentPanel]);
 
   // Keyboard shortcuts for Save and Save As
   useEffect(() => {
@@ -5187,7 +5155,7 @@ const TidyCode = () => {
     requestEditorFocus(newTabId);
     setNextId(nextIdRef.current);
     setTimeout(() => scrollTabIntoView(newTabId), 0);
-    setShowConvertDropdown(false);
+    setShowDataConvertDropdown(false);
 
     // Show warning message in the NEW tab specifically (use setTabErrorMessages directly with newTabId)
     const adjustments = result.adjustments || [];
@@ -7607,7 +7575,7 @@ const TidyCode = () => {
     if(!apiClient.ready)throw new Error('API client is loading local data. Try again when it is ready.');
     const key = `${activeTab.id}:${selected.blockIndex}`;
     const existing = apiClient.requests.find(r => r.id === httpBindingsRef.current.get(key));
-    const request = existing ? { ...selected.request, id: existing.id, credentialOrigin: existing.credentialOrigin, collectionId: existing.collectionId, folderId: existing.folderId, assertions: existing.assertions || [], timeoutMs: existing.timeoutMs, ...(selected.request.bodyMode === existing.bodyMode && ['multipart','binary'].includes(existing.bodyMode) ? { multipart: existing.multipart, binaryFile: existing.binaryFile } : {}) } : apiClient.add(null, selected.request);
+    const request = existing ? { ...selected.request, id: existing.id, credentialOrigin: existing.credentialOrigin, desktop: existing.desktop, collectionId: existing.collectionId, folderId: existing.folderId, assertions: existing.assertions || [], timeoutMs: existing.timeoutMs, ...(selected.request.bodyMode === existing.bodyMode && ['multipart','binary'].includes(existing.bodyMode) ? { multipart: existing.multipart, binaryFile: existing.binaryFile } : {}) } : apiClient.add(null, selected.request);
     if (existing) { apiClient.update(existing.id, request); apiClient.select(existing.id); }
     httpBindingsRef.current.set(key, request.id);
     setHttpBindingRevision(previous=>previous+1);
@@ -8525,6 +8493,7 @@ const TidyCode = () => {
               ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
               : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
           }`}
+          aria-haspopup="menu" aria-expanded={showAIDropdown}
           title="AI Actions & Settings"
         >
           <Sparkles className="w-4 h-4" />
@@ -8532,8 +8501,8 @@ const TidyCode = () => {
           <ChevronDown className="w-3 h-3" />
         </button>
         {showAIDropdown && currentPanel !== 'dev' && (
-          <div className={`absolute top-full right-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-            <button
+          <ToolbarMenu anchorRef={aiDropdownRef} onClose={()=>setShowAIDropdown(false)} theme={theme} id="global-ai-options" label="AI actions and settings" align="right" width={200}>
+            <button role="menuitem"
               onClick={() => { setShowAISettings(true); setShowAIDropdown(false); }}
               className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                 theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
@@ -8542,7 +8511,7 @@ const TidyCode = () => {
               <Settings className="w-4 h-4" />
               AI Settings
             </button>
-          </div>
+          </ToolbarMenu>
         )}
       </div>
     </div>
@@ -9644,11 +9613,7 @@ const TidyCode = () => {
           {/* File dropdown: Save, Save As */}
           <div className="relative" ref={fileDropdownRef}>
             <button
-              onClick={event => {
-                const rect=event.currentTarget.getBoundingClientRect();
-                setFileMenuPosition({left:Math.max(8,Math.min(rect.left,window.innerWidth-184)),top:rect.bottom+4});
-                setShowFileDropdown(previous=>!previous);
-              }}
+              onClick={() => setShowFileDropdown(previous=>!previous)}
               aria-haspopup="menu"
               aria-expanded={showFileDropdown}
               aria-controls={showFileDropdown ? "code-save-menu" : undefined}
@@ -9658,12 +9623,8 @@ const TidyCode = () => {
               <Save className="w-4 h-4" />
               <ChevronDown className="w-3 h-3" />
             </button>
-            {showFileDropdown && createPortal(
-              <div ref={fileMenuRef} id="code-save-menu" role="menu" aria-label="Save options" style={fileMenuPosition} onKeyDown={event=>{
-                const buttons=[...fileMenuRef.current.querySelectorAll('button:not(:disabled)')];
-                if(event.key==='Escape'){event.preventDefault();setShowFileDropdown(false);fileDropdownRef.current?.querySelector('button')?.focus();}
-                if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const index=buttons.indexOf(document.activeElement);buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length]?.focus();}
-              }} className={`fixed py-1 rounded-md shadow-lg z-[100] min-w-[176px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+            {showFileDropdown && (
+              <ToolbarMenu anchorRef={fileDropdownRef} onClose={()=>setShowFileDropdown(false)} theme={theme} id="code-save-menu" label="Save options" width={176}>
                 <button role="menuitem"
                   onClick={() => { saveFile(); setShowFileDropdown(false); }}
                   disabled={!hasUnsavedChanges(activeTab) || activeTab.title === 'Welcome'}
@@ -9693,8 +9654,8 @@ const TidyCode = () => {
                   Save As...
                   <span className={`ml-auto text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>⇧⌘S</span>
                 </button>
-              </div>
-            , document.body)}
+              </ToolbarMenu>
+            )}
           </div>
 
           {/* Find & Replace Button */}
@@ -9791,6 +9752,7 @@ const TidyCode = () => {
               disabled={!activeTab || activeTab.title === 'Welcome' || activeTab.isPDF || isHttpEditor}
               className={`flex items-center gap-1.5 px-2 lg:px-2.5 py-1 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
               title={isHttpEditor ? "HTTP request files are not data documents to convert" : "Convert document to another format"}
+              aria-haspopup="menu"
               aria-label="Convert document"
               aria-expanded={showDataConvertDropdown}
               aria-controls="document-conversion-options"
@@ -9802,8 +9764,8 @@ const TidyCode = () => {
             {showDataConvertDropdown && (() => {
               const currentFormat = structureTree.type?.toLowerCase() || null;
               return (
-                <div id="document-conversion-options" className={`absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[180px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                  <button
+                <ToolbarMenu anchorRef={dataConvertDropdownRef} onClose={()=>setShowDataConvertDropdown(false)} theme={theme} id="document-conversion-options" label="Document conversion" width={220}>
+                  <button role="menuitem"
                     onClick={() => { convertFormat('json'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'json'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9815,7 +9777,7 @@ const TidyCode = () => {
                     <ArrowRightLeft className="w-4 h-4" />
                     Convert to JSON {currentFormat === 'json' && '(current)'}
                   </button>
-                  <button
+                  <button role="menuitem"
                     onClick={() => { convertFormat('xml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'xml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9827,7 +9789,7 @@ const TidyCode = () => {
                     <ArrowRightLeft className="w-4 h-4" />
                     Convert to XML {currentFormat === 'xml' && '(current)'}
                   </button>
-                  <button
+                  <button role="menuitem"
                     onClick={() => { convertFormat('yaml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'yaml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9839,7 +9801,7 @@ const TidyCode = () => {
                     <ArrowRightLeft className="w-4 h-4" />
                     Convert to YAML {currentFormat === 'yaml' && '(current)'}
                   </button>
-                  <button
+                  <button role="menuitem"
                     onClick={() => { convertFormat('toml'); setShowDataConvertDropdown(false); }}
                     disabled={currentFormat === 'toml'}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9852,7 +9814,7 @@ const TidyCode = () => {
                     Convert to TOML {currentFormat === 'toml' && '(current)'}
                   </button>
                   <div className={`my-1 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}></div>
-                  <button
+                  <button role="menuitem"
                     onClick={() => { generateSchema(); setShowDataConvertDropdown(false); }}
                     disabled={!SCHEMA_SOURCE_FORMATS.includes(currentFormat)}
                     className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
@@ -9865,7 +9827,7 @@ const TidyCode = () => {
                     <Braces className="w-4 h-4" />
                     Generate JSON Schema
                   </button>
-                </div>
+                </ToolbarMenu>
               );
             })()}
           </div>
@@ -9950,16 +9912,17 @@ const TidyCode = () => {
                   ? 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-300'
                   : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
               }`}
-              title="AI Actions & Settings"
+              aria-haspopup="menu" aria-expanded={showAIDropdown}
+          title="AI Actions & Settings"
             >
               <Sparkles className="w-4 h-4" />
               <span className="hidden lg:inline">AI</span>
               <ChevronDown className="w-3 h-3" />
             </button>
             {showAIDropdown && (
-              <div className={`absolute top-full right-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[160px] ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+              <ToolbarMenu anchorRef={aiDropdownRef} onClose={()=>setShowAIDropdown(false)} theme={theme} id="code-ai-options" label="AI actions and settings" align="right" width={200}>
                 {activeTab && (
-                  <button
+                  <button role="menuitem"
                     onClick={(e) => {
                       setShowAIDropdown(false);
                       const rect = e.currentTarget.getBoundingClientRect();
@@ -9990,7 +9953,7 @@ const TidyCode = () => {
                     <span className={`ml-auto text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>⇧⌘A</span>
                   </button>
                 )}
-                <button
+                <button role="menuitem"
                   onClick={() => { setShowAISettings(true); setShowAIDropdown(false); }}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                     theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-800'
@@ -9999,7 +9962,7 @@ const TidyCode = () => {
                   <Settings className="w-4 h-4" />
                   AI Settings
                 </button>
-              </div>
+              </ToolbarMenu>
             )}
           </div>
           {!isDesktop() && <PrivateAIStatus compact />}

@@ -1,3 +1,4 @@
+import { saveResponseBytes } from "../../services/http/saveResponse";
 import React, { useMemo, useState } from "react";
 import CodeMirrorEditor from "../CodeMirrorEditor";
 import ResponseComparison from "./ResponseComparison";
@@ -143,6 +144,13 @@ export default function CodeHttpResponsePane({
         className="api-code-response-content"
         style={{ overflow: "auto", padding: "4px 8px", minHeight: 0 }}
       >
+        {client.transport === "desktop" &&
+          request?.desktop?.verifyTls === false && (
+            <p className="api-warning api-small">
+              TLS verification is disabled for this draft. Review desktop
+              Settings before sending.
+            </p>
+          )}
         {execution.error?.code === "origin" && request && (
           <button
             onClick={() => {
@@ -182,7 +190,9 @@ export default function CodeHttpResponsePane({
             ) : view === "headers" ? (
               <>
                 <p className="api-small api-muted">
-                  Only browser-readable HTTP headers are available.
+                  {client.transport === "desktop"
+                    ? "Native response headers. Cookies are not stored or automatically reused."
+                    : "Only browser-readable HTTP headers are available."}
                 </p>
                 <div className="api-header-table">
                   {response.headers.map(([key, value]) => (
@@ -262,13 +272,15 @@ export default function CodeHttpResponsePane({
               </>
             )}
             <button
-              onClick={() => {
-                const url = URL.createObjectURL(new Blob([response.bytes]));
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "response.bin";
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              onClick={async () => {
+                try {
+                  if (await saveResponseBytes(response.bytes))
+                    setNotice("Response bytes saved.");
+                } catch {
+                  setNotice(
+                    "Could not save response bytes. Choose a writable location and retry.",
+                  );
+                }
               }}
             >
               Download response bytes

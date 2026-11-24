@@ -49,3 +49,8 @@ libc = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
 objc = "0.2"
+
+[dev-dependencies]
+# Test-only TLS server; the application continues using reqwest's platform TLS.
+native-tls = "0.2"
+tokio-native-tls = "0.3"

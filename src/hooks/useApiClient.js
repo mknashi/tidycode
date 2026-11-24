@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createRequest,
   historySummary,
-  prepareRequest,
   HttpError,
 } from "../services/http/request.js";
 import {
@@ -17,7 +16,11 @@ import {
   resolveVariables,
 } from "../services/http/variables.js";
 import { buildForkPreview } from "../services/http/fork.js";
-import { sendBrowserRequest } from "../services/http/webTransport.js";
+import {
+  prepareApiRequest,
+  sendApiRequest,
+  transportKind,
+} from "../services/http/transport.js";
 
 import {
   apiStore,
@@ -167,6 +170,7 @@ export function useApiClient() {
             apiKeyValue: "",
             auth: "none",
             credentialOrigin: "",
+            desktop: undefined,
           }
         : location,
     );
@@ -223,7 +227,7 @@ export function useApiClient() {
         if (result.error) throw result.error;
         resolved = result.request;
         try {
-          prepared = prepareRequest(resolved);
+          prepared = prepareApiRequest(resolved);
         } catch (error) {
           if (error.code === "origin" && result.secretDestination)
             throw new HttpError(
@@ -268,7 +272,7 @@ export function useApiClient() {
         controllers.current.get(request.id)?.executionId === executionId;
       setExecutions((es) => ({ ...es, [request.id]: { pending: true } }));
       try {
-        const response = await sendBrowserRequest(resolved, {
+        const response = await sendApiRequest(resolved, {
           signal: controller.signal,
         });
         if (!current()) return;
@@ -405,6 +409,7 @@ export function useApiClient() {
     if (preview.requests.length) setActiveId(preview.requests[0].id);
   };
   return {
+    transport: transportKind(),
     requests,
     executions,
     openRequests,

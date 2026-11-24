@@ -57,6 +57,13 @@ export function validateVariables(value, persist = false) {
         value: persist && secret ? "" : row.value,
         secret,
         enabled,
+        ...(secret &&
+        typeof row.vaultId === "string" &&
+        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+          row.vaultId,
+        )
+          ? { vaultId: row.vaultId }
+          : {}),
       };
     });
   };
@@ -243,6 +250,15 @@ export function resolveVariables(
     resolved = {
       ...request,
       sensitiveUrl: secretDestination,
+      ...(request.desktop
+        ? {
+            desktop: {
+              ...request.desktop,
+              proxyUsername: expand(request.desktop.proxyUsername || "").value,
+              proxyPassword: expand(request.desktop.proxyPassword || "").value,
+            },
+          }
+        : {}),
       url,
       headers,
       token:

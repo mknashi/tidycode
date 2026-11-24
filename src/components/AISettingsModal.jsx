@@ -1,3 +1,4 @@
+import SecretVisibilityButton from "./SecretVisibilityButton";
 import { chromeNanoProvider } from '../services/ai/providers/ChromeBuiltInProvider.js';
 import { repairPreference } from '../services/ai/documentRepair.js';
 import PrivateAIStatus from './PrivateAIStatus.jsx';
@@ -411,15 +412,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => setShowGroqApiKey(!showGroqApiKey)}
+              <SecretVisibilityButton
+                shown={showGroqApiKey}
+                label="Groq API key"
+                onToggle={() => setShowGroqApiKey(!showGroqApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showGroqApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
 
             {groqApiKeyStatus === 'valid' && (
@@ -513,15 +513,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => setShowOpenAIApiKey(!showOpenAIApiKey)}
+              <SecretVisibilityButton
+                shown={showOpenAIApiKey}
+                label="OpenAI API key"
+                onToggle={() => setShowOpenAIApiKey(!showOpenAIApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showOpenAIApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
 
             {openaiApiKeyStatus === 'valid' && (
@@ -613,15 +612,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => setShowClaudeApiKey(!showClaudeApiKey)}
+              <SecretVisibilityButton
+                shown={showClaudeApiKey}
+                label="Claude API key"
+                onToggle={() => setShowClaudeApiKey(!showClaudeApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showClaudeApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
 
             {claudeApiKeyStatus === 'valid' && (
@@ -692,15 +690,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowGeminiApiKey(!showGeminiApiKey)}
+              <SecretVisibilityButton
+                shown={showGeminiApiKey}
+                label="Gemini API key"
+                onToggle={() => setShowGeminiApiKey(!showGeminiApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showGeminiApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
           </div>
           <div>
@@ -757,15 +754,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowMistralApiKey(!showMistralApiKey)}
+              <SecretVisibilityButton
+                shown={showMistralApiKey}
+                label="Mistral API key"
+                onToggle={() => setShowMistralApiKey(!showMistralApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showMistralApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
           </div>
           <div>
@@ -827,15 +823,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowCerebrasApiKey(!showCerebrasApiKey)}
+              <SecretVisibilityButton
+                shown={showCerebrasApiKey}
+                label="Cerebras API key"
+                onToggle={() => setShowCerebrasApiKey(!showCerebrasApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showCerebrasApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
           </div>
           <div>
@@ -897,15 +892,14 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
-              <button
-                type="button"
-                onClick={() => setShowSambanovaApiKey(!showSambanovaApiKey)}
+              <SecretVisibilityButton
+                shown={showSambanovaApiKey}
+                label="Sambanova API key"
+                onToggle={() => setShowSambanovaApiKey(!showSambanovaApiKey)}
                 className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded ${
                   theme === 'dark' ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-100'
                 }`}
-              >
-                {showSambanovaApiKey ? 'Hide' : 'Show'}
-              </button>
+              />
             </div>
           </div>
           <div>
@@ -994,6 +988,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
 
           <button
             onClick={onClose}
+            aria-label="Close AI Settings"
             className={`p-2 rounded transition-colors ${
               theme === 'dark'
                 ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'

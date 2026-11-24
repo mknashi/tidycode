@@ -1,3 +1,7 @@
+import DesktopNetworkSettings from "./DesktopNetworkSettings";
+import SecretVisibilityButton from "../SecretVisibilityButton";
+import DesktopVault from "./DesktopVault";
+import { saveResponseBytes } from "../../services/http/saveResponse";
 import FormBodyEditor from "./FormBodyEditor";
 import {
   apiVariablePreview,
@@ -186,6 +190,7 @@ export default function ApiClientWorkspace({
     ],
   );
   const [variablesOpen, setVariablesOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
   const [variableContext, setVariableContext] = useState({});
   const openVariables = (context = {}) => {
     setVariableContext(context);
@@ -352,15 +357,15 @@ export default function ApiClientWorkspace({
       setNotice("Clipboard unavailable. Select the response text to copy it.");
     }
   };
-  const download = () => {
-    const url = URL.createObjectURL(
-      new Blob([response.bytes], { type: "application/octet-stream" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "response.bin";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const download = async () => {
+    try {
+      if (await saveResponseBytes(response.bytes))
+        setNotice("Response bytes saved.");
+    } catch {
+      setNotice(
+        "Could not save response bytes. Choose a writable location and retry.",
+      );
+    }
   };
   let savePreview = "";
   let saveProblem = "";
@@ -416,6 +421,7 @@ export default function ApiClientWorkspace({
           !visible ||
           importOpen ||
           variablesOpen ||
+          vaultOpen ||
           runTarget ||
           testDataTarget ||
           exportTarget ||
@@ -435,6 +441,9 @@ export default function ApiClientWorkspace({
         }
       }}
     >
+      {vaultOpen && (
+        <DesktopVault theme={theme} onClose={() => setVaultOpen(false)} />
+      )}
       {variablesOpen && (
         <VariablesDialog
           client={client}
@@ -748,6 +757,12 @@ export default function ApiClientWorkspace({
             Unsaved edits, credentials, history, and responses stay in memory.
             Only explicitly saved templates survive reload.
           </p>
+          {client.transport === "desktop" && (
+            <p>
+              Explicitly saved OS-vault credentials persist separately. Clear
+              API data does not delete them; manage them in Vault.
+            </p>
+          )}
           <button onClick={() => setClearConfirm(true)}>
             <Trash2 size={14} /> Clear API data
           </button>
@@ -913,17 +928,37 @@ export default function ApiClientWorkspace({
               </select>
             </label>
             <button onClick={() => openVariables()}>Variables</button>
+            {client.transport === "desktop" && (
+              <button onClick={() => setVaultOpen(true)}>Vault</button>
+            )}
             {resolution.environment?.production && (
               <span className="api-production-label">Production</span>
             )}
             <span
               className="api-transport"
-              title="Browser transport · CORS restrictions apply"
+              title={
+                client.transport === "desktop"
+                  ? "Native desktop HTTP · no browser CORS restrictions · review TLS/proxy in Settings · no automatic redirects, retries or cookie jar"
+                  : "Browser transport · CORS restrictions apply"
+              }
             >
-              <Globe size={13} /> Browser
+              <Globe size={13} />{" "}
+              {client.transport === "desktop" ? "Desktop" : "Browser"}
             </span>
           </div>
         </div>
+        {client.transport === "desktop" &&
+          request.desktop?.verifyTls === false && (
+            <p role="status" className="api-warning">
+              TLS verification is disabled for this draft. Review Settings
+              before sending.
+            </p>
+          )}
+        {client.transport === "desktop" && request.desktop?.proxyUrl && (
+          <p className="api-small api-muted">
+            Explicit proxy configured · session only
+          </p>
+        )}
         {client.storageError && (
           <div className="api-status" role="alert">
             {client.storageError}
@@ -1525,9 +1560,11 @@ export default function ApiClientWorkspace({
                 )}
                 {["basic", "apikey"].includes(request.auth) && (
                   <>
-                    <button onClick={() => setShowToken((s) => !s)}>
-                      {showToken ? "Hide" : "Show"} credential
-                    </button>
+                    <SecretVisibilityButton
+                      shown={showToken}
+                      onToggle={() => setShowToken((s) => !s)}
+                      label="credential"
+                    />
                     <p className="api-muted">
                       Literal credentials stay in memory. Save variable
                       references such as {"{{password}}"} to reuse secret
@@ -1547,12 +1584,15 @@ export default function ApiClientWorkspace({
                         onChange={(e) => patch({ token: e.target.value })}
                       />
                     </label>
-                    <button onClick={() => setShowToken((s) => !s)}>
-                      {showToken ? "Hide" : "Show"} token
-                    </button>
+                    <SecretVisibilityButton
+                      shown={showToken}
+                      onToggle={() => setShowToken((s) => !s)}
+                      label="token"
+                    />
                     <p className="api-muted">
-                      Memory only. Browser cookies are never included. Bearer
-                      tokens are not copied when duplicating a request.
+                      Memory only. Webview/browser cookies are never included
+                      automatically. Bearer tokens are not copied when
+                      duplicating a request.
                     </p>
                   </>
                 )}
@@ -1676,10 +1716,18 @@ export default function ApiClientWorkspace({
                     }
                   />
                 </label>
+                {client.transport === "desktop" && (
+                  <DesktopNetworkSettings
+                    key={request.id}
+                    request={request}
+                    client={client}
+                    onChange={patch}
+                  />
+                )}
                 <p className="api-muted">
-                  Redirects are blocked to protect custom credentials. TLS
-                  verification is controlled by your browser. Responses are
-                  limited to 20 MiB; previews to 1 MiB.
+                  {client.transport === "desktop"
+                    ? "Native HTTP returns redirects without following them. TLS/proxy settings are session-only. No cookie jar, inherited system proxy, or automatic retries. Request bodies and responses are limited to 20 MiB; previews to 1 MiB."
+                    : "Redirects are blocked to protect custom credentials. TLS verification is controlled by your browser. Responses are limited to 20 MiB; previews to 1 MiB."}
                 </p>
               </div>
             )}
@@ -1863,12 +1911,14 @@ export default function ApiClientWorkspace({
                   ) : view === "headers" ? (
                     <>
                       <p className="api-muted api-small">
-                        These are HTTP response headers exposed to this page by
-                        your browser. CORS permission headers such as
-                        Access-Control-Allow-Origin and Set-Cookie may be hidden
-                        here even when the request succeeds.
+                        {client.transport === "desktop"
+                          ? "Headers received by the native HTTP transport. Set-Cookie is displayed but not stored or automatically reused."
+                          : "These are HTTP response headers exposed to this page by your browser. CORS permission headers such as Access-Control-Allow-Origin and Set-Cookie may be hidden here even when the request succeeds."}
                       </p>
-                      <details className="api-header-help">
+                      <details
+                        className="api-header-help"
+                        hidden={client.transport === "desktop"}
+                      >
                         <summary>Where are the full response headers?</summary>
                         <p>
                           Open browser Developer Tools → Network, send the
@@ -2097,6 +2147,12 @@ export default function ApiClientWorkspace({
               This cannot be undone. Copies already opened in the editor or
               downloaded are unaffected.
             </p>
+            {client.transport === "desktop" && (
+              <p>
+                OS-vault entries and their catalog are retained. Use Vault to
+                delete those credentials explicitly.
+              </p>
+            )}
             <div className="api-row">
               <button
                 onClick={async () => {
@@ -2104,7 +2160,11 @@ export default function ApiClientWorkspace({
                     await client.clear();
                     setSaveConfirm(false);
                     setClearConfirm(false);
-                    setNotice("All local API data cleared.");
+                    setNotice(
+                      client.transport === "desktop"
+                        ? "Workspace data cleared. OS-vault entries remain available in Vault."
+                        : "All local API data cleared.",
+                    );
                   } catch {
                     setNotice(
                       "Could not clear saved API data. Please retry. Your current session is unchanged.",

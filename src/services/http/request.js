@@ -82,7 +82,7 @@ const forbidden =
   /^(accept-charset|accept-encoding|access-control-request-headers|access-control-request-method|connection|content-length|cookie2?|date|dnt|expect|host|keep-alive|origin|permissions-policy|referer|set-cookie|te|trailer|transfer-encoding|upgrade|via|user-agent)$/i;
 export const browserHeaderRestricted = (key) =>
   forbidden.test(key) || /^(proxy-|sec-)/i.test(key);
-export function prepareRequest(request) {
+export function prepareRequest(request, { native = false } = {}) {
   if (
     [
       request.url,
@@ -133,10 +133,15 @@ export function prepareRequest(request) {
         "validation",
         "A header has an invalid name or a line break in its value.",
       );
-    if (forbidden.test(key) || /^(proxy-|sec-)/i.test(key))
+    if (
+      (forbidden.test(key) || /^(proxy-|sec-)/i.test(key)) &&
+      !(native && /^(cookie|user-agent)$/i.test(key))
+    )
       throw new HttpError(
         "validation",
-        `${key} cannot be controlled reliably by browser requests. Remove or disable it.`,
+        native
+          ? `${key} is managed by the native transport in this release. Remove or disable it.`
+          : `${key} cannot be controlled reliably by browser requests. Remove or disable it.`,
       );
     headers.append(key, row.value);
   }

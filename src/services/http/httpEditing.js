@@ -62,7 +62,11 @@ export function editingBlocks(source) {
     };
   });
 }
-export function httpDiagnostics(source, metadata = []) {
+export function httpDiagnostics(
+  source,
+  metadata = [],
+  { native = false } = {},
+) {
   if (new TextEncoder().encode(source).length > 1024 * 1024)
     return [
       {
@@ -139,7 +143,11 @@ export function httpDiagnostics(source, metadata = []) {
         );
     for (const header of block.headers) {
       const key = header.text.match(/^([^:]+):/)?.[1];
-      if (key && browserHeaderRestricted(key.trim()))
+      if (
+        key &&
+        browserHeaderRestricted(key.trim()) &&
+        !(native && /^(cookie|user-agent)$/i.test(key.trim()))
+      )
         add(
           header.from,
           header.to,

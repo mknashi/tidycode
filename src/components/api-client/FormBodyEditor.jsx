@@ -1,3 +1,4 @@
+import SecretVisibilityButton from "../SecretVisibilityButton";
 import React, { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import CodeMirrorEditor from "../CodeMirrorEditor";
@@ -63,9 +64,11 @@ export default function FormBodyEditor({
         </div>
         {mode === "fields" && (
           <div className="api-row">
-            <button onClick={() => setShow((v) => !v)}>
-              {show ? "Hide" : "Show"} sensitive values
-            </button>
+            <SecretVisibilityButton
+              shown={show}
+              onToggle={() => setShow((v) => !v)}
+              label="sensitive values"
+            />
             <button
               onClick={() =>
                 setRows([
