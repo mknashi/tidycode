@@ -14,7 +14,7 @@
 
 sites:
   tidycode:
-    name: TidyCode
+    name: Tidy Code
     origins:
       - https://www.tidycode.ai
       - https://tidycode.ai

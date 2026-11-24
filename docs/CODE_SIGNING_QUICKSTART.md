@@ -1,6 +1,6 @@
 # Code Signing Quick Start Guide
 
-This is a quick-start guide to get your TidyCode installer signed. For comprehensive details, see [CODE_SIGNING.md](CODE_SIGNING.md).
+This is a quick-start guide to get your Tidy Code installer signed. For comprehensive details, see [CODE_SIGNING.md](CODE_SIGNING.md).
 
 ## Why Code Signing?
 

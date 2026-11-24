@@ -1542,7 +1542,7 @@ const AISettingsModal = ({ settings, onSave, onClose, theme, isDesktop, desktopA
               <p className={`text-xs ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}>
-                TidyCode automatically scans for sensitive data (API keys, tokens, passwords) before sending content to cloud AI providers and will warn you if any are detected.
+                Tidy Code automatically scans for sensitive data (API keys, tokens, passwords) before sending content to cloud AI providers and will warn you if any are detected.
               </p>
             </div>
           </div>

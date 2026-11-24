@@ -54,7 +54,7 @@ export function AuthModal({ onClose, initGoogleButton }) {
         </div>
 
         <p className="text-xs text-gray-500 mb-5 text-center">
-          Sync is <span className="text-white font-medium">opt-in</span> — TidyCode works fully without an account.
+          Sync is <span className="text-white font-medium">opt-in</span> — Tidy Code works fully without an account.
         </p>
 
         {/* Google button — rendered by GSI into this div */}

@@ -1,8 +1,8 @@
 # Format Support Analysis
 
-## Current TidyCode Formatting & Validation Implementation
+## Current Tidy Code Formatting & Validation Implementation
 
-This document provides a comprehensive analysis of the existing formatting, validation, and structure view implementation in TidyCode, serving as the foundation for the YAML/TOML implementation plan.
+This document provides a comprehensive analysis of the existing formatting, validation, and structure view implementation in Tidy Code, serving as the foundation for the YAML/TOML implementation plan.
 
 ---
 

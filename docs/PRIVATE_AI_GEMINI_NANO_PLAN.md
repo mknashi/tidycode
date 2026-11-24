@@ -1,6 +1,6 @@
 # Private AI with Gemini Nano: Analysis and Implementation Plan
 
-This document covers adding Chrome's built-in model, Gemini Nano, to the TidyCode web app as a "Private AI" option. It records what we measured in November 2026, what the model is good and bad at, how users will experience it, and the steps to build it. It is separate from `API_CLIENT_PLAN.md`, although the API client is one of the features that would use it.
+This document covers adding Chrome's built-in model, Gemini Nano, to the Tidy Code web app as a "Private AI" option. It records what we measured in November 2026, what the model is good and bad at, how users will experience it, and the steps to build it. It is separate from `API_CLIENT_PLAN.md`, although the API client is one of the features that would use it.
 
 ## Current status — November 19, 2026
 
@@ -270,17 +270,17 @@ Reference: [Chrome built-in AI developer guide](https://developer.chrome.com/doc
 
 ## 1. Why Gemini Nano
 
-TidyCode already has a Gemini provider, but it is Google's cloud API. Gemini Nano is different: Chrome downloads the model once and runs it on the user's machine.
+Tidy Code already has a Gemini provider, but it is Google's cloud API. Gemini Nano is different: Chrome downloads the model once and runs it on the user's machine.
 
-- **Private.** After the download, Chrome says no data leaves the device. That matches TidyCode's privacy-first position and the "local" treatment Ollama already gets.
+- **Private.** After the download, Chrome says no data leaves the device. That matches Tidy Code's privacy-first position and the "local" treatment Ollama already gets.
 - **Free, with no setup.** There's no API key or account. If another site or Chrome feature has already installed the model, it works immediately.
-- **Nothing added to TidyCode's own download.** The model belongs to Chrome, not to our bundle.
+- **Nothing added to Tidy Code's own download.** The model belongs to Chrome, not to our bundle.
 - **Structured output.** The Prompt API accepts a JSON Schema (`responseConstraint`), so we can ask for output in our own request format and get valid JSON back.
 - **Fills a gap.** Web users currently have no local AI. Ollama is desktop only, and TinyLLM is rule-based.
 
 ## 2. Availability
 
-| Built-in API | Regular web pages | Use in TidyCode |
+| Built-in API | Regular web pages | Use in Tidy Code |
 |---|---|---|
 | Prompt API (general prompts) | Chrome 148 and later | Explain, summarize, fix, draft requests |
 | Summarizer | Chrome 138 and later | Optional: short summaries of long responses |
@@ -302,7 +302,7 @@ Chrome's current Prompt API documentation lists regular web support from Chrome 
 - Firefox and Safari users.
 - Chrome on Android or iOS.
 - Machines below the hardware or disk requirements.
-- **The TidyCode desktop app.** Tauri uses the system webview, not Chrome. Desktop users keep Ollama.
+- **The Tidy Code desktop app.** Tauri uses the system webview, not Chrome. Desktop users keep Ollama.
 
 ## 3. What we measured
 
@@ -400,7 +400,7 @@ Session creation and inference can still fail after selection. Show a recoverabl
 
 ### 6.1 How it fits the existing code
 
-TidyCode has two AI paths today, and Private AI has to join both:
+Tidy Code has two AI paths today, and Private AI has to join both:
 
 | Path | Entry point | Used by | Provider list |
 |---|---|---|---|
@@ -437,7 +437,7 @@ Each phase can be committed on its own and leaves the app working.
 
 #### Phase 1: Provider, lifecycle and status (about 2–3 days)
 
-**Goal:** TidyCode can detect Gemini Nano, download it on request, and run a prompt. There's no user-facing feature yet beyond the status.
+**Goal:** Tidy Code can detect Gemini Nano, download it on request, and run a prompt. There's no user-facing feature yet beyond the status.
 
 Tasks:
 1. **`chromeNanoStatus.js`**: map Chrome's availability to app states.

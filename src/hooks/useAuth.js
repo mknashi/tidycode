@@ -61,7 +61,7 @@ export function useAuth() {
   /**
    * Renders Google's official sign-in button into `containerEl`.
    * When the user completes sign-in, Supabase receives the ID token directly
-   * — no redirect to supabase.co, so Google's consent screen shows TidyCode.
+   * — no redirect to supabase.co, so Google's consent screen shows Tidy Code.
    *
    * @param {HTMLElement} containerEl - div to render the button into
    * @param {() => void} onSuccess    - called after successful sign-in

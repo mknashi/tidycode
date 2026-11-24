@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Syncfusion JavaScript PDF Viewer** is a **commercial product** with a free Community License option for qualifying users. However, for TidyCode's PDF printing needs, **open-source alternatives are more suitable** due to licensing flexibility and the fact that you're already using **react-pdf** (built on PDF.js).
+**Syncfusion JavaScript PDF Viewer** is a **commercial product** with a free Community License option for qualifying users. However, for Tidy Code's PDF printing needs, **open-source alternatives are more suitable** due to licensing flexibility and the fact that you're already using **react-pdf** (built on PDF.js).
 
 ## Syncfusion JavaScript PDF Viewer
 
@@ -45,7 +45,7 @@ According to the [Syncfusion JavaScript PDF Printing Methods article](https://ww
 - Specific pricing not publicly listed (requires contact)
 - Typical range: $995+ per developer annually (industry standard)
 
-### Pros & Cons for TidyCode
+### Pros & Cons for Tidy Code
 
 #### Pros:
 - ✅ Comprehensive PDF feature set
@@ -60,7 +60,7 @@ According to the [Syncfusion JavaScript PDF Printing Methods article](https://ww
 - ❌ **Overkill for printing** - You just need print, not full viewer
 - ❌ **Already using react-pdf** - Adding Syncfusion is redundant
 
-## TidyCode's Current Setup
+## Tidy Code's Current Setup
 
 You're already using:
 ```javascript
@@ -158,7 +158,7 @@ printJS({ printable: base64, type: 'pdf', base64: true });
 | **Annotations** | ✅ Yes | ⚠️ Limited | ❌ No | N/A |
 | **Forms** | ✅ Yes | ⚠️ Limited | ❌ No | N/A |
 
-## License Implications for TidyCode
+## License Implications for Tidy Code
 
 ### If Using Syncfusion
 
@@ -172,7 +172,7 @@ printJS({ printable: base64, type: 'pdf', base64: true });
 
 ### Commercial License Concerns
 
-If TidyCode:
+If Tidy Code:
 - Becomes commercial product
 - Grows beyond Community License limits
 - Gets distributed to users
@@ -192,7 +192,7 @@ Using **PDF.js (via react-pdf)** + **Print.js**:
 - ✅ Commercial use allowed
 - ✅ No vendor lock-in
 
-## Recommendation for TidyCode
+## Recommendation for Tidy Code
 
 ### ❌ **Don't Add Syncfusion**
 

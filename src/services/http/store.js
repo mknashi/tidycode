@@ -35,7 +35,7 @@ function database() {
       );
     open.onblocked = () => {
       blocked = true;
-      reject(new Error("Close other TidyCode tabs and retry local storage."));
+      reject(new Error("Close other Tidy Code tabs and retry local storage."));
     };
   });
 }

@@ -1,8 +1,8 @@
-# Ad Integration Analysis for TidyCode
+# Ad Integration Analysis for Tidy Code
 
 ## Executive Summary
 
-This document provides recommendations for integrating ads in TidyCode's web application in a non-intrusive manner that maintains user experience while generating revenue.
+This document provides recommendations for integrating ads in Tidy Code's web application in a non-intrusive manner that maintains user experience while generating revenue.
 
 ---
 
@@ -108,7 +108,7 @@ This document provides recommendations for integrating ads in TidyCode's web app
 | **Infolinks** | $0.50-$2 | None | $50 | Non-intrusive in-text ads |
 | **RevenueHits** | $0.30-$1.50 | None | $20 | AI optimization tool |
 
-### Recommendation for TidyCode
+### Recommendation for Tidy Code
 
 1. **Primary**: **Carbon Ads** - Perfect fit for developer tools, non-intrusive native ads, premium tech advertisers
 2. **Fallback**: **Google AdSense** - Reliable fill rate, easy implementation
@@ -140,7 +140,7 @@ Goal: prioritize advertiser demand and higher CPC categories while staying relev
 
 ### High-Intent Keyword Clusters (Higher Revenue Potential)
 
-| Cluster | Example Keywords | Why It Pays | Fit for TidyCode |
+| Cluster | Example Keywords | Why It Pays | Fit for Tidy Code |
 |---------|------------------|-------------|--------------------|
 | **Cloud Platforms** | aws credits, azure startup, gcp free tier, cloud cost optimization | Cloud services have strong budgets | Good for deployment docs, integrations |
 | **DevOps / CI/CD** | github actions, gitlab ci, circleci, terraform, kubernetes tutorials | High B2B spend and SaaS competition | Fits workflow and automation content |
@@ -151,7 +151,7 @@ Goal: prioritize advertiser demand and higher CPC categories while staying relev
 
 ### Mid-Intent Keyword Clusters (Stable, Broader Volume)
 
-| Cluster | Example Keywords | Why It Pays | Fit for TidyCode |
+| Cluster | Example Keywords | Why It Pays | Fit for Tidy Code |
 |---------|------------------|-------------|--------------------|
 | **Programming Languages** | javascript, typescript, rust, python, go | Large advertiser base | Fits syntax guides and snippets |
 | **Databases** | postgres, mongodb, redis, sqlite, vector database | Good infrastructure demand | Fits storage/export features |

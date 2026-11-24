@@ -1,6 +1,6 @@
 /**
  * Client for the forms service (forms/ in this repo), which emails feedback
- * to the TidyCode inbox. Submissions need a solved proof-of-work challenge;
+ * to the Tidy Code inbox. Submissions need a solved proof-of-work challenge;
  * see forms/src/pow.js.
  */
 

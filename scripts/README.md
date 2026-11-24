@@ -1,6 +1,6 @@
 # Build Scripts
 
-This directory contains utility scripts for building TidyCode across different platforms.
+This directory contains utility scripts for building Tidy Code across different platforms.
 
 ## Available Scripts
 
@@ -187,7 +187,7 @@ npm run build:desktop:linux
 
 ### GPG Signing for Releases
 
-These scripts help you sign TidyCode releases with GPG signatures for integrity verification across all platforms.
+These scripts help you sign Tidy Code releases with GPG signatures for integrity verification across all platforms.
 
 #### setup-gpg.sh / setup-gpg.ps1
 

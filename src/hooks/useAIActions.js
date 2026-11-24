@@ -53,7 +53,7 @@ const STREAM_ACTIONS = {
 
 /**
  * Map old aiSettings format to new provider config
- * @param {Object} aiSettings - Existing settings from TidyCode
+ * @param {Object} aiSettings - Existing settings from Tidy Code
  * @returns {Object} Config for providerManager.initialize()
  */
 function buildProviderConfig(aiSettings) {
@@ -133,7 +133,7 @@ function buildProviderConfig(aiSettings) {
 /**
  * Custom hook for AI actions integration
  * @param {Object} params
- * @param {Object} params.aiSettings - Current AI settings from TidyCode state
+ * @param {Object} params.aiSettings - Current AI settings from Tidy Code state
  * @param {Array} params.tabs - All editor tabs
  * @param {number|string} params.activeTabId - Currently active tab ID
  * @param {Function} params.setTabs - Tab state setter

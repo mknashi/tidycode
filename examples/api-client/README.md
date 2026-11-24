@@ -1,6 +1,6 @@
 # API client sample collections
 
-In TidyCode, open **API Client → Collections → Import**, choose one of these
+In Tidy Code, open **API Client → Collections → Import**, choose one of these
 Postman v2.1 JSON files, select **Preview import**, then **Import as new collection**.
 Importing does not send any requests.
 

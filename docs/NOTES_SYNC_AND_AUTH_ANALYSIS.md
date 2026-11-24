@@ -157,7 +157,7 @@ Authentication is required for Approach 1 and optional for Approach 4. The optio
 - On return, Supabase issues a JWT; the client attaches it to all API calls automatically
 - Row-level security (RLS) policies on the `notes` table ensure users only see their own data
 
-**Integration with TidyCode:**
+**Integration with Tidy Code:**
 ```js
 // Auth
 await supabase.auth.signInWithOAuth({ provider: 'google' });
@@ -191,7 +191,7 @@ Google's Firebase provides Authentication and Firestore (a NoSQL document DB) as
 
 **Supported providers:** Google, Apple, Facebook, GitHub, Microsoft, Twitter, phone, email/password, anonymous, SAML, OIDC.
 
-**Integration with TidyCode:**
+**Integration with Tidy Code:**
 ```js
 // Auth
 await signInWithPopup(auth, new GoogleAuthProvider());
@@ -220,7 +220,7 @@ Auth0 is a dedicated identity platform that handles login flows, token managemen
 
 **Supported providers:** Google, Apple, Facebook, GitHub, Microsoft, LinkedIn, Twitter, SAML/enterprise SSO, email/password, passwordless.
 
-**Integration with TidyCode:**
+**Integration with Tidy Code:**
 ```js
 // Wrap app with Auth0Provider, then:
 const { loginWithRedirect, user, isAuthenticated } = useAuth0();
@@ -250,7 +250,7 @@ Clerk is a modern drop-in auth solution with pre-built UI components (sign-in mo
 
 **Supported providers:** Google, Apple, GitHub, Facebook, Microsoft, LinkedIn, email/password, magic link, phone OTP.
 
-**Integration with TidyCode:**
+**Integration with Tidy Code:**
 ```jsx
 // Wrap app
 <ClerkProvider publishableKey={...}>
@@ -287,13 +287,13 @@ Open-source auth library, primarily for Next.js but usable with other frameworks
 **Cons:**
 - Requires a Node.js server to run the auth endpoints — does not work as a pure client-side library
 - More configuration and maintenance than hosted solutions
-- Less relevant here since TidyCode is a Vite/React SPA with a Tauri desktop build, not a Next.js app
+- Less relevant here since Tidy Code is a Vite/React SPA with a Tauri desktop build, not a Next.js app
 
 ---
 
 ## Part 3 — Recommended Path
 
-Given TidyCode ships both a **web app** and a **Tauri desktop app**, the recommended approach is:
+Given Tidy Code ships both a **web app** and a **Tauri desktop app**, the recommended approach is:
 
 ### Phase 1 — Stopgap (low effort, no infrastructure)
 

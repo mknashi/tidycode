@@ -72,7 +72,7 @@ function compactConversation(messages) {
  * @returns {{ prompt: string, fileContextInfo: { included: boolean, truncated: boolean, originalSize: number, includedSize: number } }}
  */
 function buildSystemPrompt(activeTab, selectedText, includeFileContent, allowTruncation = true) {
-  let prompt = 'You are a helpful coding assistant integrated into the TidyCode editor.';
+  let prompt = 'You are a helpful coding assistant integrated into the Tidy Code editor.';
   const fileContextInfo = { included: false, truncated: false, originalSize: 0, includedSize: 0 };
 
   if (activeTab?.title) {

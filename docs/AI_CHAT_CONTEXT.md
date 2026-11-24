@@ -31,7 +31,7 @@ The codebase uses a conservative estimate of **4 characters per token** (`CHARS_
 
 ### Ollama (Local)
 - **Default `num_ctx`:** 2048 tokens (Ollama's built-in default)
-- **TidyCode override:** 32,768 tokens (set via `num_ctx` in API options)
+- **Tidy Code override:** 32,768 tokens (set via `num_ctx` in API options)
 - **Model-specific limits:** Varies — e.g., `qwen2.5-coder:7b` supports 32K, `codellama:7b` supports 16K
 - **Cost:** Free (runs locally). Only costs are RAM/VRAM usage and inference time.
 - **Note:** If `num_ctx` exceeds the model's native limit, Ollama silently caps it. Larger `num_ctx` values require more RAM.

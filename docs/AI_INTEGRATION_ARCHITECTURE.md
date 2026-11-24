@@ -561,7 +561,7 @@ ${selection}
 
 ### Action: Convert to YAML
 
-Converts JSON or XML content to YAML format, leveraging TidyCode's existing format detection.
+Converts JSON or XML content to YAML format, leveraging Tidy Code's existing format detection.
 
 ```javascript
 // src/services/ai/actions/convertAction.js
@@ -1784,7 +1784,7 @@ Code/API bridges should be explicit actions such as Ask about selection or Expla
 
 ### 9.5 Skills: interoperable instructions first
 
-Use the Agent Skills `SKILL.md` directory format as the import target: YAML metadata plus Markdown instructions, with optional supporting resources. The published format also permits scripts; that does not require this first TidyCode release to execute them. Track supported versus imported-but-disabled features and disclose limits. Reference: [Agent Skills specification](https://agentskills.io/specification).
+Use the Agent Skills `SKILL.md` directory format as the import target: YAML metadata plus Markdown instructions, with optional supporting resources. The published format also permits scripts; that does not require this first Tidy Code release to execute them. Track supported versus imported-but-disabled features and disclose limits. Reference: [Agent Skills specification](https://agentskills.io/specification).
 
 Add a Skills library with import/create/edit/preview/enable/disable/remove, provenance and content hash/version. Start with user-selected Markdown/skill folders and bounded local references. Git URL/marketplace installation, dependency installers and remote resource fetching should be later work. Validate required metadata and names; constrain YAML aliases/tags, file count/size, total package bytes and traversal depth. Reject absolute/outside-root references and symlink/path traversal. Archive import, if added, must independently enforce decompressed-size and entry-count limits.
 

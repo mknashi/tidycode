@@ -865,7 +865,7 @@ export const formatConverter = new FormatConverter();
 
 ### Phase 5: UI Integration
 
-**Goal**: Integrate new format support into TidyCode UI
+**Goal**: Integrate new format support into Tidy Code UI
 
 #### Tasks:
 - [ ] Update Format button to support all formats

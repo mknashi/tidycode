@@ -1,4 +1,4 @@
-# Code Signing Guide for TidyCode
+# Code Signing Guide for Tidy Code
 
 This guide explains how to sign your application installers for Windows, macOS, and Linux to build user trust and ensure secure distribution.
 
@@ -861,7 +861,7 @@ Unlike Windows and macOS, Linux distributions:
 | **macOS** | Apple Developer ID + Notarization | $99/year | **Required** | Gatekeeper (immediate) |
 | **Linux** | GPG signatures | Free | Recommended | Package managers (Web of Trust) |
 
-## Recommended Approach for TidyCode
+## Recommended Approach for Tidy Code
 
 ### Minimum Viable Signing
 
@@ -904,7 +904,7 @@ releases/
 | **GPG Signatures** | Free | ❌ No | Supplement only, tech users | Low |
 | **Self-signed** | Free | ❌ No | Testing only | Low |
 
-**Recommendation for TidyCode**: Start with **Azure Trusted Signing** ($9.99/month) for the best value and ease of management. Add GPG signatures as a free supplementary verification method for technical users.
+**Recommendation for Tidy Code**: Start with **Azure Trusted Signing** ($9.99/month) for the best value and ease of management. Add GPG signatures as a free supplementary verification method for technical users.
 
 ### Azure Trusted Signing (Cheapest Cloud Option)
 

@@ -1,8 +1,8 @@
-# Binary Signing Guide for TidyCode
+# Binary Signing Guide for Tidy Code
 
 ## Overview
 
-This document explains the binary signing options for TidyCode and how to use them.
+This document explains the binary signing options for Tidy Code and how to use them.
 
 ## Signing Options Comparison
 
@@ -67,7 +67,7 @@ Use BOTH:
    - Choose RSA and RSA (default)
    - Key size: 4096 bits
    - Expiration: 2 years (recommended)
-   - Real name: Your name or "TidyCode Release"
+   - Real name: Your name or "Tidy Code Release"
    - Email: Your email
    - Set a strong passphrase
 

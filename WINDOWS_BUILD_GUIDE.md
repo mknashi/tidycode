@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Before building TidyCode on Windows, ensure you have:
+Before building Tidy Code on Windows, ensure you have:
 
 1. **Node.js** (v18 or later) - [Download](https://nodejs.org/)
 2. **Rust** (latest stable) - [Download](https://rustup.rs/)
@@ -367,4 +367,4 @@ If you're still having issues:
 ---
 
 *Last Updated: 2025-12-25*
-*TidyCode Version: 0.2.0*
+*Tidy Code Version: 0.2.0*

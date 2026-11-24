@@ -3,7 +3,7 @@
 A small backend that receives contact and feedback forms from any of your websites and emails them to you, without exposing your address and without third-party form services.
 
 - **Live at:** `https://forms.tidycode.ai`
-- **Used by:** the TidyCode app (Feedback button) and any site listed in [`sites.yaml`](sites.yaml)
+- **Used by:** the Tidy Code app (Feedback button) and any site listed in [`sites.yaml`](sites.yaml)
 
 ## How spam is kept out
 
@@ -91,7 +91,7 @@ Messages are sent from `MAIL_FROM` (`forms@tidycode.ai`) for every site, so new 
 6. **SMTP settings → Create SMTP credentials.** Save the SMTP username and password. They are different from AWS access keys and are shown only once.
 
 ### 2. The inbox
-`sites.yaml` sends TidyCode feedback to `feedback@tidycode.ai`. Either:
+`sites.yaml` sends Tidy Code feedback to `feedback@tidycode.ai`. Either:
 - create that address as a forward at GoDaddy (Email → Forwarding) to one of your existing inboxes, or
 - change `to:` in `sites.yaml` to an existing address.
 
@@ -158,6 +158,6 @@ With no SMTP server on that port, messages are saved with status `failed`, which
 
 The admin page is then at http://localhost:8787/admin with the token `dev`.
 
-To use the local server from the TidyCode app, run the app with `VITE_FORMS_URL=http://localhost:8787 npm run dev`. `http://localhost:5173` is already an allowed origin.
+To use the local server from the Tidy Code app, run the app with `VITE_FORMS_URL=http://localhost:8787 npm run dev`. `http://localhost:5173` is already an allowed origin.
 
 Requires Node 22.13 or later (built-in `node:sqlite`).

@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-This document provides information about the open-source libraries used in TidyCode and their licensing implications.
+This document provides information about the open-source libraries used in Tidy Code and their licensing implications.
 
 ## Summary
 
@@ -363,7 +363,7 @@ Full text available at: https://www.apache.org/licenses/LICENSE-2.0.txt
 4. ✅ **Patent protection** from Apache-2.0 libraries (PDF.js, WebLLM)
 5. ✅ **Simple compliance**: Just include license notices and attributions
 
-**TidyCode can be freely used in commercial products** as long as proper attributions are maintained.
+**Tidy Code can be freely used in commercial products** as long as proper attributions are maintained.
 
 ---
 

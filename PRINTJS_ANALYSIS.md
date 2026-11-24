@@ -1,4 +1,4 @@
-# Print.js Library Analysis for TidyCode
+# Print.js Library Analysis for Tidy Code
 
 ## Overview
 
@@ -52,7 +52,7 @@ printJS({
 
 > "PDF files must be served from the same domain as your app is hosted under... it is limited by the Same Origin Policy."
 
-### What This Means for TidyCode:
+### What This Means for Tidy Code:
 
 1. **Local File Access**: Cannot directly print PDFs from local file system
 2. **Cross-Domain**: Cannot print PDFs from external URLs
@@ -254,7 +254,7 @@ Print.js relies on the browser's built-in PDF viewer:
 
 ### ✅ **Use Print.js for Web Version**
 
-For the web version of TidyCode, Print.js is excellent:
+For the web version of Tidy Code, Print.js is excellent:
 ```javascript
 if (isWeb()) {
   printJS({ printable: base64Data, type: 'pdf', base64: true });

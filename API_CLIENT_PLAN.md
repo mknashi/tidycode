@@ -2,7 +2,7 @@
 
 ## 1. Goal
 
-Let users build, send, save, and inspect HTTP requests inside TidyCode, without switching to Postman or Insomnia. Optimize for a friendly first request, faster debugging, and fewer interruptions between API work and editing code. Product experience requirements and measurable release gates are defined in section 10. The client should reuse what the editor already does well:
+Let users build, send, save, and inspect HTTP requests inside Tidy Code, without switching to Postman or Insomnia. Optimize for a friendly first request, faster debugging, and fewer interruptions between API work and editing code. Product experience requirements and measurable release gates are defined in section 10. The client should reuse what the editor already does well:
 
 - CodeMirror for request and response bodies
 - The formatters for pretty JSON and XML
@@ -37,14 +37,14 @@ Postman's web app solves CORS by not sending requests from the page. You choose 
 - **Desktop Agent:** a local app the page talks to over `localhost`.
 - **Browser Agent:** plain `fetch`, subject to CORS.
 
-Hoppscotch offers the same choices as a browser extension, a proxy you host yourself, or a desktop app. TidyCode can follow the same model.
+Hoppscotch offers the same choices as a browser extension, a proxy you host yourself, or a desktop app. Tidy Code can follow the same model.
 
 ### Transports, from no install to most operating effort
 
 | # | Transport | User install | Reach | Our effort and risk |
 |---|---|---|---|---|
 | A | **Browser `fetch`** | None | APIs that allow browser access, the user's own APIs once they enable CORS, often `localhost` dev servers | Low |
-| B | **Desktop app as local agent** | TidyCode desktop | Everything: `localhost`, VPN/intranet, any header, self-signed TLS | Low. Reuses the `http_request` command. Needs strict pairing (below) |
+| B | **Desktop app as local agent** | Tidy Code desktop | Everything: `localhost`, VPN/intranet, any header, self-signed TLS | Low. Reuses the `http_request` command. Needs strict pairing (below) |
 | C | **Browser extension** | One-click from the browser's store | Any host the user grants, most headers, `localhost` | Medium. A separate codebase and store reviews; Safari is harder |
 | D | **User-supplied proxy URL** | Runs our Docker image | Whatever the proxy host can reach | Low. We publish an image and host nothing |
 | E | **Hosted cloud proxy** | None | Public internet only, never `localhost` or private networks | High. Needs sign-in, rate limits, SSRF protection, privacy notice, running cost |
@@ -336,9 +336,9 @@ Use a local HTTP fixture server with routes for duplicate headers/query keys, re
 
 ### 10.1. Product ambition
 
-Make everyday API development easier to learn and faster to repeat than the tools developers currently use. Treat this as a hypothesis to validate with task-based comparisons, not an unsupported claim that TidyCode is already better.
+Make everyday API development easier to learn and faster to repeat than the tools developers currently use. Treat this as a hypothesis to validate with task-based comparisons, not an unsupported claim that Tidy Code is already better.
 
-Collections, variables, and request scripting are established capabilities in [Postman's documentation](https://learning.postman.com/docs/use/use-collections/create-collections/) and [variable documentation](https://learning.postman.com/latest-v-12/docs/use/send-requests/variables/variables). They are baseline capabilities, not sufficient differentiation. TidyCode's proposed advantage is the connected workflow: send a request, understand its response, find a value, compare a change, and continue editing without losing context.
+Collections, variables, and request scripting are established capabilities in [Postman's documentation](https://learning.postman.com/docs/use/use-collections/create-collections/) and [variable documentation](https://learning.postman.com/latest-v-12/docs/use/send-requests/variables/variables). They are baseline capabilities, not sufficient differentiation. Tidy Code's proposed advantage is the connected workflow: send a request, understand its response, find a value, compare a change, and continue editing without losing context.
 
 ### 10.2. Experience principles
 
@@ -372,7 +372,7 @@ The expanded milestone 5 scope (JSON-aware comparison, response-to-variable acti
 
 These are proposed targets to measure, not achieved results. Use a controlled local fixture server and record device, browser, response size, and network conditions. Separate app interaction time from server/network latency.
 
-- **First request:** at least four of five developers unfamiliar with TidyCode can send a sample request and locate its response body within 60 seconds, without coaching.
+- **First request:** at least four of five developers unfamiliar with Tidy Code can send a sample request and locate its response body within 60 seconds, without coaching.
 - **Core tasks:** at least four of five can add a header, edit JSON, cancel a slow request, and reopen history without coaching. No participant loses a draft during the test.
 - **Reuse tasks:** after milestone 4, at least four of five can import cURL, configure auth, and switch environments. After milestone 5, repeat for comparing responses and reusing a JSON value.
 - **Responsiveness:** target p95 visible feedback within 100 ms for Send/Cancel interactions and within 200 ms for local request search in a fixture with 1,000 saved requests. Show pending/cancelling immediately even if transport completion takes longer.
@@ -382,7 +382,7 @@ These are proposed targets to measure, not achieved results. Use a controlled lo
 
 ### 10.5. Competitive validation and prioritization
 
-Use the same tasks, endpoint fixtures, and participant experience levels to compare TidyCode with Postman and at least one lightweight API client. Record tool versions and include both unfamiliar and experienced users. Measure task completion, active interaction time, errors, help requests, and a short ease-of-use rating. Separate setup time from repeat-use time.
+Use the same tasks, endpoint fixtures, and participant experience levels to compare Tidy Code with Postman and at least one lightweight API client. Record tool versions and include both unfamiliar and experienced users. Measure task completion, active interaction time, errors, help requests, and a short ease-of-use rating. Separate setup time from repeat-use time.
 
 Prioritize the largest observed sources of wasted time. Do not market superiority until repeatable results support it. A feature ships when its end-to-end task is understandable and reliable, rather than merely when its controls exist.
 
@@ -698,7 +698,7 @@ JetBrains documents completion, folding, request formatting, inline documentatio
 - [JetBrains HTTP Client variable model](https://www.jetbrains.com/help/idea/http-client-variables.html)
 - [JetBrains HTTP Client scripting reference](https://www.jetbrains.com/help/idea/http-client-reference.html)
 
-Validate every browser increment against live editor content/cursor selection, stale-outline handling, no execution from navigation/completion/formatting, undo/source preservation, secret masking and persistence isolation, correct result-to-request association, responsive layouts, and bounded work on representative files. Keep accessibility and keyboard navigation part of the feature's completion criteria. We do not yet have evidence of feature-use frequency among TidyCode users; use voluntary usability feedback to prioritize further parity rather than treating competitor support as proof of demand.
+Validate every browser increment against live editor content/cursor selection, stale-outline handling, no execution from navigation/completion/formatting, undo/source preservation, secret masking and persistence isolation, correct result-to-request association, responsive layouts, and bounded work on representative files. Keep accessibility and keyboard navigation part of the feature's completion criteria. We do not yet have evidence of feature-use frequency among Tidy Code users; use voluntary usability feedback to prioritize further parity rather than treating competitor support as proof of demand.
 
 
 ### 13.6. Priority 1 implemented — contextual HTTP actions
